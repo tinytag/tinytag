@@ -13,9 +13,9 @@ class TinyTag(object):
         self.length = 0
 
     @classmethod
-    def get(cls, filename, get_tags=True, get_length=True):
+    def get(cls, filename, tags=True, length=True):
         if filename.lower().endswith('.mp3'):
-            return ID3V2(filename, get_tags=get_tags, get_length=get_length)
+            return ID3V2(filename, tags=tags, length=length)
     
 class ID3V2(TinyTag):
     FRAME_ID_ASSIGNMENT = {
@@ -31,19 +31,19 @@ class ID3V2(TinyTag):
         'TT2': '_parse_title',
     }
 
-    def __init__(self, filename):
+    def __init__(self, filename, tags=True, length=True):
         TinyTag.__init__(self)
-        self.load(filename)
+        self.load(filename, tags=tags, length=length)
 
     def __str__(self):
         return str(self.__dict__)
 
-    def load(self, filename, get_tags=True, get_length=True):
+    def load(self, filename, tags, length):
         with open(filename, 'rb') as af:
-            if get_tags:
+            if tags:
                 self._parse_id3v2(af)
                 af.seek(0)
-            if get_length:
+            if length:
                 self._determine_length(af)
             
 
