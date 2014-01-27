@@ -29,10 +29,3 @@ branches:
   only:
     - master
     - devel
-
-# notifications:
-# email:
-#   recipients:
-#     - tilman.boerner@gmx.de
-#   on_success: change  # [always|never|change] # default: change
-#   on_failure: always  # [always|never|change] # default: always
