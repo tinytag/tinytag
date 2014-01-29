@@ -1,14 +1,15 @@
 tinytag 
 =======
 
-reading music meta data with python
------------------------------------
+tinytag is a library for reading music meta data of MP3 and OGG files with python
+
+[![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 
 Features:
-  * Read ID3 tags and length of MP3s and OGGs
+  * Read tags and length of MP3s and OGGs
   * pure python
   * supports python 2 and 3
-  * is tested (https://travis-ci.org/devsnd/tinytag)
+  * is tested 
   * Under 300 lines of code (just include it in your project!) 
 
 tinytag only provides the minimum needed for _reading_ MP3 and OGG meta-data.
