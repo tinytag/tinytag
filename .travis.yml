@@ -23,9 +23,3 @@ script:
 
 after_success:
   coveralls
-
-branches:
-  # whitelist
-  only:
-    - master
-    - devel
