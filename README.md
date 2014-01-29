@@ -1,13 +1,30 @@
 tinytag
 =======
 
-Read ID3 tags and length of MP3 files with python 2 or 3
-------------------
+Read ID3 tags and length of MP3s and OGGs
+-----------------------------------------
 
-tinytag only provides the minimum needed for _reading_ MP3 meta-data in 
-pure python 2 or 3. 
+tinytag only provides the minimum needed for _reading_ MP3 and OGG meta-data.
+
+Features:
+ * pure python
+ * supports python 2 and 3
+ * (is tested)[https://travis-ci.org/devsnd/tinytag]
+ * Under 300 lines of code (just include it in your project!) 
 
     from tinytag import TinyTag
     info = TinyTag.get('/some/music.mp3')
     print('This track is by %s.' % info.artist)
-    print('It is %d milliseconds long.' % info.length)
+    print('It is %f seconds long.' % info.length)
+
+Tinytag can determine track number, total tracks, title, artist, album, year and length in seconds.
+
+supported python versions:
+
+ * 2.6
+ * 2.7
+ * 3.2
+ * 3.3
+ * pypy
+
+and possibly more.
