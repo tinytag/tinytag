@@ -1,7 +1,7 @@
 tinytag 
 =======
 
-reading music meta date with python
+reading music meta data with python
 -----------------------------------
 
 Features:
