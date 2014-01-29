@@ -4,11 +4,22 @@ import nose
 
 from tinytag import *
 
-def test_id3_v1():    
-    testfiles = ['vbri.mp3', 'cbr.mp3', 'id3v22-test.mp3']
+testfiles = ['vbri.mp3', 
+             'cbr.mp3',
+             'id3v22-test.mp3',
+             'empty.ogg',
+             'multipagecomment.ogg',
+             'multipage-setup.ogg',
+             'test.ogg',
+            ]
+
+def get_info(testfile):
     folder = path.join(path.dirname(__file__), 'samples')
+    TinyTag.get(path.join(folder, testfile))
+
+def test_generator():
     for testfile in testfiles:
-        TinyTag.get(path.join(folder, testfile))
+        yield get_info, testfile
 
 
 if __name__ == '__main__':

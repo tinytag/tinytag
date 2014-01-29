@@ -2,6 +2,7 @@ import codecs
 import struct
 import os
 
+
 class TinyTag(object):
     def __init__(self):
         self.track = None
@@ -16,7 +17,27 @@ class TinyTag(object):
     def get(cls, filename, tags=True, length=True):
         if filename.lower().endswith('.mp3'):
             return ID3V2(filename, tags=tags, length=length)
-    
+        if filename.lower().endswith(('.oga', '.ogg')):
+            return Ogg(filename, tags=tags, length=length)
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def load(self, filename, tags, length):
+        with open(filename, 'rb') as af:
+            if tags:
+                self._parse_tag(af)
+                af.seek(0)
+            if length:
+                self._determine_length(af)
+
+    def _determine_length(self, fh):
+        raise NotImplementedError()
+
+    def _parse_tag(self, fh):
+        raise NotImplementedError()
+
+
 class ID3V2(TinyTag):
     FRAME_ID_ASSIGNMENT = {
         'TRCK': '_parse_track',
@@ -34,18 +55,6 @@ class ID3V2(TinyTag):
     def __init__(self, filename, tags=True, length=True):
         TinyTag.__init__(self)
         self.load(filename, tags=tags, length=length)
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def load(self, filename, tags, length):
-        with open(filename, 'rb') as af:
-            if tags:
-                self._parse_id3v2(af)
-                af.seek(0)
-            if length:
-                self._determine_length(af)
-            
 
     def _determine_length(self, fh):
         # set sample rate from first found frame later, default to 44khz
@@ -67,18 +76,17 @@ class ID3V2(TinyTag):
                 b = fh.read(1)
                 if b > b'\xf0':
                     bitrate_freq, rest = struct.unpack('BB', fh.read(2))
-                    bitrate_selector = (bitrate_freq & 0xf0) >> 4
-                    sample_rate_selector = (bitrate_freq&0x03)>>2
+                    br_id = (bitrate_freq & 0xf0) >> 4  # biterate id
+                    sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
                     # check if the values aren't just random
-                    if bitrate_selector == 15 or bitrate_selector == 0 \
-                        or sample_rate_selector == 3:
+                    if br_id == 15 or br_id == 0 or sr_id == 3:
                         #invalid frame! roll back to last position
                         fh.seek(-2, os.SEEK_CUR)
                         continue
                     # it's most probably an mp3 frame
                     frames += 1
-                    bitrate = bitrates[bitrate_selector]
-                    samplerate = samplerates[sample_rate_selector]
+                    bitrate = bitrates[br_id]
+                    samplerate = samplerates[sr_id]
                     if frames == 1:
                         file_sample_rate = samplerate
                     padding = 1 if bitrate_freq & 0x02 > 0 else 0
@@ -87,9 +95,9 @@ class ID3V2(TinyTag):
                         # jump over current frame body
                         fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         samples = frames * samples_per_frame
-        self.length = samples*1000//file_sample_rate
+        self.length = samples/float(file_sample_rate)
 
-    def _parse_id3v2(self, fh):
+    def _parse_tag(self, fh):
         header = struct.unpack('3sBBB4B', fh.read(10))
         tag = codecs.decode(header[0], 'ISO-8859-1')
         if not tag == 'ID3':
@@ -102,27 +110,27 @@ class ID3V2(TinyTag):
         size = self._calc_size(header[4:9])
         parsed_size = 0
         while parsed_size < size:
-            frame_size = self._parse_frame(fh, is_v22=major==2)
+            frame_size = self._parse_frame(fh, is_v22=major == 2)
             if frame_size == 0:
                 break
             parsed_size += frame_size
 
     def _parse_frame(self, fh, is_v22=False):
         encoding = 'ISO-8859-1'
-        frame_header_size = 6 if is_v22 else 10 
+        frame_header_size = 6 if is_v22 else 10
         frame_size_bytes = 3 if is_v22 else 4
         binformat = '3s3B' if is_v22 else '4s4B2B'
         frame = struct.unpack(binformat, fh.read(frame_header_size))
         frame_id = self._decode_string(frame[0])
         frame_size = self._calc_size(frame[1:1+frame_size_bytes])
         if frame_size > 0:
-            # flags = frame[1+frame_size_bytes:] # fuck flags.
+            # flags = frame[1+frame_size_bytes:] # dont care about flags.
             content = fh.read(frame_size)
             if frame_id in ID3V2.FRAME_ID_ASSIGNMENT:
                 getattr(self, ID3V2.FRAME_ID_ASSIGNMENT[frame_id])(content)
             return frame_size
         return 0
-    
+
     def _decode_string(self, b):
         # it's not my fault, this is the spec.
         if b[0] == b'\x00' or b[0] == 0:
@@ -130,10 +138,10 @@ class ID3V2(TinyTag):
         if b[0:3] == b'\x01\xff\xfe':
             return self._unpad(codecs.decode(b[3:], 'UTF-16'))
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
-    
+
     def _unpad(self, string):
         return string[:-1] if string.endswith('\x00') else string
-    
+
     def _parse_track(self, b):
         trackstr = self._decode_string(b)
         if '/' in trackstr:
@@ -143,7 +151,7 @@ class ID3V2(TinyTag):
 
     def _parse_year(self, b):
         self.year = self._decode_string(b)
-    
+
     def _parse_album(self, b):
         self.album = self._decode_string(b)
 
@@ -155,9 +163,84 @@ class ID3V2(TinyTag):
 
     def _dont_care(self, b):
         pass
-    
+
     def _calc_size(self, b):
-        # size is saved in 4 bytes with the MSBit 0, so there are 28bits
-        if len(b) == 3: #id3v22
+        # size is saved in 4 bytes with the MSBit=0, so there are 28bits
+        if len(b) == 3:  # pad in first byte for id3 v2.2
             b = (0, b[0], b[1], b[2])
-        return ((b[0]&127)<<21) | ((b[1]&127)<<14) | ((b[2]&127)<<7) | (b[3]&127)
+        return ((b[0] & 127) << 21) | ((b[1] & 127) << 14) | \
+               ((b[2] & 127) << 7) | (b[3] & 127)
+
+
+class Ogg(TinyTag):
+    def __init__(self, filename, tags=True, length=True):
+        TinyTag.__init__(self)
+        self._tags_parsed = False
+        self._max_samplenum = 0  # maximum sample position ever read
+        self.load(filename, tags=tags, length=length)
+
+    def _determine_length(self, fh):
+        # have to _parse_tag to determine length right now
+        if not self._tags_parsed:
+            self._parse_tag(fh)
+
+    def _parse_tag(self, fh):
+        got_comments = False
+        got_sample = False
+        sample_rate = 44100  # default samplerate 44khz, but update later
+        for packet in self._parse_pages(fh):
+            if packet.startswith(b"\x01vorbis"):
+                (channels, sample_rate, max_bitrate, nominal_bitrate,
+                 min_bitrate) = struct.unpack("<B4i", packet[11:28])
+            elif packet.startswith(b"\x03vorbis"):
+                pos = 7
+                vendor_length = struct.unpack('I', packet[pos:pos+4])[0]
+                pos += 4
+                vendor = packet[pos:pos+vendor_length]
+                pos += vendor_length
+                elements = struct.unpack('I', packet[pos:pos+4])[0]
+                pos += 4
+                for i in range(elements):
+                    length = struct.unpack('I', packet[pos:pos+4])[0]
+                    pos += 4
+                    keyvalpair = codecs.decode(packet[pos:pos+length], 'UTF-8')
+                    if '=' in keyvalpair:
+                        key, value = keyvalpair.split('=')
+                        key = key.lower()
+                        if key == 'album':
+                            self.album = value
+                        elif key == 'title':
+                            self.title = value
+                        elif key == 'artist':
+                            self.artist = value
+                        elif key == 'date':
+                            self.year = value
+                        elif key == 'tracknumber':
+                            self.track = value
+                    pos += length
+        self.length = self._max_samplenum / float(sample_rate)
+
+    def _parse_pages(self, fh):
+        previous_page = b''  # contains data from previous (continuing) pages
+        header_data = fh.read(27)
+        while len(header_data) != 0:
+            header = struct.unpack('<4sBBqIIiB', header_data)
+            oggs, version, flags, pos, serial, pageseq, crc, segments = header
+            self._max_samplenum = max(self._max_samplenum, pos)
+            if oggs != b'OggS' or version != 0:
+                break  # not a valid ogg file
+            segsizes = struct.unpack('B'*segments, fh.read(segments))
+            total = 0
+            for segsize in segsizes:  # read all segments
+                total += segsize
+                if total < 255:  # less than 255 bytes means end of page
+                    yield previous_page + fh.read(total)
+                    previous_page = b''
+                    total = 0
+            if total != 0:
+                if total % 255 == 0:
+                    previous_page += fh.read(total)
+                else:
+                    yield previous_page + fh.read(total)
+                    previous_page = b''
+            header_data = fh.read(27)
