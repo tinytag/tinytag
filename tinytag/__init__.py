@@ -13,6 +13,10 @@ class TinyTag(object):
         self.year = None
         self.length = 0
 
+    def has_all_tags(self):
+        return all((self.track, self.track_total, self.title,
+                    self.artist, self.album, self.year))
+
     @classmethod
     def get(cls, filename, tags=True, length=True):
         if filename.lower().endswith('.mp3'):
@@ -31,6 +35,14 @@ class TinyTag(object):
             if length:
                 self._determine_length(af)
 
+    def _set_field(self, fieldname, bytestring, transfunc=None):
+        if getattr(self, fieldname):
+            return
+        if transfunc:
+            setattr(self, fieldname, transfunc(bytestring))
+        else:
+            setattr(self, fieldname, bytestring)
+
     def _determine_length(self, fh):
         raise NotImplementedError()
 
@@ -39,17 +51,12 @@ class TinyTag(object):
 
 
 class ID3V2(TinyTag):
-    FRAME_ID_ASSIGNMENT = {
-        'TRCK': '_parse_track',
-        'TRK': '_parse_track',
-        'TYER': '_parse_year',
-        'TYE': '_parse_year',
-        'TALB': '_parse_album',
-        'TAL': '_parse_album',
-        'TPE1': '_parse_artist',
-        'TP1': '_parse_artist',
-        'TIT2': '_parse_title',
-        'TT2': '_parse_title',
+    FID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
+        'TRCK': 'track',  'TRK': 'track',
+        'TYER': 'year',   'TYE': 'year',
+        'TALB': 'album',  'TAL': 'album',
+        'TPE1': 'artist', 'TP1': 'artist',
+        'TIT2': 'title',  'TT2': 'title',
     }
 
     def __init__(self, filename, tags=True, length=True):
@@ -100,20 +107,30 @@ class ID3V2(TinyTag):
     def _parse_tag(self, fh):
         header = struct.unpack('3sBBB4B', fh.read(10))
         tag = codecs.decode(header[0], 'ISO-8859-1')
-        if not tag == 'ID3':
-            # there is no ID3v2 tag at the beginning of the file
-            return
-        major, rev = header[1:3]
-        unsync = header[3] & 0x80 > 0
-        extended = header[3] & 0x40 > 0
-        experimental = header[3] & 0x20 > 0
-        size = self._calc_size(header[4:9])
-        parsed_size = 0
-        while parsed_size < size:
-            frame_size = self._parse_frame(fh, is_v22=major == 2)
-            if frame_size == 0:
-                break
-            parsed_size += frame_size
+        # check if there is an ID3v2 tag at the beginning of the file
+        if tag == 'ID3':
+            major, rev = header[1:3]
+            unsync = header[3] & 0x80 > 0
+            extended = header[3] & 0x40 > 0
+            experimental = header[3] & 0x20 > 0
+            size = self._calc_size(header[4:9])
+            parsed_size = 0
+            while parsed_size < size:
+                frame_size = self._parse_frame(fh, is_v22=major == 2)
+                if frame_size == 0:
+                    break
+                parsed_size += frame_size
+        if not self.has_all_tags():  # try to get more info using id3v1
+            fh.seek(-128, 2)
+            if fh.read(3) == b'TAG':
+                asciidecode = lambda x: self._unpad(codecs.decode(x, 'ASCII'))
+                self._set_field('title', fh.read(30), transfunc=asciidecode)
+                self._set_field('artist', fh.read(30), transfunc=asciidecode)
+                self._set_field('album', fh.read(30), transfunc=asciidecode)
+                self._set_field('year', fh.read(4), transfunc=asciidecode)
+                comment = fh.read(30)
+                if b'\x00\x00' < comment[-2:] < b'\x01\x00':
+                    self._set_field('track', str(comment[-1]))
 
     def _parse_frame(self, fh, is_v22=False):
         encoding = 'ISO-8859-1'
@@ -126,8 +143,12 @@ class ID3V2(TinyTag):
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             content = fh.read(frame_size)
-            if frame_id in ID3V2.FRAME_ID_ASSIGNMENT:
-                getattr(self, ID3V2.FRAME_ID_ASSIGNMENT[frame_id])(content)
+            fieldname = ID3V2.FID_TO_FIELD.get(frame_id)
+            if fieldname:
+                if fieldname == 'track':
+                    self._parse_track(content)
+                else:
+                    self._set_field(fieldname, content, self._decode_string)
             return frame_size
         return 0
 
@@ -139,30 +160,17 @@ class ID3V2(TinyTag):
             return self._unpad(codecs.decode(b[3:], 'UTF-16'))
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
 
-    def _unpad(self, string):
-        return string[:-1] if string.endswith('\x00') else string
+    def _unpad(self, s):
+        return s[:s.index('\x00')] if '\x00' in s else s
 
     def _parse_track(self, b):
-        trackstr = self._decode_string(b)
-        if '/' in trackstr:
-            self.track, self.track_total = trackstr.split('/')
-        else:
-            self.track = trackstr
-
-    def _parse_year(self, b):
-        self.year = self._decode_string(b)
-
-    def _parse_album(self, b):
-        self.album = self._decode_string(b)
-
-    def _parse_artist(self, b):
-        self.artist = self._decode_string(b)
-
-    def _parse_title(self, b):
-        self.title = self._decode_string(b)
-
-    def _dont_care(self, b):
-        pass
+        track = self._decode_string(b)
+        track_total = None
+        if '/' in track:
+            track, track_total = track.split('/')
+        print(track)
+        self._set_field('track', track)
+        self._set_field('track_total', track_total)
 
     def _calc_size(self, b):
         # size is saved in 4 bytes with the MSBit=0, so there are 28bits
@@ -185,6 +193,8 @@ class Ogg(TinyTag):
             self._parse_tag(fh)
 
     def _parse_tag(self, fh):
+        mapping = {'album': 'album', 'title': 'title',
+                   'date': 'year', 'tracknumber': 'track'}
         got_comments = False
         got_sample = False
         sample_rate = 44100  # default samplerate 44khz, but update later
@@ -206,17 +216,9 @@ class Ogg(TinyTag):
                     keyvalpair = codecs.decode(packet[pos:pos+length], 'UTF-8')
                     if '=' in keyvalpair:
                         key, value = keyvalpair.split('=')
-                        key = key.lower()
-                        if key == 'album':
-                            self.album = value
-                        elif key == 'title':
-                            self.title = value
-                        elif key == 'artist':
-                            self.artist = value
-                        elif key == 'date':
-                            self.year = value
-                        elif key == 'tracknumber':
-                            self.track = value
+                        fieldname = mapping.get(key.lower())
+                        if fieldname:
+                            self._set_field(fieldname, value)
                     pos += length
         self.length = self._max_samplenum / float(sample_rate)
 
