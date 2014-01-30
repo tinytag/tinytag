@@ -128,7 +128,7 @@ class ID3V2(TinyTag):
                 self._set_field('year', fh.read(4), transfunc=asciidecode)
                 comment = fh.read(30)
                 if b'\x00\x00' < comment[-2:] < b'\x01\x00':
-                    self._set_field('track', str(comment[-1]))
+                    self._set_field('track', str(ord(comment[-1:])))
 
     def _parse_frame(self, fh, is_v22=False):
         encoding = 'ISO-8859-1'

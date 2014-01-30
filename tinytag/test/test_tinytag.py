@@ -20,7 +20,8 @@ def get_info(testfile, expected):
     print(filename)
     tag = TinyTag.get(filename)
     for key, value in expected.items():
-        assert getattr(tag, key) == value
+        result = getattr(tag, key)
+        assert result == value, 'field "%s": %s is not %s!' % (key, repr(result), repr(value))
     print(tag)
     print('')
 
