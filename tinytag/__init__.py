@@ -152,7 +152,7 @@ class ID3V2(TinyTag):
 
     def _decode_string(self, b):
         # it's not my fault, this is the spec.
-        if b[0] == b'\x00' or b[0] == 0:
+        if b[:1] == b'\x00':
             return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
         if b[0:3] == b'\x01\xff\xfe':
             return self._unpad(codecs.decode(b[3:], 'UTF-16'))
