@@ -15,6 +15,12 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
              'test.wav': {'length': 1.0},
              'test3sMono.wav': {'length': 3.0},
              'test-tagged.wav': {'length': 1.0},
+             
+             'flac1sMono.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.0, 'title': None, 'track': None, 'artist': None},
+             'flac1.5sStereo.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.4995238095238095, 'title': None, 'track': None, 'artist': None},
+             'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'length': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': None},
+             'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'length': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
+             'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'length': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': None},
              }
 
 
@@ -25,7 +31,9 @@ def get_info(testfile, expected):
     tag = TinyTag.get(filename)
     for key, value in expected.items():
         result = getattr(tag, key)
-        assert result == value, 'field "%s": %s is not %s!' % (key, repr(result), repr(value))
+        fmt_string = 'field "%s": %s (%s) is not %s (%s)!'
+        fmt_values = (key, repr(result), type(result), repr(value), type(value))
+        assert result == value, fmt_string % fmt_values
     print(tag)
     print('')
 

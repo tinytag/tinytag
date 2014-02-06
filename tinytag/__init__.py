@@ -22,12 +22,17 @@ class TinyTag(object):
         if filename.lower().endswith('.mp3'):
             with open(filename, 'rb') as af:
                 return ID3V2(af, tags=tags, length=length)
-        if filename.lower().endswith(('.oga', '.ogg')):
+        elif filename.lower().endswith(('.oga', '.ogg')):
             with open(filename, 'rb') as af:
                 return Ogg(af, tags=tags, length=length)
-        if filename.lower().endswith(('.wav')):
+        elif filename.lower().endswith(('.wav')):
             with open(filename, 'rb') as af:
                 return Wave(af, tags=tags, length=length)
+        elif filename.lower().endswith(('.flac')):
+            with open(filename, 'rb') as af:
+                return Flac(af, tags=tags, length=length)
+        else:
+            raise LookupError('No tag reader found to support filetype!')
 
     def __str__(self):
         return str(self.__dict__)
@@ -204,45 +209,48 @@ class StringWalker(object):
     def __init__(self, string):
         self.string = string
 
-    def get(self, length):
+    def read(self, length):
         retstring, self.string = self.string[:length], self.string[length:]
         return retstring
 
 
 class Ogg(TinyTag):
-    def __init__(self, filename, tags=True, length=True):
+    def __init__(self, filehandler, tags=True, length=True):
         TinyTag.__init__(self)
         self._tags_parsed = False
         self._max_samplenum = 0  # maximum sample position ever read
-        self.load(filename, tags=tags, length=length)
+        self.load(filehandler, tags=tags, length=length)
 
     def _determine_length(self, fh):
         if not self._tags_parsed:
             self._parse_tag(fh)  # parse_whole file to determine length :(
 
     def _parse_tag(self, fh):
-        mapping = {'album': 'album', 'title': 'title',
-                   'date': 'year', 'tracknumber': 'track'}
         sample_rate = 44100  # default samplerate 44khz, but update later
         for packet in self._parse_pages(fh):
             walker = StringWalker(packet)
-            head = walker.get(7)
+            head = walker.read(7)
             if head == b"\x01vorbis":
                 (channels, sample_rate, max_bitrate, nominal_bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
             elif head == b"\x03vorbis":
-                vendor_length = struct.unpack('I', walker.get(4))[0]
-                vendor = walker.get(vendor_length)
-                elements = struct.unpack('I', walker.get(4))[0]
-                for i in range(elements):
-                    length = struct.unpack('I', walker.get(4))[0]
-                    keyvalpair = codecs.decode(walker.get(length), 'UTF-8')
-                    if '=' in keyvalpair:
-                        key, value = keyvalpair.split('=')
-                        fieldname = mapping.get(key.lower())
-                        if fieldname:
-                            self._set_field(fieldname, value)
+                self._parse_vorbis_comment(walker)
         self.length = self._max_samplenum / float(sample_rate)
+
+    def _parse_vorbis_comment(self, fh):
+        mapping = {'album': 'album', 'title': 'title',
+                   'date': 'year', 'tracknumber': 'track'}
+        vendor_length = struct.unpack('I', fh.read(4))[0]
+        vendor = fh.read(vendor_length)
+        elements = struct.unpack('I', fh.read(4))[0]
+        for i in range(elements):
+            length = struct.unpack('I', fh.read(4))[0]
+            keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
+            if '=' in keyvalpair:
+                key, value = keyvalpair.split('=')
+                fieldname = mapping.get(key.lower())
+                if fieldname:
+                    self._set_field(fieldname, value)
 
     def _parse_pages(self, fh):
         previous_page = b''  # contains data from previous (continuing) pages
@@ -302,3 +310,61 @@ class Wave(TinyTag):
     def _parse_tag(self, fh):
         if not self._length_parsed:
             self._determine_length(fh)  # parse_whole file to determine tags :(
+
+
+class Flac(TinyTag):
+    def __init__(self, filename, tags=True, length=True):
+        TinyTag.__init__(self)
+        self.load(filename, tags=tags, length=length)
+
+    def load(self, filehandler, tags, length):
+        if filehandler.read(4) != b'fLaC':
+            return  # not a flac file!
+        if tags:
+            self._parse_tag(filehandler)
+            filehandler.seek(4)
+        if length:
+            self._determine_length(filehandler)
+
+    def _determine_length(self, fh):
+        header_data = fh.read(4)
+        while len(header_data):
+            meta_header = struct.unpack('B3B', header_data)
+            size = self._bytes_to_int(meta_header[1:4])
+            if meta_header[0] == 0:  # STREAMINFO
+                header = struct.unpack('HH3s3s8B16s', fh.read(size))
+                min_blk, max_blk, min_frm, max_frm = header[0:4]
+                min_frm = self._bytes_to_int(struct.unpack('3B', min_frm))
+                max_frm = self._bytes_to_int(struct.unpack('3B', max_frm))
+                sample_rate = self._bytes_to_int(header[4:7]) >> 4
+                channels = ((header[7] >> 1) & 7) + 1
+                bit_depth = ((header[7] & 1) << 4) + ((header[8] & 0xF0) >> 4)
+                bit_depth = (bit_depth + 1)
+                total_sample_bytes = [(header[8] >> 4)] + list(header[9:12])
+                total_samples = self._bytes_to_int(total_sample_bytes)
+                md5 = header[12:]
+                self.length = float(total_samples) / sample_rate
+                return
+            else:
+                fh.seek(size, 1)
+                header_data = fh.read(4)
+
+    def _bytes_to_int(self, b):
+        result = 0
+        for byte in b:
+            result = (result << 8) + byte
+        return result
+
+    def _parse_tag(self, fh):
+        header_data = fh.read(4)
+        while len(header_data):
+            meta_header = struct.unpack('B3B', header_data)
+            size = self._bytes_to_int(meta_header[1:4])
+            if meta_header[0] == 4:
+                oggtag = Ogg(fh, False, False)
+                oggtag._parse_vorbis_comment(fh)
+                self.update(oggtag)
+                return
+            else:
+                fh.seek(size, 1)
+                header_data = fh.read(4)
