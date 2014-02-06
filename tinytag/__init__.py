@@ -23,6 +23,8 @@ class TinyTag(object):
             return ID3V2(filename, tags=tags, length=length)
         if filename.lower().endswith(('.oga', '.ogg')):
             return Ogg(filename, tags=tags, length=length)
+        if filename.lower().endswith(('.wav')):
+            return Wave(filename, tags=tags, length=length)
 
     def __str__(self):
         return str(self.__dict__)
@@ -179,10 +181,11 @@ class ID3V2(TinyTag):
 class StringWalker(object):
     def __init__(self, string):
         self.string = string
-    
+
     def get(self, length):
         retstring, self.string = self.string[:length], self.string[length:]
         return retstring
+
 
 class Ogg(TinyTag):
     def __init__(self, filename, tags=True, length=True):
@@ -243,3 +246,25 @@ class Ogg(TinyTag):
                     yield previous_page + fh.read(total)
                     previous_page = b''
             header_data = fh.read(27)
+
+
+class Wave(TinyTag):
+    def __init__(self, filename, tags=True, length=True):
+        TinyTag.__init__(self)
+        self.load(filename, tags=tags, length=length)
+
+    def _determine_length(self, fh):
+        riff, size, fformat = struct.unpack('4sI4s', fh.read(12))
+        if riff != b'RIFF' or fformat != b'WAVE':
+            print('not a wave file!')
+        channels, samplerate, bitdepth = 2, 44100, 16  # assume CD quality
+        for i in range(2):  # first the fmt block, then the data block
+            subchunkid, subchunksize = struct.unpack('4sL', fh.read(8))
+            if subchunkid == b'fmt ':
+                _, channels, samplerate = struct.unpack('HHI', fh.read(8))
+                _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
+            elif subchunkid == b'data':
+                self.length = subchunksize/channels/samplerate/(bitdepth/8)
+
+    def _parse_tag(self, fh):
+        pass
