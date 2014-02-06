@@ -131,7 +131,8 @@ class ID3V2(TinyTag):
             size = self._calc_size_7bit_bytes(header[4:9])
             parsed_size = 0
             if extended:  # just read over the extended header.
-                extd_size = self._calc_size_7bit_bytes(fh.read(6)[0:4])
+                size_bytes = struct.unpack('4B', fh.read(6)[0:4])
+                extd_size = self._calc_size_7bit_bytes(size_bytes)
                 fh.read(extd_size - 6)
             while parsed_size < size:
                 frame_size = self._parse_frame(fh, is_v22=major == 2)
