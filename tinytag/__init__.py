@@ -283,7 +283,7 @@ class Wave(TinyTag):
         channels, samplerate, bitdepth = 2, 44100, 16  # assume CD quality
         chunk_header = fh.read(8)
         while len(chunk_header) > 0:
-            subchunkid, subchunksize = struct.unpack('4sL', chunk_header)
+            subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
             if subchunkid == b'fmt ':
                 _, channels, samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
