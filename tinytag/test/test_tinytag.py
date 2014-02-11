@@ -10,17 +10,17 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
              'silence-44-s-v1.mp3': {'track_total': None, 'length': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2'},
              'empty.ogg': {'track_total': None, 'length': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False},
              'multipagecomment.ogg': {'track_total': None, 'length': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False},
-             'multipage-setup.ogg': {'track_total': None, 'length': 4.128798185941043, 'album': 'Timeless', '_max_samplenum': 182080, 'year': '2006', 'title': 'Burst', 'artist': None, 'track': '7', '_tags_parsed': False},
-             'test.ogg': {'track_total': None, 'length': 1.0, 'album': 'the boss', '_max_samplenum': 44100, 'year': '2006', 'title': 'the boss', 'artist': None, 'track': '1', '_tags_parsed': False},
+             'multipage-setup.ogg': {'track_total': None, 'length': 4.128798185941043, 'album': 'Timeless', '_max_samplenum': 182080, 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False},
+             'test.ogg': {'track_total': None, 'length': 1.0, 'album': 'the boss', '_max_samplenum': 44100, 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False},
              'test.wav': {'length': 1.0},
              'test3sMono.wav': {'length': 3.0},
              'test-tagged.wav': {'length': 1.0},
              
              'flac1sMono.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.0, 'title': None, 'track': None, 'artist': None},
              'flac1.5sStereo.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.4995238095238095, 'title': None, 'track': None, 'artist': None},
-             'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'length': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': None},
+             'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'length': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
              'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'length': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
-             'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'length': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': None},
+             'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'length': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'},
              }
 
 
