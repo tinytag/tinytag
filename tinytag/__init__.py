@@ -29,6 +29,7 @@ import os
 
 __version__ = '0.1.0'
 
+
 class TinyTag(object):
     def __init__(self):
         self.track = None
@@ -45,6 +46,8 @@ class TinyTag(object):
 
     @classmethod
     def get(cls, filename, tags=True, length=True):
+        if not os.path.getsize(filename) > 0:
+            return TinyTag()
         if filename.lower().endswith('.mp3'):
             with open(filename, 'rb') as af:
                 return ID3V2(af, tags=tags, length=length)
@@ -264,7 +267,7 @@ class Ogg(TinyTag):
         self.length = self._max_samplenum / float(sample_rate)
 
     def _parse_vorbis_comment(self, fh):
-        mapping = {'album': 'album', 'title': 'title',
+        mapping = {'album': 'album', 'title': 'title', 'artist': 'artist',
                    'date': 'year', 'tracknumber': 'track'}
         vendor_length = struct.unpack('I', fh.read(4))[0]
         vendor = fh.read(vendor_length)
@@ -273,7 +276,8 @@ class Ogg(TinyTag):
             length = struct.unpack('I', fh.read(4))[0]
             keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
             if '=' in keyvalpair:
-                key, value = keyvalpair.split('=')
+                splitidx = keyvalpair.index('=')
+                key, value = keyvalpair[:splitidx], keyvalpair[splitidx+1:]
                 fieldname = mapping.get(key.lower())
                 if fieldname:
                     self._set_field(fieldname, value)
