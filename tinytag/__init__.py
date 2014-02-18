@@ -27,7 +27,7 @@ import codecs
 import struct
 import os
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 
 class TinyTag(object):
@@ -227,7 +227,8 @@ class ID3(TinyTag):
         if b[:1] == b'\x00':
             return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
         if b[0:3] == b'\x01\xff\xfe':
-            return self._unpad(codecs.decode(b[3:], 'UTF-16'))
+            bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
+            return codecs.decode(bytestr, 'UTF-16')
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
 
     def _unpad(self, s):
