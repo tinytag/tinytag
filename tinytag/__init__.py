@@ -119,6 +119,9 @@ class ID3(TinyTag):
         self.load(filehandler, tags=tags, length=length)
 
     def _determine_length(self, fh):
+        max_estimation_sec = 30
+        max_estimation_frames = (max_estimation_sec*44100) // 1152
+        frame_size_mean = 0
         # set sample rate from first found frame later, default to 44khz
         file_sample_rate = 44100
         # see this page for the magic values used in mp3:
@@ -151,6 +154,14 @@ class ID3(TinyTag):
                         file_sample_rate = samplerate
                     padding = 1 if bitrate_freq & 0x02 > 0 else 0
                     frame_length = (144000 * bitrate) // samplerate + padding
+                    frame_size_mean += frame_length
+                    if frames == max_estimation_frames:
+                        # try to estimate length
+                        fh.seek(-1, 2) # jump to last byte
+                        estimated_frame_count = fh.tell() / (frame_size_mean / frames)
+                        samples = estimated_frame_count * 1152
+                        self.length = samples/float(file_sample_rate)
+                        return
                     if frame_length > 1:
                         # jump over current frame body
                         fh.seek(frame_length - header_bytes, os.SEEK_CUR)
