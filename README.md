@@ -15,7 +15,7 @@ Features:
   * pure python
   * supports python 2 and 3 (without 2to3)
   * is tested 
-  * Just about 300 lines of code (just include it in your project!) 
+  * Just a few hundred lines of code (just include it in your project!) 
 
 tinytag only provides the minimum needed for _reading_ MP3, OGG, FLAC and Wave meta-data.
 It can determine track number, total tracks, title, artist, album, year and length in seconds.
