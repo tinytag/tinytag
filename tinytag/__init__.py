@@ -27,7 +27,7 @@ import codecs
 import struct
 import os
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 
 class TinyTag(object):
