@@ -61,7 +61,7 @@ class TinyTag(object):
         }
         size = os.path.getsize(filename)
         if not size > 0:
-            return TinyTag()
+            return TinyTag(None, 0)
         for fileextension, tagclass in mapping.items():
             if filename.lower().endswith(fileextension):
                 with open(filename, 'rb') as af:
@@ -155,7 +155,7 @@ class ID3(TinyTag):
                     frame_size_mean += frame_length
                     if frames == max_estimation_frames:
                         # try to estimate length
-                        fh.seek(-1, 2) # jump to last byte
+                        fh.seek(-1, 2)  # jump to last byte
                         estimated_frame_count = fh.tell() / (frame_size_mean / frames)
                         samples = estimated_frame_count * 1152
                         self.length = samples/float(file_sample_rate)

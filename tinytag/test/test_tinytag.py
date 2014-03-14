@@ -1,9 +1,11 @@
 from __future__ import unicode_literals
 from os import path
 import nose
+from nose.tools import *
 
 from tinytag import *
 
+test_sample_folder = path.join(path.dirname(__file__), 'samples')
 testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'},
              'cbr.mp3': {'track_total': None, 'length': 0.4963265306122449, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'},
              'id3v22-test.mp3': {'track_total': '11', 'length': 0.156734693877551, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'},
@@ -22,12 +24,12 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
              'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'length': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
              'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'length': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
              'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'length': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'},
+             'emptyfile.mp3': {'track_total': None, 'album': None, 'year': None, 'length': 0, 'title': None, 'track': None, 'artist': None},
              }
 
 
 def get_info(testfile, expected):
-    folder = path.join(path.dirname(__file__), 'samples')
-    filename = path.join(folder, testfile)
+    filename = path.join(test_sample_folder, testfile)
     print(filename)
     tag = TinyTag.get(filename)
     for key, value in expected.items():
@@ -43,6 +45,9 @@ def test_generator():
     for testfile, expected in testfiles.items():
         yield get_info, testfile, expected
 
+@raises(LookupError)
+def test_unsupported_filetype():
+    get_info(path.join(test_sample_folder, 'unsupported.filetype'), {})
 
 if __name__ == '__main__':
     nose.runmodule()
