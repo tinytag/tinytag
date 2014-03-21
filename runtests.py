@@ -1,8 +1,11 @@
+#!/usr/bin/env python
 from __future__ import unicode_literals
-from os import path
-import nose
 
-from tinytag import *
+import nose
+import os
+
+from tinytag import TinyTag
+
 
 testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'},
              'cbr.mp3': {'track_total': None, 'length': 0.4963265306122449, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'},
@@ -16,7 +19,7 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
              'test.wav': {'length': 1.0},
              'test3sMono.wav': {'length': 3.0},
              'test-tagged.wav': {'length': 1.0},
-             
+
              'flac1sMono.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.0, 'title': None, 'track': None, 'artist': None},
              'flac1.5sStereo.flac': {'track_total': None, 'album': None, 'year': None, 'length': 1.4995238095238095, 'title': None, 'track': None, 'artist': None},
              'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'length': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
@@ -26,8 +29,8 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
 
 
 def get_info(testfile, expected):
-    folder = path.join(path.dirname(__file__), 'samples')
-    filename = path.join(folder, testfile)
+    folder = os.path.join(os.path.dirname(__file__), 'tests', 'samples')
+    filename = os.path.join(folder, testfile)
     print(filename)
     tag = TinyTag.get(filename)
     for key, value in expected.items():
@@ -44,5 +47,9 @@ def test_generator():
         yield get_info, testfile, expected
 
 
-if __name__ == '__main__':
+def runtests():
     nose.runmodule()
+
+
+if __name__ == '__main__':
+    runtests()
