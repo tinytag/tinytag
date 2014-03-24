@@ -29,7 +29,7 @@ testfiles = {'vbri.mp3': {'track_total': None, 'length': 0.5224489795918368, 'al
 
 
 def get_info(testfile, expected):
-    folder = os.path.join(os.path.dirname(__file__), 'tests', 'samples')
+    folder = os.path.join(os.path.dirname(__file__), 'tinytag', 'tests', 'samples')
     filename = os.path.join(folder, testfile)
     print(filename)
     tag = TinyTag.get(filename)
