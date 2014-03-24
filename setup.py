@@ -2,9 +2,6 @@ from os.path import join
 from setuptools import setup, find_packages
 
 
-long_description = (open('README.md').read())
-
-
 def get_version():
     with open(join('tinytag', '__init__.py')) as f:
         for line in f:
@@ -16,7 +13,7 @@ setup(
     name='tinytag',
     version=get_version(),
     description='Read music meta data and length of MP3, OGG, FLAC and Wave files',
-    long_description=long_description,
+    long_description=(open('README.md').read()),
     author='Tom Wallroth',
     author_email='tomwallroth@gmail.com',
     url='https://github.com/devsnd/tinytag/',
@@ -41,5 +38,4 @@ setup(
     ],
     zip_safe=False,
     tests_require=["nose"],
-    test_suite='runtests.runtests'
 )
