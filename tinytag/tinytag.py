@@ -40,6 +40,9 @@ class TinyTag(object):
         self.album = None
         self.year = None
         self.duration = 0
+        self.audio_offset = 0
+        self.bitrate = 0.0  # must be float for later VBR calculations
+        self.samplerate = 0
 
     def has_all_tags(self):
         """check if all tags are already defined. Useful for ID3 tags
@@ -146,8 +149,12 @@ class ID3(TinyTag):
                     frames += 1  # it's most probably an mp3 frame
                     bitrate = bitrates[br_id]
                     samplerate = samplerates[sr_id]
+                    # running average of bitrate
+                    self.bitrate = (self.bitrate*(frames-1) + bitrate)/frames
                     if frames == 1:
-                        file_sample_rate = samplerate
+                        # we already read the 4 bytes frame header
+                        self.audio_offset = fh.tell() - 4
+                        self.samplerate = samplerate
                     padding = 1 if bitrate_freq & 0x02 > 0 else 0
                     frame_length = (144000 * bitrate) // samplerate + padding
                     frame_size_mean += frame_length
@@ -156,13 +163,13 @@ class ID3(TinyTag):
                         fh.seek(-1, 2)  # jump to last byte
                         estimated_frame_count = fh.tell() / (frame_size_mean / frames)
                         samples = estimated_frame_count * 1152
-                        self.duration = samples/float(file_sample_rate)
+                        self.duration = samples/float(self.samplerate)
                         return
                     if frame_length > 1:
                         # jump over current frame body
                         fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         samples = frames * 1152  # 1152 is the default frame size for mp3
-        self.duration = samples/float(file_sample_rate)
+        self.duration = samples/float(self.samplerate)
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
@@ -290,22 +297,26 @@ class Ogg(TinyTag):
                     fh.seek(-4, 1)  # parse the page header from start
                     for packet in self._parse_pages(fh):
                         pass  # parse all remaining pages
-                    self.duration = self._max_samplenum / float(self._sample_rate)
+                    self.duration = self._max_samplenum / float(self.samplerate)
                 else:
                     fh.seek(-3, 1)  # oops, no header, rewind selectah!
 
     def _parse_tag(self, fh):
-        sample_rate = 44100  # default samplerate 44khz, but update later
+        page_start_pos = fh.tell()  # set audio_offest later if its audio data
         for packet in self._parse_pages(fh):
             walker = StringWalker(packet)
-            head = walker.read(7)
-            if head == b"\x01vorbis":
-                (channels, self._sample_rate, max_bitrate, nominal_bitrate,
+            header = walker.read(7)
+            if header == b"\x01vorbis":
+                (channels, self.samplerate, max_bitrate, bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
-            elif head == b"\x03vorbis":
+                if not self.audio_offset:
+                    self.bitrate = bitrate / 1024
+                    self.audio_offset = page_start_pos
+            elif header == b"\x03vorbis":
                 self._parse_vorbis_comment(walker)
             else:
                 break
+            page_start_pos = fh.tell()
 
     def _parse_vorbis_comment(self, fh):
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
@@ -367,10 +378,12 @@ class Wave(TinyTag):
         while len(chunk_header) > 0:
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
             if subchunkid == b'fmt ':
-                _, channels, samplerate = struct.unpack('HHI', fh.read(8))
+                _, channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
+                self.bitrate = self.samplerate * channels * bitdepth / 1024
             elif subchunkid == b'data':
                 self.duration = subchunksize/channels/samplerate/(bitdepth/8)
+                self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
                 id3 = ID3(fh, 0)
@@ -402,19 +415,21 @@ class Flac(TinyTag):
         while len(header_data):
             meta_header = struct.unpack('B3B', header_data)
             size = self._bytes_to_int(meta_header[1:4])
+            # http://xiph.org/flac/format.html#metadata_block_streaminfo
             if meta_header[0] == 0:  # STREAMINFO
                 header = struct.unpack('HH3s3s8B16s', fh.read(size))
                 min_blk, max_blk, min_frm, max_frm = header[0:4]
                 min_frm = self._bytes_to_int(struct.unpack('3B', min_frm))
                 max_frm = self._bytes_to_int(struct.unpack('3B', max_frm))
-                sample_rate = self._bytes_to_int(header[4:7]) >> 4
+                self.samplerate = self._bytes_to_int(header[4:7]) >> 4
                 channels = ((header[7] >> 1) & 7) + 1
                 bit_depth = ((header[7] & 1) << 4) + ((header[8] & 0xF0) >> 4)
                 bit_depth = (bit_depth + 1)
                 total_sample_bytes = [(header[8] >> 4)] + list(header[9:12])
                 total_samples = self._bytes_to_int(total_sample_bytes)
                 md5 = header[12:]
-                self.duration = float(total_samples) / sample_rate
+                self.duration = float(total_samples) / self.samplerate
+                self.bitrate = self.filesize/self.duration*8/1024
                 return
             else:
                 fh.seek(size, 1)
