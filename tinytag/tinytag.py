@@ -72,7 +72,10 @@ class TinyTag(object):
         raise LookupError('No tag reader found to support filetype!')
 
     def __str__(self):
-        return str(self.__dict__)
+        return str({k: v for k, v in self.__dict__.items() if not k.startswith('_')})
+
+    def __repr__(self):
+        return str(self)
 
     def load(self, tags, duration):
         """default behavior of all tags. This method is called in the

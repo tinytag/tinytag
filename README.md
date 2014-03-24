@@ -19,12 +19,26 @@ Features:
   * Just a few hundred lines of code (just include it in your project!) 
 
 tinytag only provides the minimum needed for _reading_ MP3, OGG, FLAC and Wave meta-data.
-It can determine track number, total tracks, title, artist, album, year and length in seconds.
+It can determine track number, total tracks, title, artist, album, year, duration and more.
 
     from tinytag import TinyTag
-    info = TinyTag.get('/some/music.mp3')
-    print('This track is by %s.' % info.artist)
-    print('It is %f seconds long.' % info.length)
+    tag = TinyTag.get('/some/music.mp3')
+    print('This track is by %s.' % tag.artist)
+    print('It is %f seconds long.' % tag.duration)
+
+List of possible attributes you can get with TinyTag:
+
+    tag.album         # album as string
+    tag.artist        # artist name as string
+    tag.audio_offset  # number of bytes before audio data begins
+    tag.bitrate       # bitrate in kBits/s
+    tag.duration      # duration of the song in seconds
+    tag.filesize      # file size in bytes
+    tag.samplerate    # samples per second
+    tag.title         # title of the sonf
+    tag.track         # track number as string
+    tag.track_total   # total number of tracks as string
+    tag.year          # year or data as string
 
 supported python versions:
 
