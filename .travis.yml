@@ -20,7 +20,6 @@ install:
 # command to run tests
 script:
   coverage run -a ./runtests.py
-  coverage report
 
 after_success:
   coveralls
