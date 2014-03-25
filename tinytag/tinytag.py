@@ -72,7 +72,8 @@ class TinyTag(object):
         raise LookupError('No tag reader found to support filetype!')
 
     def __str__(self):
-        return str({k: v for k, v in self.__dict__.items() if not k.startswith('_')})
+        public_attrs = ((k, v) for k, v in self.__dict__.items() if not k.startswith('_'))
+        return str(dict(public_attrs))
 
     def __repr__(self):
         return str(self)
