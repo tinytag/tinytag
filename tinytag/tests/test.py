@@ -1,8 +1,8 @@
 from __future__ import unicode_literals
 
 import os
-
-from tinytag import TinyTag
+from nose.tools import *
+from tinytag import TinyTag, ID3, Ogg, Wave, Flac
 
 
 testfiles = {'vbri.mp3': {'track_total': None, 'duration': 0.5224489795918368, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'},
@@ -23,12 +23,14 @@ testfiles = {'vbri.mp3': {'track_total': None, 'duration': 0.5224489795918368, '
              'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
              'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
              'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'},
+             '106-invalid-streaminfo.flac': {},
+             '106-short-picture-block-size.flac': {},
+             'empty_file.mp3': {'track_total': None, 'album': None, 'year': None, 'duration': 0.0, 'title': None, 'track': None, 'artist': None},
              }
-
+samplefolder = os.path.join(os.path.dirname(__file__), 'samples')
 
 def get_info(testfile, expected):
-    folder = os.path.join(os.path.dirname(__file__), 'samples')
-    filename = os.path.join(folder, testfile)
+    filename = os.path.join(samplefolder, testfile)
     print(filename)
     tag = TinyTag.get(filename)
     for key, value in expected.items():
@@ -37,9 +39,42 @@ def get_info(testfile, expected):
         fmt_values = (key, repr(result), type(result), repr(value), type(value))
         assert result == value, fmt_string % fmt_values
     print(tag)
-    print('')
+    print(tag.__repr__())
 
 
 def test_generator():
     for testfile, expected in testfiles.items():
         yield get_info, testfile, expected
+
+@raises(LookupError)
+def test_unsupported_extension():
+    bogus_file = os.path.join(samplefolder, 'there_is_no_such_ext.bogus')
+    TinyTag.get(bogus_file)
+
+@raises(NotImplementedError)
+def test_unsubclassed_tinytag_duration():
+    tag = TinyTag(None, 0)
+    tag._determine_duration(None)
+
+@raises(NotImplementedError)
+def test_unsubclassed_tinytag_parse_tag():
+    tag = TinyTag(None, 0)
+    tag._parse_tag(None)
+
+def test_mp3_length_estimation():
+    ID3.set_estimation_precision(0.7)
+    tag = TinyTag.get(os.path.join(samplefolder, 'silence-44-s-v1.mp3'))
+    print(tag.duration)
+    assert 3.5 < tag.duration < 4.0 
+
+def test_invalid_flac_file():
+    tag = Flac.get(os.path.join(samplefolder, 'silence-44-s-v1.mp3'))
+
+def test_invalid_mp3_file():
+    tag = ID3.get(os.path.join(samplefolder, 'flac1.5sStereo.flac'))
+
+def test_invalid_ogg_file():
+    tag = Ogg.get(os.path.join(samplefolder, 'flac1.5sStereo.flac'))
+
+def test_invalid_wave_file():
+    tag = Wave.get(os.path.join(samplefolder, 'flac1.5sStereo.flac'))
