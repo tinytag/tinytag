@@ -129,6 +129,11 @@ class ID3(TinyTag):
     }
     _MAX_ESTIMATION_SEC = 30
 
+    def __init__(self, filehandler, filesize):
+        TinyTag.__init__(self, filehandler, filesize)
+        # save position after the ID3 tag for duration mesurement speedup
+        self._bytepos_after_id3v2 = 0
+
     @classmethod
     def set_estimation_precision(cls, estimation_in_seconds):
         cls._MAX_ESTIMATION_SEC = estimation_in_seconds
@@ -145,6 +150,8 @@ class ID3(TinyTag):
         samplerates = [44100, 48000, 32000]
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
+        # seek to first position after id3 tag (speedup for large header)
+        fh.seek(self._bytepos_after_id3v2)
         while True:
             # reading through garbage until 12 '1' bits are found
             b = fh.read(1)
@@ -158,7 +165,7 @@ class ID3(TinyTag):
                     sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
                     # check if the values aren't just random
                     if br_id == 15 or br_id == 0 or sr_id == 3:
-                        #invalid frame! roll back to last position
+                        # invalid frame! roll back to last position
                         fh.seek(-2, os.SEEK_CUR)
                         continue
                     frames += 1  # it's most probably an mp3 frame
@@ -184,7 +191,8 @@ class ID3(TinyTag):
                         # jump over current frame body
                         fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         samples = frames * 1152  # 1152 is the default frame size for mp3
-        self.duration = samples/float(self.samplerate)
+        if self.samplerate:
+            self.duration = samples/float(self.samplerate)
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
@@ -204,6 +212,7 @@ class ID3(TinyTag):
             experimental = (header[3] & 0x20) > 0
             footer = (header[3] & 0x10) > 0
             size = self._calc_size_7bit_bytes(header[4:9])
+            self._bytepos_after_id3v2 = size
             parsed_size = 0
             if extended:  # just read over the extended header.
                 size_bytes = struct.unpack('4B', fh.read(6)[0:4])
