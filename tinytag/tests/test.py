@@ -19,6 +19,7 @@ testfiles = {'vbri.mp3': {'track_total': None, 'duration': 0.47020408163265304, 
              'test-tagged.wav': {'duration': 1.0},
 
              'flac1sMono.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 1.0, 'title': None, 'track': None, 'artist': None},
+             'flac453sStereo.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None},
              'flac1.5sStereo.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 1.4995238095238095, 'title': None, 'track': None, 'artist': None},
              'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
              'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
