@@ -7,6 +7,7 @@ tinytag is a library for reading music meta data of MP3, OGG, FLAC and Wave file
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
 
 Features:
+
   * Read tags and length of music files
   * supported formats
     * MP3 (ID3 v1, v1.1, v2.2, v2.3+)
