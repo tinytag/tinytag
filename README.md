@@ -6,6 +6,12 @@ tinytag is a library for reading music meta data of MP3, OGG, FLAC and Wave file
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
 
+## Installation
+To install tinytag, simply:
+```shell
+	pip install tinytag
+```
+
 Features:
 
   * Read tags and length of music files
