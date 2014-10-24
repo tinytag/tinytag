@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 from .tinytag import TinyTag, StringWalker, ID3, Ogg, Wave, Flac
 
 
