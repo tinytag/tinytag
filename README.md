@@ -14,7 +14,7 @@ To install tinytag, simply:
 
 Features:
 
-  * Read tags and length of music files
+  * Read tags, length and IDv3 cover images of music files
   * supported formats
     * MP3 (ID3 v1, v1.1, v2.2, v2.3+)
     * Wave
@@ -47,12 +47,15 @@ List of possible attributes you can get with TinyTag:
     tag.track_total   # total number of tracks as string
     tag.year          # year or data as string
 
+Additionally you can also get cover images from ID3 tags:
+
+    tag = TinyTag.get('/some/music.mp3', image=True)
+    image_data = tag.get_image()
+
 supported python versions:
 
- * 2.6
- * 2.7
- * 3.2
- * 3.3
+ * 2.6+
+ * 3.2+
  * pypy
 
 and possibly more.
