@@ -83,3 +83,9 @@ def test_invalid_ogg_file():
 
 def test_invalid_wave_file():
     tag = Wave.get(os.path.join(samplefolder, 'flac1.5sStereo.flac'))
+
+def test_mp3_image_loading():
+    tag = TinyTag.get(os.path.join(samplefolder, 'cover_img.mp3'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
