@@ -493,7 +493,8 @@ class Flac(TinyTag):
                 total_samples = self._bytes_to_int(total_sample_bytes)
                 md5 = header[12:]
                 self.duration = float(total_samples) / self.samplerate
-                self.bitrate = self.filesize/self.duration*8/1024
+                if self.duration > 0:
+                    self.bitrate = self.filesize/self.duration*8/1024
                 return
             else:
                 fh.seek(size, 1)
