@@ -135,8 +135,8 @@ class TinyTag(object):
 
     def _bytes_to_int_le(self, b):
         result = 0
-        for idx, byte in enumerate(b):
-            result += (byte << 8*idx)
+        for idx in range(len(b)): # uglyness for py2/3 compat
+            result += (struct.unpack('B', b[idx:idx+1])[0] << 8*idx)
         return result
 
     def _unpad(self, s):
@@ -646,7 +646,7 @@ class Wma(TinyTag):
                     ('maximum_data_packet_size', 4, True),
                     ('maximum_bitrate', 4, False),
                 ])
-                self.duration = blocks.get('play_duration') / 10000000
+                self.duration = blocks.get('play_duration') / float(10000000)
             elif object_id == Wma.ASF_STREAM_PROPERTIES_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('stream_type', 16, False),
@@ -668,7 +668,7 @@ class Wma(TinyTag):
                         ('bits_per_sample', 2, True),
                     ])
                     self.samplerate = stream_info['samples_per_second']
-                    self.bitrate = stream_info['avg_bytes_per_second'] * 8 / 1000
+                    self.bitrate = stream_info['avg_bytes_per_second'] * 8 / float(1000)
                     already_read = 16
                 fh.read(blocks['type_specific_data_length'] - already_read)
                 fh.read(blocks['error_correction_data_length'])
