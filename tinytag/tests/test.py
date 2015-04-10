@@ -29,9 +29,9 @@ testfiles = {'vbri.mp3': {'track_total': None, 'duration': 0.47020408163265304, 
              '106-invalid-streaminfo.flac': {},
              '106-short-picture-block-size.flac': {},
              'empty_file.mp3': {'track_total': None, 'album': None, 'year': None, 'duration': 0.0, 'title': None, 'track': None, 'artist': None},
-             'id3v1-latin1.mp3': {'samplerate': 0, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 256, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993'}
-,
-             }
+             'id3v1-latin1.mp3': {'samplerate': 0, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 256, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993'},
+             'test2.wma': {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'},
+            }
 samplefolder = os.path.join(os.path.dirname(__file__), 'samples')
 
 def get_info(testfile, expected):
