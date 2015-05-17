@@ -309,8 +309,6 @@ class ID3(TinyTag):
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
-            print(content)
-            print(frame_id)
             if fieldname:
                 if fieldname == 'track':
                     self._parse_track(content)
