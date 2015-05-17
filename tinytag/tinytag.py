@@ -296,11 +296,19 @@ class ID3(TinyTag):
 
     def _decode_string(self, b):
         # it's not my fault, this is the spec.
-        if b[:1] == b'\x00':
+        first_byte = b[:1]
+        if first_byte == b'\x00':
             return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
-        if b[0:3] == b'\x01\xff\xfe':
+        elif first_byte == b'\x01':
+            # strip the bom and optional null bytes
             bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
             return codecs.decode(bytestr, 'UTF-16')
+        elif first_byte == b'\x02':
+            # strip optional null byte
+            bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
+            return codecs.decode(bytestr, 'UTF-16be')
+        elif first_byte == b'\x03':
+            return codecs.decode(b[1:], 'UTF-8')
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
 
     def _parse_track(self, b):
