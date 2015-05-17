@@ -41,6 +41,7 @@ List of possible attributes you can get with TinyTag:
     tag.bitrate       # bitrate in kBits/s
     tag.duration      # duration of the song in seconds
     tag.filesize      # file size in bytes
+    tag.genre         # genre as string
     tag.samplerate    # samples per second
     tag.title         # title of the song
     tag.track         # track number as string
