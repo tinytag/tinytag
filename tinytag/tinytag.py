@@ -180,6 +180,25 @@ class ID3(TinyTag):
         'Folklore', 'Ballad', 'Power Ballad', 'Rhythmic Soul', 'Freestyle',
         'Duet', 'Punk Rock', 'Drum Solo', 'A capella', 'Euro-House', 'Dance Hall',
         'Goa', 'Drum & Bass',
+
+        # according to https://de.wikipedia.org/wiki/Liste_der_ID3v1-Genres:
+        'Club-House', 'Hardcore Techno', 'Terror', 'Indie', 'BritPop',
+            # don't use ethnic slur ("Negerpunk", WTF!)
+            '',
+        'Polsk Punk', 'Beat', 'Christian Gangsta Rap',
+        'Heavy Metal', 'Black Metal', 'Contemporary Christian',
+        'Christian Rock',
+            # WinAmp 1.91
+        'Merengue', 'Salsa', 'Thrash Metal', 'Anime', 'Jpop', 'Synthpop',
+            # WinAmp 5.6
+        'Abstract', 'Art Rock', 'Baroque', 'Bhangra', 'Big Beat', 'Breakbeat',
+        'Chillout', 'Downtempo', 'Dub', 'EBM', 'Eclectic', 'Electro',
+        'Electroclash', 'Emo', 'Experimental', 'Garage', 'Illbient',
+        'Industro-Goth', 'Jam Band', 'Krautrock', 'Leftfield', 'Lounge',
+        'Math Rock', 'New Romantic', 'Nu-Breakz', 'Post-Punk', 'Post-Rock',
+        'Psytrance', 'Shoegaze', 'Space Rock', 'Trop Rock', 'World Music',
+        'Neoclassical', 'Audiobook', 'Audio Theatre', 'Neue Deutsche Welle',
+        'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     ]
 
     def __init__(self, filehandler, filesize):
