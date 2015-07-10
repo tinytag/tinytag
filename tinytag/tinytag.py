@@ -158,9 +158,9 @@ class ID3(TinyTag):
         'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco',
         'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age', 'Oldies',
         'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock', 'Techno', 'Industrial',
-        'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack', 
+        'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack',
         'Euro-Techno', 'Ambient', 'Trip-Hop', 'Vocal', 'Jazz+Funk', 'Fusion',
-        'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game', 
+        'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game',
         'Sound Clip', 'Gospel', 'Noise', 'AlternRock', 'Bass', 'Soul', 'Punk',
         'Space', 'Meditative', 'Instrumental Pop', 'Instrumental Rock',
         'Ethnic', 'Gothic','Darkwave', 'Techno-Industrial', 'Electronic',
@@ -544,7 +544,7 @@ class Flac(TinyTag):
                 #                          `.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
-                # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-# 
+                # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
                 self.samplerate = self._bytes_to_int(header[4:7]) >> 4
                 channels = ((header[6] >> 1) & 0x07) + 1
                 bit_depth = ((header[6] & 1) << 4) + ((header[7] & 0xF0) >> 4)
