@@ -179,7 +179,7 @@ class ID3(TinyTag):
         'Primus', 'Porn Groove', 'Satire', 'Slow Jam', 'Club', 'Tango', 'Samba',
         'Folklore', 'Ballad', 'Power Ballad', 'Rhythmic Soul', 'Freestyle',
         'Duet', 'Punk Rock', 'Drum Solo', 'A capella', 'Euro-House', 'Dance Hall',
-
+        'Goa', 'Drum & Bass',
     ]
 
     def __init__(self, filehandler, filesize):
