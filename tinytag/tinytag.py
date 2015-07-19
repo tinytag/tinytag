@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # tinytag - an audio meta info reader
-# Copyright (c) 2014 Tom Wallroth
+# Copyright (c) 2014-2015 Tom Wallroth
 #
 # Sources on github:
 # http://github.com/devsnd/tinytag/
@@ -183,14 +183,14 @@ class ID3(TinyTag):
 
         # according to https://de.wikipedia.org/wiki/Liste_der_ID3v1-Genres:
         'Club-House', 'Hardcore Techno', 'Terror', 'Indie', 'BritPop',
-            # don't use ethnic slur ("Negerpunk", WTF!)
-            '',
+        # don't use ethnic slur ("Negerpunk", WTF!)
+        '',
         'Polsk Punk', 'Beat', 'Christian Gangsta Rap',
         'Heavy Metal', 'Black Metal', 'Contemporary Christian',
         'Christian Rock',
-            # WinAmp 1.91
+        # WinAmp 1.91
         'Merengue', 'Salsa', 'Thrash Metal', 'Anime', 'Jpop', 'Synthpop',
-            # WinAmp 5.6
+        # WinAmp 5.6
         'Abstract', 'Art Rock', 'Baroque', 'Bhangra', 'Big Beat', 'Breakbeat',
         'Chillout', 'Downtempo', 'Dub', 'EBM', 'Eclectic', 'Electro',
         'Electroclash', 'Emo', 'Experimental', 'Garage', 'Illbient',
