@@ -158,9 +158,9 @@ class ID3(TinyTag):
         'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco',
         'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age', 'Oldies',
         'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock', 'Techno', 'Industrial',
-        'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack', 
+        'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack',
         'Euro-Techno', 'Ambient', 'Trip-Hop', 'Vocal', 'Jazz+Funk', 'Fusion',
-        'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game', 
+        'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game',
         'Sound Clip', 'Gospel', 'Noise', 'AlternRock', 'Bass', 'Soul', 'Punk',
         'Space', 'Meditative', 'Instrumental Pop', 'Instrumental Rock',
         'Ethnic', 'Gothic','Darkwave', 'Techno-Industrial', 'Electronic',
@@ -179,7 +179,26 @@ class ID3(TinyTag):
         'Primus', 'Porn Groove', 'Satire', 'Slow Jam', 'Club', 'Tango', 'Samba',
         'Folklore', 'Ballad', 'Power Ballad', 'Rhythmic Soul', 'Freestyle',
         'Duet', 'Punk Rock', 'Drum Solo', 'A capella', 'Euro-House', 'Dance Hall',
+        'Goa', 'Drum & Bass',
 
+        # according to https://de.wikipedia.org/wiki/Liste_der_ID3v1-Genres:
+        'Club-House', 'Hardcore Techno', 'Terror', 'Indie', 'BritPop',
+            # don't use ethnic slur ("Negerpunk", WTF!)
+            '',
+        'Polsk Punk', 'Beat', 'Christian Gangsta Rap',
+        'Heavy Metal', 'Black Metal', 'Contemporary Christian',
+        'Christian Rock',
+            # WinAmp 1.91
+        'Merengue', 'Salsa', 'Thrash Metal', 'Anime', 'Jpop', 'Synthpop',
+            # WinAmp 5.6
+        'Abstract', 'Art Rock', 'Baroque', 'Bhangra', 'Big Beat', 'Breakbeat',
+        'Chillout', 'Downtempo', 'Dub', 'EBM', 'Eclectic', 'Electro',
+        'Electroclash', 'Emo', 'Experimental', 'Garage', 'Illbient',
+        'Industro-Goth', 'Jam Band', 'Krautrock', 'Leftfield', 'Lounge',
+        'Math Rock', 'New Romantic', 'Nu-Breakz', 'Post-Punk', 'Post-Rock',
+        'Psytrance', 'Shoegaze', 'Space Rock', 'Trop Rock', 'World Music',
+        'Neoclassical', 'Audiobook', 'Audio Theatre', 'Neue Deutsche Welle',
+        'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     ]
 
     def __init__(self, filehandler, filesize):
@@ -544,7 +563,7 @@ class Flac(TinyTag):
                 #                          `.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
-                # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-# 
+                # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
                 self.samplerate = self._bytes_to_int(header[4:7]) >> 4
                 channels = ((header[6] >> 1) & 0x07) + 1
                 bit_depth = ((header[6] & 1) << 4) + ((header[7] & 0xF0) >> 4)
