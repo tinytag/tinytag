@@ -237,12 +237,12 @@ class ID3(TinyTag):
             br_id = (bitrate_freq & 0xf0) >> 4  # biterate id
             sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
             # check for twelve 1s, validate bitrate and sample rate
-            if not b[:2] > b'\xFFE0' or br_id == 15 or br_id == 0 or sr_id == 3:
-                try:
-                    # find next occurence of 8 '1' bits
-                    fh.seek(max(b.index(b'\xff'), 1), os.SEEK_CUR)
-                except ValueError:
-                    fh.seek(len(b), os.SEEK_CUR)  # jump over peeked data
+            if not b[:2] > b'\xFFE0' or br_id > 14 or br_id == 0 or sr_id == 3:
+                # find next occurence of 8 '1' bits
+                idx = b.find(b'\xff', 1)
+                if idx == -1:
+                    idx = len(b)
+                fh.seek(max(idx, 1), os.SEEK_CUR)
                 continue
 
             frames += 1  # it's most probably an mp3 frame

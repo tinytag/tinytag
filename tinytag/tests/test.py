@@ -5,7 +5,10 @@ from __future__ import unicode_literals
 import os
 from nose.tools import *
 from tinytag import TinyTag, ID3, Ogg, Wave, Flac
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    OrderedDict = dict  # python 2.6 and 3.2 compat
 
 
 testfiles = OrderedDict([
