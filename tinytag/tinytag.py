@@ -494,7 +494,7 @@ class Wave(TinyTag):
         riff, size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
             print('not a wave file!')
-        channels, samplerate, bitdepth = 2, 44100, 16  # assume CD quality
+        channels, bitdepth = 2, 16  # assume CD quality
         chunk_header = fh.read(8)
         while len(chunk_header) > 0:
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
@@ -503,7 +503,7 @@ class Wave(TinyTag):
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
                 self.bitrate = self.samplerate * channels * bitdepth / 1024
             elif subchunkid == b'data':
-                self.duration = subchunksize/channels/samplerate/(bitdepth/8)
+                self.duration = subchunksize/channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
