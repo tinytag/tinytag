@@ -26,6 +26,8 @@
 import codecs
 import struct
 import os
+import io
+from io import BytesIO
 
 
 class TinyTag(object):
@@ -80,7 +82,7 @@ class TinyTag(object):
             parser_class = cls
         if parser_class is None:
             raise LookupError('No tag reader found to support filetype! ')
-        with open(filename, 'rb') as af:
+        with io.open(filename, 'rb') as af:
             tag = parser_class(af, size)
             tag.load(tags=tags, duration=duration, image=image)
             return tag
@@ -100,8 +102,9 @@ class TinyTag(object):
             self._load_image = True
         if tags:
             self._parse_tag(self._filehandler)
-            self._filehandler.seek(0)
         if duration:
+            if tags:  # rewind file if the tags were already parsed
+                self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
     def _set_field(self, fieldname, bytestring, transfunc=None):
@@ -142,6 +145,7 @@ class TinyTag(object):
     def _unpad(self, s):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
         return s[:s.index('\x00')] if '\x00' in s else s
+
 
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
@@ -217,51 +221,52 @@ class ID3(TinyTag):
         file_sample_rate = 44100
         # see this page for the magic values used in mp3:
         # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
-        bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192,
-                    224, 256, 320]
+        bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
         samplerates = [44100, 48000, 32000]
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
         # seek to first position after id3 tag (speedup for large header)
         fh.seek(self._bytepos_after_id3v2)
         while True:
-            # reading through garbage until 12 '1' bits are found
-            b = fh.read(1)
-            if len(b) == 0:
-                break
-            if b == b'\xff':
-                b = fh.read(1)
-                if b > b'\xf0':
-                    bitrate_freq, rest = struct.unpack('BB', fh.read(2))
-                    br_id = (bitrate_freq & 0xf0) >> 4  # biterate id
-                    sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
-                    # check if the values aren't just random
-                    if br_id == 15 or br_id == 0 or sr_id == 3:
-                        # invalid frame! roll back to last position
-                        fh.seek(-2, os.SEEK_CUR)
-                        continue
-                    frames += 1  # it's most probably an mp3 frame
-                    bitrate = bitrates[br_id]
-                    samplerate = samplerates[sr_id]
-                    # running average of bitrate
-                    self.bitrate = (self.bitrate*(frames-1) + bitrate)/frames
-                    if frames == 1:
-                        # we already read the 4 bytes frame header
-                        self.audio_offset = fh.tell() - 4
-                        self.samplerate = samplerate
-                    padding = 1 if bitrate_freq & 0x02 > 0 else 0
-                    frame_length = (144000 * bitrate) // samplerate + padding
-                    frame_size_mean += frame_length
-                    if frames == max_estimation_frames:
-                        # try to estimate duration
-                        fh.seek(-1, 2)  # jump to last byte
-                        estimated_frame_count = fh.tell() / (frame_size_mean / frames)
-                        samples = estimated_frame_count * 1152
-                        self.duration = samples/float(self.samplerate)
-                        return
-                    if frame_length > 1:
-                        # jump over current frame body
-                        fh.seek(frame_length - header_bytes, os.SEEK_CUR)
+            # reading through garbage until 11 '1' bits are found
+            b = fh.peek(4)
+            if len(b) < 4:
+                break  # EOF
+            # validate header start
+            bitrate_freq, rest = struct.unpack('BB', b[2:4])
+            br_id = (bitrate_freq & 0xf0) >> 4  # biterate id
+            sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
+            # check for twelve 1s, validate bitrate and sample rate
+            if not b[:2] > b'\xFFE0' or br_id == 15 or br_id == 0 or sr_id == 3:
+                try:
+                    # find next occurence of 8 '1' bits
+                    fh.seek(max(b.index(b'\xff'), 1), os.SEEK_CUR)
+                except ValueError:
+                    fh.seek(len(b), os.SEEK_CUR)  # jump over peeked data
+                continue
+
+            frames += 1  # it's most probably an mp3 frame
+            bitrate = bitrates[br_id]
+            samplerate = samplerates[sr_id]
+            # running average of bitrate
+            self.bitrate = (self.bitrate * (frames - 1) + bitrate) / frames
+            if frames == 1:
+                self.audio_offset = fh.tell()
+                self.samplerate = samplerate
+            fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
+            padding = 1 if bitrate_freq & 0x02 > 0 else 0
+            frame_length = (144000 * bitrate) // samplerate + padding
+            frame_size_mean += frame_length
+            if frames == max_estimation_frames:
+                # try to estimate duration
+                fh.seek(-1, 2)  # jump to last byte
+                estimated_frame_count = fh.tell() / (frame_size_mean / frames)
+                samples = estimated_frame_count * 1152
+                self.duration = samples/float(self.samplerate)
+                return
+            if frame_length > 1:
+                # jump over current frame body
+                fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         samples = frames * 1152  # 1152 is the default frame size for mp3
         if self.samplerate:
             self.duration = samples/float(self.samplerate)
@@ -289,7 +294,7 @@ class ID3(TinyTag):
             if extended:  # just read over the extended header.
                 size_bytes = struct.unpack('4B', fh.read(6)[0:4])
                 extd_size = self._calc_size(size_bytes, 7)
-                fh.read(extd_size - 6)
+                fh.seek(extd_size - 6, os.SEEK_CUR)
             while parsed_size < size:
                 is_id3_v22 = major == 2
                 frame_size = self._parse_frame(fh, is_v22=is_id3_v22)
@@ -300,14 +305,15 @@ class ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
             asciidecode = lambda x: self._unpad(codecs.decode(x, 'latin1'))
-            self._set_field('title', fh.read(30), transfunc=asciidecode)
-            self._set_field('artist', fh.read(30), transfunc=asciidecode)
-            self._set_field('album', fh.read(30), transfunc=asciidecode)
-            self._set_field('year', fh.read(4), transfunc=asciidecode)
-            comment = fh.read(30)
+            fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
+            self._set_field('title', fields[:30], transfunc=asciidecode)
+            self._set_field('artist', fields[30:60], transfunc=asciidecode)
+            self._set_field('album', fields[60:90], transfunc=asciidecode)
+            self._set_field('year', fields[90:94], transfunc=asciidecode)
+            comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
                 self._set_field('track', str(ord(comment[-1:])))
-            genre_id = ord(fh.read(1))
+            genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
                 self.genre = ID3.ID3V1_GENRES[genre_id]
 
@@ -380,16 +386,6 @@ class ID3(TinyTag):
         return ret
 
 
-class StringWalker(object):
-    """file obj like string. probably there are buildins doing this already"""
-    def __init__(self, string):
-        self.string = string
-
-    def read(self, nbytes):
-        retstring, self.string = self.string[:nbytes], self.string[nbytes:]
-        return retstring
-
-
 class Ogg(TinyTag):
     def __init__(self, filehandler, filesize):
         TinyTag.__init__(self, filehandler, filesize)
@@ -404,22 +400,22 @@ class Ogg(TinyTag):
         if self.filesize > MAX_PAGE_SIZE:
             fh.seek(-MAX_PAGE_SIZE, 2)  # go to last possible page position
         while True:
-            b = fh.read(1)
+            b = fh.peek(4)
             if len(b) == 0:
                 return  # EOF
-            if b == b'O':  # look for an ogg header
-                if fh.read(3) == b'ggS':
-                    fh.seek(-4, 1)  # parse the page header from start
-                    for packet in self._parse_pages(fh):
-                        pass  # parse all remaining pages
-                    self.duration = self._max_samplenum / float(self.samplerate)
-                else:
-                    fh.seek(-3, 1)  # oops, no header, rewind selectah!
+            if b[:4] == b'OggS':  # look for an ogg header
+                for packet in self._parse_pages(fh):
+                    pass  # parse all remaining pages
+                self.duration = self._max_samplenum / float(self.samplerate)
+            else:
+                idx = b.find(b'OggS')  # try to find header in peeked data
+                seekpos = idx if idx != -1 else len(b) - 3
+                fh.seek(max(seekpos, 1), os.SEEK_CUR)
 
     def _parse_tag(self, fh):
         page_start_pos = fh.tell()  # set audio_offest later if its audio data
         for packet in self._parse_pages(fh):
-            walker = StringWalker(packet)
+            walker = BytesIO(packet)
             header = walker.read(7)
             if header == b"\x01vorbis":
                 (channels, self.samplerate, max_bitrate, bitrate,
@@ -503,7 +499,7 @@ class Wave(TinyTag):
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
                 self.bitrate = self.samplerate * channels * bitdepth / 1024
             elif subchunkid == b'data':
-                self.duration = subchunksize/channels/self.samplerate/(bitdepth/8)
+                self.duration = float(subchunksize)/channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
