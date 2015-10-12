@@ -157,6 +157,7 @@ class ID3(TinyTag):
         'TCON': 'genre',
     }
     _MAX_ESTIMATION_SEC = 30
+    _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
 
     ID3V1_GENRES = [
         'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco',
@@ -214,60 +215,87 @@ class ID3(TinyTag):
     def set_estimation_precision(cls, estimation_in_seconds):
         cls._MAX_ESTIMATION_SEC = estimation_in_seconds
 
+    # see this page for the magic values used in mp3:
+    # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
+    bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
+    samplerates = [44100, 48000, 32000]
+    samples_per_frame = 1152  # the default frame size for mp3
+
+    def _parse_xing_header(self, fh):
+        # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
+        if not fh.read(4) == b'Xing':
+            return
+        header_flags = struct.unpack('>i', fh.read(4))[0]
+        if header_flags & 1: # FRAMES FLAG
+            frames = struct.unpack('>i', fh.read(4))[0]
+        if header_flags & 2: # BYTES FLAG
+            byte_count = struct.unpack('>i', fh.read(4))[0]
+        if header_flags & 4: # TOC FLAG
+            toc = [struct.unpack('>i', fh.read(4))[0] for _ in range(100)]
+        if header_flags & 8: # VBR SCALE FLAG
+            vbr_scale = struct.unpack('>i', fh.read(4))[0]
+        return frames, byte_count, toc, vbr_scale
+
     def _determine_duration(self, fh):
         max_estimation_frames = (ID3._MAX_ESTIMATION_SEC*44100) // 1152
-        frame_size_mean = 0
+        frame_size_accu = 0
         # set sample rate from first found frame later, default to 44khz
-        file_sample_rate = 44100
-        # see this page for the magic values used in mp3:
-        # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
-        bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
-        samplerates = [44100, 48000, 32000]
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
+        bitrate_accu = 0
         # seek to first position after id3 tag (speedup for large header)
         fh.seek(self._bytepos_after_id3v2)
         while True:
-            # reading through garbage until 11 '1' bits are found
+            # reading through garbage until 11 '1' sync-bits are found
             b = fh.peek(4)
             if len(b) < 4:
                 break  # EOF
-            # validate header start
             bitrate_freq, rest = struct.unpack('BB', b[2:4])
-            br_id = (bitrate_freq & 0xf0) >> 4  # biterate id
+            br_id = (bitrate_freq & 0xF0) >> 4  # biterate id
             sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
-            # check for twelve 1s, validate bitrate and sample rate
-            if not b[:2] > b'\xFFE0' or br_id > 14 or br_id == 0 or sr_id == 3:
-                # find next occurence of 8 '1' bits
-                idx = b.find(b'\xff', 1)
+            # check for eleven 1s, validate bitrate and sample rate
+            if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
+                idx = b.find(b'\xFF', 1)  # find next occurence of 8 '1' bits
                 if idx == -1:
-                    idx = len(b)
+                    idx = len(b)  # not found: jump over the current peek buffer
                 fh.seek(max(idx, 1), os.SEEK_CUR)
                 continue
 
+            samplerate = ID3.samplerates[sr_id]
+            self.samplerate = samplerate
+            # There might be a xing header in the first frame that contains
+            # all the info we need, otherwise parse many frames to find the
+            # accurate average bitrate
+            if frames == 0 and ID3._USE_XING_HEADER:
+                xing_header_offset = b.find(b'Xing')
+                if xing_header_offset != -1:
+                    fh.seek(xing_header_offset, os.SEEK_CUR)
+                    frames, byte_count, toc, vbr_scale = self._parse_xing_header(fh)
+                    self.duration = frames * ID3.samples_per_frame / self.samplerate
+                    self.bitrate = byte_count * 8 / self.duration
+                    return
+
             frames += 1  # it's most probably an mp3 frame
-            bitrate = bitrates[br_id]
-            samplerate = samplerates[sr_id]
-            # running average of bitrate
-            self.bitrate = (self.bitrate * (frames - 1) + bitrate) / frames
+            frame_bitrate = ID3.bitrates[br_id]
+            bitrate_accu += frame_bitrate
             if frames == 1:
                 self.audio_offset = fh.tell()
-                self.samplerate = samplerate
             fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
             padding = 1 if bitrate_freq & 0x02 > 0 else 0
-            frame_length = (144000 * bitrate) // samplerate + padding
-            frame_size_mean += frame_length
+            frame_length = (144000 * frame_bitrate) // samplerate + padding
+            frame_size_accu += frame_length
             if frames == max_estimation_frames:
                 # try to estimate duration
                 fh.seek(-1, 2)  # jump to last byte
-                estimated_frame_count = fh.tell() / (frame_size_mean / frames)
+                estimated_frame_count = fh.tell() / (frame_size_accu / frames)
                 samples = estimated_frame_count * 1152
-                self.duration = samples/float(self.samplerate)
+                self.duration = samples / float(self.samplerate)
+                self.bitrate = bitrate_accu / frames
                 return
             if frame_length > 1:
                 # jump over current frame body
                 fh.seek(frame_length - header_bytes, os.SEEK_CUR)
-        samples = frames * 1152  # 1152 is the default frame size for mp3
+        samples = frames * ID3.samples_per_frame
         if self.samplerate:
             self.duration = samples/float(self.samplerate)
 
@@ -294,7 +322,7 @@ class ID3(TinyTag):
             if extended:  # just read over the extended header.
                 size_bytes = struct.unpack('4B', fh.read(6)[0:4])
                 extd_size = self._calc_size(size_bytes, 7)
-                fh.seek(extd_size - 6, os.SEEK_CUR)
+                extended_header = fh.read(extd_size - 6)
             while parsed_size < size:
                 is_id3_v22 = major == 2
                 frame_size = self._parse_frame(fh, is_v22=is_id3_v22)
