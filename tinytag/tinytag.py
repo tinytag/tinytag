@@ -226,6 +226,7 @@ class ID3(TinyTag):
         if not fh.read(4) == b'Xing':
             return
         header_flags = struct.unpack('>i', fh.read(4))[0]
+        frames = byte_count = toc = vbr_scale = None
         if header_flags & 1: # FRAMES FLAG
             frames = struct.unpack('>i', fh.read(4))[0]
         if header_flags & 2: # BYTES FLAG
@@ -271,9 +272,11 @@ class ID3(TinyTag):
                 if xing_header_offset != -1:
                     fh.seek(xing_header_offset, os.SEEK_CUR)
                     frames, byte_count, toc, vbr_scale = self._parse_xing_header(fh)
-                    self.duration = frames * ID3.samples_per_frame / self.samplerate
-                    self.bitrate = byte_count * 8 / self.duration
-                    return
+                    if frames is not None and byte_count is not None:
+                        self.duration = frames * ID3.samples_per_frame / self.samplerate
+                        self.bitrate = byte_count * 8 / self.duration
+                        return
+                    continue
 
             frames += 1  # it's most probably an mp3 frame
             frame_bitrate = ID3.bitrates[br_id]
