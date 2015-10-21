@@ -157,6 +157,7 @@ class ID3(TinyTag):
         'TCON': 'genre',
     }
     _MAX_ESTIMATION_SEC = 30
+    _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
 
     ID3V1_GENRES = [
@@ -238,12 +239,13 @@ class ID3(TinyTag):
         return frames, byte_count, toc, vbr_scale
 
     def _determine_duration(self, fh):
-        max_estimation_frames = (ID3._MAX_ESTIMATION_SEC*44100) // 1152
+        max_estimation_frames = (ID3._MAX_ESTIMATION_SEC*44100) // ID3.samples_per_frame
         frame_size_accu = 0
         # set sample rate from first found frame later, default to 44khz
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
-        bitrate_accu = 0
+        bitrate_accu = 0  # add up bitrates to find average bitrate
+        last_bitrates = []  # to detect CBR mp3s (multiple frames with same bitrates)
         # seek to first position after id3 tag (speedup for large header)
         fh.seek(self._bytepos_after_id3v2)
         while True:
@@ -256,7 +258,7 @@ class ID3(TinyTag):
             sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
             # check for eleven 1s, validate bitrate and sample rate
             if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
-                idx = b.find(b'\xFF', 1)  # find next occurence of 8 '1' bits
+                idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
                 if idx == -1:
                     idx = len(b)  # not found: jump over the current peek buffer
                 fh.seek(max(idx, 1), os.SEEK_CUR)
@@ -265,7 +267,7 @@ class ID3(TinyTag):
             samplerate = ID3.samplerates[sr_id]
             self.samplerate = samplerate
             # There might be a xing header in the first frame that contains
-            # all the info we need, otherwise parse many frames to find the
+            # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
             if frames == 0 and ID3._USE_XING_HEADER:
                 xing_header_offset = b.find(b'Xing')
@@ -283,24 +285,29 @@ class ID3(TinyTag):
             bitrate_accu += frame_bitrate
             if frames == 1:
                 self.audio_offset = fh.tell()
+            if frames <= ID3._CBR_DETECTION_FRAME_COUNT:
+                last_bitrates.append(frame_bitrate)
             fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
             padding = 1 if bitrate_freq & 0x02 > 0 else 0
             frame_length = (144000 * frame_bitrate) // samplerate + padding
             frame_size_accu += frame_length
-            if frames == max_estimation_frames:
+            # if bitrate does not change over time its CBR
+            is_cbr = frames == ID3._CBR_DETECTION_FRAME_COUNT and len(set(last_bitrates)) == 1
+
+            if frames == max_estimation_frames or is_cbr:
                 # try to estimate duration
-                fh.seek(-1, 2)  # jump to last byte
-                estimated_frame_count = fh.tell() / (frame_size_accu / frames)
-                samples = estimated_frame_count * 1152
+                fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
+                audio_stream_size = fh.tell() - self.audio_offset
+                est_frame_count = audio_stream_size / (frame_size_accu / frames)
+                samples = est_frame_count * ID3.samples_per_frame
                 self.duration = samples / float(self.samplerate)
                 self.bitrate = bitrate_accu / frames
                 return
-            if frame_length > 1:
-                # jump over current frame body
+
+            if frame_length > 1:  # jump over current frame body
                 fh.seek(frame_length - header_bytes, os.SEEK_CUR)
-        samples = frames * ID3.samples_per_frame
         if self.samplerate:
-            self.duration = samples/float(self.samplerate)
+            self.duration = frames * ID3.samples_per_frame / float(self.samplerate)
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)

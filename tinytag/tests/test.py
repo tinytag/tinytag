@@ -13,14 +13,14 @@ except ImportError:
 
 testfiles = OrderedDict([
     ('vbri.mp3', {'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
-    ('cbr.mp3', {'track_total': None, 'duration': 0.4963265306122449, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
-    ('id3v22-test.mp3', {'track_total': '11', 'duration': 0.156734693877551, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
+    ('cbr.mp3', {'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
+    ('id3v22-test.mp3', {'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
     ('silence-44-s-v1.mp3', {'genre': 'Darkwave', 'track_total': None, 'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2'}),
     ('id3v1-latin1.mp3', {'genre': 'Rock', 'samplerate': 0, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 256, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993'}),
     ('UTF16.mp3', {'duration': 0, 'track_total': '11', 'track': '07', 'artist': 'The National', 'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld'}),
     ('utf-8-id3v2.mp3', {'genre': 'Acustico', 'duration': 0, 'track_total': '21', 'track': '01', 'filesize': 2119, 'title': 'Gran día', 'artist': 'Paso a paso', 'album': 'S/T', 'bitrate': 0.0, 'year': None, 'audio_offset': 0, 'samplerate': 0}),
     ('empty_file.mp3', {'track_total': None, 'album': None, 'year': None, 'duration': 0.0, 'title': None, 'track': None, 'artist': None}),
-    ('silence-22khz-56k-mono-1s.mp3', {'duration': 1.0448979591836736}),
+    ('silence-22khz-56k-mono-1s.mp3', {'duration': 1.018}),
 
     ('empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
     ('multipagecomment.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
@@ -50,15 +50,16 @@ def get_info(testfile, expected):
     filename = os.path.join(samplefolder, testfile)
     print(filename)
     tag = TinyTag.get(filename)
-    for key, value in expected.items():
+    for key, expected_val in expected.items():
         result = getattr(tag, key)
         if key == 'duration':
-            # round the duration values so that close matches are good enough
-            result = round(result, 2) # off by a maximum of 10ms
-            value = round(value, 2)
+            # allow duration to be off by 100 ms and a maximum of 1%
+            if abs(result - expected_val) < 0.1:
+                if expected_val and min(result, expected_val) / max(result, expected_val) > 0.99:
+                    continue
         fmt_string = 'field "%s": got %s (%s) expected %s (%s)!'
-        fmt_values = (key, repr(result), type(result), repr(value), type(value))
-        assert result == value, fmt_string % fmt_values
+        fmt_values = (key, repr(result), type(result), repr(expected_val), type(expected_val))
+        assert result == expected_val, fmt_string % fmt_values
     print(tag)
     print(tag.__repr__())
 
