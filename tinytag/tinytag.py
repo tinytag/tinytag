@@ -298,7 +298,7 @@ class ID3(TinyTag):
                 # try to estimate duration
                 fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
                 audio_stream_size = fh.tell() - self.audio_offset
-                est_frame_count = audio_stream_size / (frame_size_accu / frames)
+                est_frame_count = audio_stream_size / (frame_size_accu / float(frames))
                 samples = est_frame_count * ID3.samples_per_frame
                 self.duration = samples / float(self.samplerate)
                 self.bitrate = bitrate_accu / frames
