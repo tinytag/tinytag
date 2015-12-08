@@ -29,6 +29,8 @@ import os
 import io
 from io import BytesIO
 
+class TinyTagException(Exception):
+    pass
 
 class TinyTag(object):
     """Base class for all tag types"""
@@ -40,12 +42,13 @@ class TinyTag(object):
         self.title = None
         self.artist = None
         self.album = None
+        self.channels = None
         self.year = None
         self.genre = None
         self.duration = 0
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
-        self.samplerate = 0
+        self.samplerate = None
         self._load_image = False
         self._image_data = None
 
@@ -218,9 +221,31 @@ class ID3(TinyTag):
 
     # see this page for the magic values used in mp3:
     # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
-    bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
-    samplerates = [44100, 48000, 32000]
+    samplerates = [
+        [11025, 12000,  8000],  # MPEG 2.5
+        [],                     # reserved
+        [22050, 24000, 16000],  # MPEG 2
+        [44100, 48000, 32000],  # MPEG 1
+    ]
+    v1l1 = [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0]
+    v1l2 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0]
+    v1l3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0]
+    v2l1 = [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0]
+    v2l2 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0]
+    v2l3 = v2l2
+    bitrate_by_version_by_layer = [
+        [None, v2l3, v2l2, v2l1], # MPEG Version 2.5  # note that the layers go
+        None,                     # reserved          # from 3 to 1 by design.
+        [None, v2l3, v2l2, v2l1], # MPEG Version 2    # the first layer id is
+        [None, v1l3, v1l2, v1l1], # MPEG Version 1    # reserved
+    ]
     samples_per_frame = 1152  # the default frame size for mp3
+    channels_per_channel_mode = [
+        2,  # 00 Stereo
+        2,  # 01 Joint stereo (Stereo)
+        2,  # 10 Dual channel (2 mono channels)
+        1,  # 11 Single channel (Mono)
+    ]
 
     def _parse_xing_header(self, fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
@@ -253,9 +278,14 @@ class ID3(TinyTag):
             b = fh.peek(4)
             if len(b) < 4:
                 break  # EOF
-            bitrate_freq, rest = struct.unpack('BB', b[2:4])
-            br_id = (bitrate_freq & 0xF0) >> 4  # biterate id
-            sr_id = (bitrate_freq & 0x03) >> 2  # sample rate id
+            sync, conf, bitrate_freq, rest = struct.unpack('BBBB', b[0:4])
+            br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
+            sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
+            padding = 1 if bitrate_freq & 0x02 > 0 else 0
+            mpeg_id = (conf >> 3) & 0x03
+            layer_id = (conf >> 1) & 0x03
+            channel_mode = (rest  >> 6) & 0x03
+            self.channels = self.channels_per_channel_mode[channel_mode]
             # check for eleven 1s, validate bitrate and sample rate
             if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
                 idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
@@ -263,9 +293,11 @@ class ID3(TinyTag):
                     idx = len(b)  # not found: jump over the current peek buffer
                 fh.seek(max(idx, 1), os.SEEK_CUR)
                 continue
-
-            samplerate = ID3.samplerates[sr_id]
-            self.samplerate = samplerate
+            try:
+                self.samplerate = ID3.samplerates[mpeg_id][sr_id]
+                frame_bitrate = ID3.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
+            except (IndexError, TypeError):
+                raise TinyTagException('mp3 parsing failed')
             # There might be a xing header in the first frame that contains
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
@@ -275,21 +307,20 @@ class ID3(TinyTag):
                     fh.seek(xing_header_offset, os.SEEK_CUR)
                     frames, byte_count, toc, vbr_scale = self._parse_xing_header(fh)
                     if frames is not None and byte_count is not None:
-                        self.duration = frames * ID3.samples_per_frame / self.samplerate
+                        self.duration = frames * ID3.samples_per_frame / float(self.samplerate)
                         self.bitrate = byte_count * 8 / self.duration
                         return
                     continue
 
             frames += 1  # it's most probably an mp3 frame
-            frame_bitrate = ID3.bitrates[br_id]
             bitrate_accu += frame_bitrate
             if frames == 1:
                 self.audio_offset = fh.tell()
             if frames <= ID3._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.append(frame_bitrate)
             fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
-            padding = 1 if bitrate_freq & 0x02 > 0 else 0
-            frame_length = (144000 * frame_bitrate) // samplerate + padding
+
+            frame_length = (144000 * frame_bitrate) // self.samplerate + padding
             frame_size_accu += frame_length
             # if bitrate does not change over time its CBR
             is_cbr = frames == ID3._CBR_DETECTION_FRAME_COUNT and len(set(last_bitrates)) == 1
@@ -499,7 +530,7 @@ class Ogg(TinyTag):
             oggs, version, flags, pos, serial, pageseq, crc, segments = header
             self._max_samplenum = max(self._max_samplenum, pos)
             if oggs != b'OggS' or version != 0:
-                break  # not a valid ogg file
+                raise TinyTagException('Not a valid ogg file!')
             segsizes = struct.unpack('B'*segments, fh.read(segments))
             total = 0
             for segsize in segsizes:  # read all segments
@@ -527,7 +558,7 @@ class Wave(TinyTag):
         # and: https://en.wikipedia.org/wiki/WAV
         riff, size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
-            print('not a wave file!')
+            raise TinyTagException('not a wave file!')
         channels, bitdepth = 2, 16  # assume CD quality
         chunk_header = fh.read(8)
         while len(chunk_header) > 0:
@@ -560,7 +591,7 @@ class Flac(TinyTag):
 
     def load(self, tags, duration, image=False):
         if self._filehandler.read(4) != b'fLaC':
-            return  # not a flac file!
+            raise TinyTagException('Invalid flac header')
         self._determine_duration(self._filehandler, skip_tags=not tags)
 
     def _determine_duration(self, fh, skip_tags=False):
