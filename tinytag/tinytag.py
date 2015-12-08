@@ -37,18 +37,18 @@ class TinyTag(object):
     def __init__(self, filehandler, filesize):
         self._filehandler = filehandler
         self.filesize = filesize
-        self.track = None
-        self.track_total = None
-        self.title = None
-        self.artist = None
         self.album = None
-        self.channels = None
-        self.year = None
-        self.genre = None
-        self.duration = 0
+        self.artist = None
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
+        self.channels = None
+        self.duration = 0
+        self.genre = None
         self.samplerate = None
+        self.title = None
+        self.track = None
+        self.track_total = None
+        self.year = None
         self._load_image = False
         self._image_data = None
 
