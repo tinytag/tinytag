@@ -14,7 +14,7 @@ import timeit
 import os
 import re
 from nose.tools import *
-from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
+from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac, _make_parser
 
 try:
     from collections import OrderedDict
@@ -138,3 +138,28 @@ def test_mp3_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
+
+def test_make_parser():
+    parser = _make_parser('aaaabbbb')
+    assert parser(b'\xF0') == [15, 0]
+    assert parser(b'\x0F') == [0, 15]
+    assert parser(b'\x11') == [1, 1]
+    assert parser(b'\x51') == [5, 1]
+
+    parser = _make_parser('aaaabbbbcccccccc')
+    assert parser(b'\xF0\xFF') == [15, 0, 255]
+    assert parser(b'\x0F\x00') == [0, 15, 0]
+    assert parser(b'\x11\x22') == [1, 1, 34]
+    assert parser(b'\x51\x33') == [5, 1, 51]
+
+    parser = _make_parser('aabcddee')
+    assert parser(b'\xFF') == [3, 1, 1, 3, 3]
+    assert parser(b'\x00') == [0, 0, 0, 0, 0]
+    assert parser(b'\x11') == [0, 0, 1, 0, 1]
+    assert parser(b'\x33') == [0, 1, 1, 0, 3]
+
+@raises(AssertionError)
+def test_make_parser_multibyte_groups():
+    # not implemented yet
+    parser = _make_parser('aaaaaaaaaaaaaaaa')
+    parser(b'\xFF\xFF')

@@ -28,6 +28,29 @@ import struct
 import os
 import io
 from io import BytesIO
+from itertools import groupby
+
+def _make_parser(bits):
+    # function to generate a binary parser, group the bits using characters, eg
+    # _make_parser(bits='aaaabbbbccccccc')(data='\xF1\xFF')
+    # > [15, 1, 255]
+    assert len(bits) % 8 == 0, 'bits must be multiple of 8 (to parse a byte)'
+    # iterate over each letter and save the start and end position of the group
+    groups = [(bits.index(c), bits.rindex(c)) for c, _ in groupby(bits) if c != '_']
+    def parse(data):
+        assert len(bits) == len(data) * 8
+        byte_data = struct.unpack('B'*len(data), data)
+        retval = []
+        for bit_start, bit_end in groups:
+            bitmask = (1 << ((bit_end + 1) - bit_start)) - 1
+            byte_idx = bit_start // 8
+            print(bit_start, bit_end)
+            assert byte_idx == bit_end // 8, 'Cannot parse multibyte groups!'
+            shifted_data = byte_data[byte_idx] >> (7 - (bit_end % 8))
+            retval.append(shifted_data & bitmask)
+        return retval
+    return parse
+
 
 class TinyTagException(Exception):
     pass
@@ -192,8 +215,7 @@ class ID3(TinyTag):
 
         # according to https://de.wikipedia.org/wiki/Liste_der_ID3v1-Genres:
         'Club-House', 'Hardcore Techno', 'Terror', 'Indie', 'BritPop',
-        # don't use ethnic slur ("Negerpunk", WTF!)
-        '',
+        '', # don't use ethnic slur
         'Polsk Punk', 'Beat', 'Christian Gangsta Rap',
         'Heavy Metal', 'Black Metal', 'Contemporary Christian',
         'Christian Rock',
@@ -247,6 +269,8 @@ class ID3(TinyTag):
         1,  # 11 Single channel (Mono)
     ]
 
+    header_parser = _make_parser('___________bbcc_eeeeffg_ii______')
+
     def _parse_xing_header(self, fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
         if not fh.read(4) == b'Xing':
@@ -278,14 +302,8 @@ class ID3(TinyTag):
             b = fh.peek(4)
             if len(b) < 4:
                 break  # EOF
-            sync, conf, bitrate_freq, rest = struct.unpack('BBBB', b[0:4])
-            br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
-            sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
-            padding = 1 if bitrate_freq & 0x02 > 0 else 0
-            mpeg_id = (conf >> 3) & 0x03
-            layer_id = (conf >> 1) & 0x03
-            channel_mode = (rest  >> 6) & 0x03
-            self.channels = self.channels_per_channel_mode[channel_mode]
+            (mpeg_id, layer_id, br_id, sr_id, pad, ch_id) = ID3.header_parser(b[0:4])
+            self.channels = ID3.channels_per_channel_mode[ch_id]
             # check for eleven 1s, validate bitrate and sample rate
             if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
                 idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
@@ -320,7 +338,7 @@ class ID3(TinyTag):
                 last_bitrates.append(frame_bitrate)
             fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
 
-            frame_length = (144000 * frame_bitrate) // self.samplerate + padding
+            frame_length = (144000 * frame_bitrate) // self.samplerate + pad
             frame_size_accu += frame_length
             # if bitrate does not change over time its CBR
             is_cbr = frames == ID3._CBR_DETECTION_FRAME_COUNT and len(set(last_bitrates)) == 1
