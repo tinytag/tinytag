@@ -17,7 +17,7 @@ from nose.tools import *
 
 # workaround to be compatible with new cherrymusic
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
+from tinytag.tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
 
 try:
     from collections import OrderedDict
