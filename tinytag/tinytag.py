@@ -39,6 +39,8 @@ class TinyTag(object):
         self.filesize = filesize
         self.track = None
         self.track_total = None
+        self.disc = None
+        self.disc_total = None
         self.title = None
         self.artist = None
         self.album = None
@@ -129,7 +131,7 @@ class TinyTag(object):
     def update(self, other):
         """update the values of this tag with the values from another tag"""
         for key in ['track', 'track_total', 'title', 'artist',
-                    'album', 'year', 'duration', 'genre']:
+                    'album', 'year', 'duration', 'genre', 'disc', 'disc_total']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -157,7 +159,7 @@ class ID3(TinyTag):
         'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
-        'TCON': 'genre',
+        'TCON': 'genre',  'TPOS': 'disc'
     }
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -405,8 +407,8 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                if fieldname == 'track':
-                    self._parse_track(content)
+                if fieldname in ('track', 'disc'):
+                    self._parse_track(fieldname, content)
                 else:
                     self._set_field(fieldname, content, self._decode_string)
             elif frame_id == 'APIC' and self._load_image:
@@ -437,13 +439,17 @@ class ID3(TinyTag):
             return codecs.decode(b[1:], 'UTF-8')
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
 
-    def _parse_track(self, b):
+    def _parse_track(self, fn, b):
         track = self._decode_string(b)
         track_total = None
         if '/' in track:
             track, track_total = track.split('/')
-        self._set_field('track', track)
-        self._set_field('track_total', track_total)
+        if fn == "track":
+            self._set_field('track', track)
+            self._set_field('track_total', track_total)
+        elif fn == "disc":
+            self._set_field('disc', track)
+            self._set_field('disc_total', track_total)
 
     def _calc_size(self, bytestr, bits_per_byte):
         # length of some mp3 header fields is described
@@ -500,12 +506,14 @@ class Ogg(TinyTag):
 
     def _parse_vorbis_comment(self, fh):
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
+        # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         comment_type_to_attr_mapping = {
             'album': 'album',
             'title': 'title',
             'artist': 'artist',
             'date': 'year',
             'tracknumber': 'track',
+            'discnumber': 'disc',
             'genre': 'genre'
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
@@ -741,8 +749,9 @@ class Wma(TinyTag):
             elif object_id == Wma.ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT:
                 mapping = {
                     'WM/TrackNumber': 'track',
+                    'WM/PartOfSet': 'disc',
                     'WM/Year': 'year',
-                    'WM/AlbumArtist': 'album',
+                    'WM/AlbumArtist': 'artist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
                 }
@@ -757,7 +766,15 @@ class Wma(TinyTag):
                     field_name = mapping.get(name)
                     if field_name:
                         field_value = self.__decode_ext_desc(value_type, value)
-                        self._set_field(field_name, str(field_value))
+                        if field_name == "disc":
+                            if '/' in str(field_value):
+                                disc, disc_total = field_value.split('/')
+                            else
+                                disc, disc_total = (fieldvalue, None)
+                            self._set_field("disc", disc)
+                            self._set_field("disc_total", disc)
+                        else:
+                            self._set_field(field_name, str(field_value))
             elif object_id == Wma.ASF_FILE_PROPERTY_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('file_id', 16, False),
