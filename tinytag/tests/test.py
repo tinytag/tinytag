@@ -14,7 +14,7 @@ import timeit
 import os
 import re
 from nose.tools import *
-from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac, _make_parser
+from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac, BitParser
 
 try:
     from collections import OrderedDict
@@ -34,26 +34,27 @@ testfiles = OrderedDict([
     ('samples/silence-44khz-56k-mono-1s.mp3', {'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'samplerate': 44100}),
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050}),
 
-    ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
-    ('samples/multipagecomment.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
-    ('samples/multipage-setup.ogg', {'genre': 'JRock', 'track_total': None, 'duration': 4.128798185941043, 'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False}),
-    ('samples/test.ogg', {'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False}),
+    ('samples/empty.ogg', {'channels': 2, 'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
+    ('samples/multipagecomment.ogg', {'channels': 2, 'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
+    ('samples/multipage-setup.ogg', {'channels': 2, 'genre': 'JRock', 'track_total': None, 'duration': 4.128798185941043, 'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False}),
+    ('samples/test.ogg', {'channels': 2, 'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False}),
+    ('samples/silence-22khz-mono-1s.ogg', {'channels': 1, 'samplerate': 22050}),
 
-    ('samples/test.wav', {'duration': 1.0}),
-    ('samples/test3sMono.wav', {'duration': 3.0}),
-    ('samples/test-tagged.wav', {'duration': 1.0}),
-    ('samples/silence-22khz-mono-1s.wav', {'duration': 1.0}),
+    ('samples/test.wav', {'channels': 2, 'duration': 1.0}),
+    ('samples/test3sMono.wav', {'channels': 1, 'duration': 3.0}),
+    ('samples/test-tagged.wav', {'channels': 2, 'duration': 1.0}),
+    ('samples/silence-22khz-mono-1s.wav', {'channels': 1, 'duration': 1.0}),
 
-    ('samples/flac1sMono.flac', {'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art'}),
-    ('samples/flac453sStereo.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None}),
-    ('samples/flac1.5sStereo.flac', {'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art'}),
-    ('samples/flac_application.flac', {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'}),
-    ('samples/no-tags.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None}),
-    ('samples/variable-block.flac', {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'}),
+    ('samples/flac1sMono.flac', {'channels': 1, 'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art'}),
+    ('samples/flac453sStereo.flac', {'channels': 2, 'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None}),
+    ('samples/flac1.5sStereo.flac', {'channels': 2, 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art'}),
+    ('samples/flac_application.flac', {'channels': 2, 'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'}),
+    ('samples/no-tags.flac', {'channels': 2, 'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None}),
+    ('samples/variable-block.flac', {'channels': 2, 'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'}),
     ('samples/106-invalid-streaminfo.flac', {}),
     ('samples/106-short-picture-block-size.flac', {}),
 
-    ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
+    ('samples/test2.wma', {'channels': 2, 'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
 ])
 
 testfolder = os.path.join(os.path.dirname(__file__))
@@ -140,26 +141,31 @@ def test_mp3_image_loading():
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
 
 def test_make_parser():
-    parser = _make_parser('aaaabbbb')
-    assert parser(b'\xF0') == [15, 0]
-    assert parser(b'\x0F') == [0, 15]
-    assert parser(b'\x11') == [1, 1]
-    assert parser(b'\x51') == [5, 1]
+    parser = BitParser('aaaabbbb')
+    assert parser.parse(b'\xF0') == [15, 0]
+    assert parser.parse(b'\x0F') == [0, 15]
+    assert parser.parse(b'\x11') == [1, 1]
+    assert parser.parse(b'\x51') == [5, 1]
 
-    parser = _make_parser('aaaabbbbcccccccc')
-    assert parser(b'\xF0\xFF') == [15, 0, 255]
-    assert parser(b'\x0F\x00') == [0, 15, 0]
-    assert parser(b'\x11\x22') == [1, 1, 34]
-    assert parser(b'\x51\x33') == [5, 1, 51]
+    parser = BitParser('aaaabbbbcccccccc')
+    assert parser.parse(b'\xF0\xFF') == [15, 0, 255]
+    assert parser.parse(b'\x0F\x00') == [0, 15, 0]
+    assert parser.parse(b'\x11\x22') == [1, 1, 34]
+    assert parser.parse(b'\x51\x33') == [5, 1, 51]
 
-    parser = _make_parser('aabcddee')
-    assert parser(b'\xFF') == [3, 1, 1, 3, 3]
-    assert parser(b'\x00') == [0, 0, 0, 0, 0]
-    assert parser(b'\x11') == [0, 0, 1, 0, 1]
-    assert parser(b'\x33') == [0, 1, 1, 0, 3]
+    parser = BitParser('aabcddee')
+    assert parser.parse(b'\xFF') == [3, 1, 1, 3, 3]
+    assert parser.parse(b'\x00') == [0, 0, 0, 0, 0]
+    assert parser.parse(b'\x11') == [0, 0, 1, 0, 1]
+    assert parser.parse(b'\x33') == [0, 1, 1, 0, 3]
 
-@raises(AssertionError)
+#@raises(AssertionError)
 def test_make_parser_multibyte_groups():
     # not implemented yet
-    parser = _make_parser('aaaaaaaaaaaaaaaa')
-    parser(b'\xFF\xFF')
+    parser = BitParser('aaaaaaaaaaaaaaaa')
+    print(parser.parse(b'\xFF\xFF'))
+    assert parser.parse(b'\xFF\xFF') == [65535]
+    parser = BitParser('aaaaaaaaabbbbbbb')
+    print([2**9 - 1, 2**7 - 1])
+    print(parser.parse(b'\xFF\xFF'))
+    assert parser.parse(b'\xFF\xFF') == [2**9 - 1, 2**7 - 1]

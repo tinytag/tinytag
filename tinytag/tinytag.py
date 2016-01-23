@@ -30,30 +30,42 @@ import io
 from io import BytesIO
 from itertools import groupby
 
-def _make_parser(bits):
-    # function to generate a binary parser, group the bits using characters, eg
-    # _make_parser(bits='aaaabbbbccccccc')(data='\xF1\xFF')
-    # > [15, 1, 255]
-    assert len(bits) % 8 == 0, 'bits must be multiple of 8 (to parse a byte)'
-    # iterate over each letter and save the start and end position of the group
-    groups = [(bits.index(c), bits.rindex(c)) for c, _ in groupby(bits) if c != '_']
-    def parse(data):
-        assert len(bits) == len(data) * 8
-        byte_data = struct.unpack('B'*len(data), data)
+
+class BitParser(object):
+    def __init__(self, bits):
+        # function to generate a binary parser, group the bits using characters, eg
+        # _make_parser(bits='aaaabbbbccccccc')(data='\xF1\xFF')
+        # > [15, 1, 255]
+        assert len(bits) % 8 == 0, 'bits must be multiple of 8 (to parse a byte)'
+        # iterate over each letter and save the start and end position of the group
+        self.groups = [(bits.index(c), bits.rindex(c)) for c, _ in groupby(bits) if c != '_']
+        self.byte_count = len(bits) // 8
+
+    def parse(self, data):
+        print('data', data)
+        byte_data = struct.unpack('B' * self.byte_count, data)
         retval = []
-        for bit_start, bit_end in groups:
-            bitmask = (1 << ((bit_end + 1) - bit_start)) - 1
-            byte_idx = bit_start // 8
-            print(bit_start, bit_end)
-            assert byte_idx == bit_end // 8, 'Cannot parse multibyte groups!'
-            shifted_data = byte_data[byte_idx] >> (7 - (bit_end % 8))
-            retval.append(shifted_data & bitmask)
+        for bit_start, bit_end in self.groups:
+            print('group')
+            val = 0
+            for nthbyte, byte_idx in enumerate(range(bit_start // 8, bit_end // 8 + 1)):
+                bitmask = (1 << ((bit_end + 1) - bit_start) - nthbyte * 8) - 1
+                print('bitmask', bin(bitmask))
+                byte_idx = bit_start // 8
+                # assert byte_idx == bit_end // 8, 'Cannot parse multibyte groups!'
+                shifted_data = byte_data[byte_idx] >> (7 - (bit_end % 8))
+                print('before', val)
+                val <<= nthbyte * 8
+                print('shifted', val)
+                val += (shifted_data & bitmask)
+                print('plus current', val)
+            retval.append(val)
         return retval
-    return parse
 
 
 class TinyTagException(Exception):
     pass
+
 
 class TinyTag(object):
     """Base class for all tag types"""
@@ -269,7 +281,7 @@ class ID3(TinyTag):
         1,  # 11 Single channel (Mono)
     ]
 
-    header_parser = _make_parser('___________bbcc_eeeeffg_ii______')
+    header_parser = BitParser('___________bbcc_eeeeffg_ii______')
 
     def _parse_xing_header(self, fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
@@ -302,7 +314,7 @@ class ID3(TinyTag):
             b = fh.peek(4)
             if len(b) < 4:
                 break  # EOF
-            (mpeg_id, layer_id, br_id, sr_id, pad, ch_id) = ID3.header_parser(b[0:4])
+            (mpeg_id, layer_id, br_id, sr_id, pad, ch_id) = ID3.header_parser.parse(b[0:4])
             self.channels = ID3.channels_per_channel_mode[ch_id]
             # check for eleven 1s, validate bitrate and sample rate
             if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
@@ -505,7 +517,7 @@ class Ogg(TinyTag):
             walker = BytesIO(packet)
             header = walker.read(7)
             if header == b"\x01vorbis":
-                (channels, self.samplerate, max_bitrate, bitrate,
+                (self.channels, self.samplerate, max_bitrate, bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
                 if not self.audio_offset:
                     self.bitrate = bitrate / 1024
@@ -577,16 +589,16 @@ class Wave(TinyTag):
         riff, size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
             raise TinyTagException('not a wave file!')
-        channels, bitdepth = 2, 16  # assume CD quality
+        bitdepth = 16  # assume CD quality
         chunk_header = fh.read(8)
         while len(chunk_header) > 0:
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
             if subchunkid == b'fmt ':
-                _, channels, self.samplerate = struct.unpack('HHI', fh.read(8))
+                _, self.channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
-                self.bitrate = self.samplerate * channels * bitdepth / 1024
+                self.bitrate = self.samplerate * self.channels * bitdepth / 1024
             elif subchunkid == b'data':
-                self.duration = float(subchunksize)/channels/self.samplerate/(bitdepth/8)
+                self.duration = float(subchunksize)/self.channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
@@ -648,7 +660,7 @@ class Flac(TinyTag):
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
                 # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
                 self.samplerate = self._bytes_to_int(header[4:7]) >> 4
-                channels = ((header[6] >> 1) & 0x07) + 1
+                self.channels = ((header[6] >> 1) & 0x07) + 1
                 bit_depth = ((header[6] & 1) << 4) + ((header[7] & 0xF0) >> 4)
                 bit_depth = (bit_depth + 1)
                 total_sample_bytes = [(header[7] & 0x0F)] + list(header[8:12])
@@ -812,6 +824,7 @@ class Wma(TinyTag):
                         ('bits_per_sample', 2, True),
                     ])
                     self.samplerate = stream_info['samples_per_second']
+                    self.channels = stream_info['number_of_channels']
                     self.bitrate = stream_info['avg_bytes_per_second'] * 8 / float(1000)
                     already_read = 16
                 fh.read(blocks['type_specific_data_length'] - already_read)

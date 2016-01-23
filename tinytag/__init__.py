@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from .tinytag import TinyTag, TinyTagException, ID3, Ogg, Wave, Flac, _make_parser
+from .tinytag import TinyTag, TinyTagException, ID3, Ogg, Wave, Flac, BitParser
 
 
 __version__ = '0.10.1'
