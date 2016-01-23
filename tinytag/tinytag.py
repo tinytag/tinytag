@@ -42,6 +42,10 @@ class TinyTag(object):
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
         self.channels = None
+ 
+        self.disc = None
+        self.disc_total = None
+
         self.duration = 0
         self.genre = None
         self.samplerate = None
@@ -115,10 +119,17 @@ class TinyTag(object):
         the payload (bytestring) can be changed using the transfunc"""
         if getattr(self, fieldname):
             return
-        if transfunc:
-            setattr(self, fieldname, transfunc(bytestring))
+        value = bytestring if transfunc is None else transfunc(bytestring)
+        if fieldname in ("track", "disc"):
+            current = total = None
+            if '/' in str(value):
+                current, total = str(value).split('/')
+            else:   
+                current = value
+            setattr(self, fieldname, current)
+            setattr(self, "%s_total" % fieldname, total)
         else:
-            setattr(self, fieldname, bytestring)
+            setattr(self, fieldname, value)
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -129,7 +140,7 @@ class TinyTag(object):
     def update(self, other):
         """update the values of this tag with the values from another tag"""
         for key in ['track', 'track_total', 'title', 'artist',
-                    'album', 'year', 'duration', 'genre']:
+                    'album', 'year', 'duration', 'genre', 'disc', 'disc_total']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -149,7 +160,6 @@ class TinyTag(object):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
         return s[:s.index('\x00')] if '\x00' in s else s
 
-
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
         'TRCK': 'track',  'TRK': 'track',
@@ -157,7 +167,7 @@ class ID3(TinyTag):
         'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
-        'TCON': 'genre',
+        'TCON': 'genre',  'TPOS': 'disc'
     }
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -405,10 +415,7 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                if fieldname == 'track':
-                    self._parse_track(content)
-                else:
-                    self._set_field(fieldname, content, self._decode_string)
+                self._set_field(fieldname, content, self._decode_string)
             elif frame_id == 'APIC' and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 mimetype_end_pos = content[1:].index(b'\x00')+1
@@ -436,14 +443,6 @@ class ID3(TinyTag):
         elif first_byte == b'\x03':
             return codecs.decode(b[1:], 'UTF-8')
         return self._unpad(codecs.decode(b, 'ISO-8859-1'))
-
-    def _parse_track(self, b):
-        track = self._decode_string(b)
-        track_total = None
-        if '/' in track:
-            track, track_total = track.split('/')
-        self._set_field('track', track)
-        self._set_field('track_total', track_total)
 
     def _calc_size(self, bytestr, bits_per_byte):
         # length of some mp3 header fields is described
@@ -500,12 +499,14 @@ class Ogg(TinyTag):
 
     def _parse_vorbis_comment(self, fh):
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
+        # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         comment_type_to_attr_mapping = {
             'album': 'album',
             'title': 'title',
             'artist': 'artist',
             'date': 'year',
             'tracknumber': 'track',
+            'discnumber': 'disc',
             'genre': 'genre'
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
@@ -741,8 +742,9 @@ class Wma(TinyTag):
             elif object_id == Wma.ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT:
                 mapping = {
                     'WM/TrackNumber': 'track',
+                    'WM/PartOfSet': 'disc',
                     'WM/Year': 'year',
-                    'WM/AlbumArtist': 'album',
+                    'WM/AlbumArtist': 'artist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
                 }

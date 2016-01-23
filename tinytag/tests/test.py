@@ -47,7 +47,7 @@ testfiles = OrderedDict([
     ('samples/flac1sMono.flac', {'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art'}),
     ('samples/flac453sStereo.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None}),
     ('samples/flac1.5sStereo.flac', {'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art'}),
-    ('samples/flac_application.flac', {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'}),
+    ('samples/flac_application.flac', {'track_total': '11', 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4', 'artist': 'Belle and Sebastian'}),
     ('samples/no-tags.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None}),
     ('samples/variable-block.flac', {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'}),
     ('samples/106-invalid-streaminfo.flac', {}),
@@ -62,6 +62,8 @@ testfolder = os.path.join(os.path.dirname(__file__))
 custom_samples_folder = os.path.join(testfolder, 'custom_samples')
 pattern_field_name_type = [
     ('sr(\d+)', 'samplerate', int),
+    ('dn(\d+)', 'disc', str),
+    ('dt(\d+)', 'disc_total', str),
     ('d(\d+.?\d*)', 'duration', float),
     ('b(\d+)', 'bitrate', int),
     ('c(\d)', 'channels', int),

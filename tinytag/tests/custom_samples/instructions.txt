@@ -16,3 +16,5 @@ These are the prefixes that can be used for the expected values:
     d - duration
     b - bitrate
     c - channels
+    dn - disc number
+    dt - disc total
