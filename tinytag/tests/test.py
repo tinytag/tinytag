@@ -23,6 +23,7 @@ testfiles = {'vbri.mp3': {'track_total': None, 'duration': 0.5224489795918368, '
              'flac_application.flac': {'track_total': None, 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4/11', 'artist': 'Belle and Sebastian'},
              'no-tags.flac': {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None},
              'variable-block.flac': {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'},
+             'wav-with-nul-byte.wav': {'album': None, 'audio_offset': 0, 'artist': None, 'track': None, 'title': None, 'track_total': None, 'audio_offest': 36, 'filesize': 410198, 'year': None, 'duration': 2, 'samplerate': 44100, 'bitrate': 1378},
              }
 
 
