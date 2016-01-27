@@ -380,6 +380,10 @@ class Wave(TinyTag):
         channels, samplerate, bitdepth = 2, 44100, 16  # assume CD quality
         chunk_header = fh.read(8)
         while len(chunk_header) > 0:
+            # if a WAV has been converted from an MP3 it may contain trailing zero bytes
+            # see `ID3._unpad`.
+            if chunk_header == '\x00':
+                break
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
             if subchunkid == b'fmt ':
                 _, channels, self.samplerate = struct.unpack('HHI', fh.read(8))
