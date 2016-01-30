@@ -38,6 +38,7 @@ class TinyTag(object):
         self._filehandler = filehandler
         self.filesize = filesize
         self.album = None
+        self.albumartist = None
         self.artist = None
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
@@ -62,7 +63,8 @@ class TinyTag(object):
         since multiple kinds of tags can be in one audio file
         """
         return all((self.track, self.track_total, self.title,
-                    self.artist, self.album, self.year, self.genre))
+                    self.artist, self.album, self.albumartist,
+                    self.year, self.genre))
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
@@ -141,7 +143,8 @@ class TinyTag(object):
     def update(self, other):
         """update the values of this tag with the values from another tag"""
         for key in ['track', 'track_total', 'title', 'artist',
-                    'album', 'year', 'duration', 'genre', 'disc', 'disc_total']:
+                    'album', 'albumartist', 'year', 'duration',
+                    'genre', 'disc', 'disc_total']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -168,7 +171,8 @@ class ID3(TinyTag):
         'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
-        'TCON': 'genre',  'TPOS': 'disc'
+        'TCON': 'genre',  'TPOS': 'disc',
+        'TPE2': 'albumartist',
     }
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -501,6 +505,7 @@ class Ogg(TinyTag):
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         comment_type_to_attr_mapping = {
             'album': 'album',
+            'albumartist': 'albumartist',
             'title': 'title',
             'artist': 'artist',
             'date': 'year',
