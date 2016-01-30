@@ -25,9 +25,9 @@ except ImportError:
 testfiles = OrderedDict([
     ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
-    ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
+    ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.14476357158483608, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3', 'albumartist': 'alba'}),
     ('samples/silence-44-s-v1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Darkwave', 'track_total': None, 'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2'}),
-    ('samples/id3v1-latin1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Rock', 'samplerate': None, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 256, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993'}),
+    ('samples/id3v1-latin1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Rock', 'samplerate': None, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 2489, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993', 'albumartist': 'alba'}),
     ('samples/UTF16.mp3', {'channels': None, 'samplerate': None, 'duration': 0, 'track_total': '11', 'track': '07', 'artist': 'The National', 'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld'}),
     ('samples/utf-8-id3v2.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Acustico', 'duration': 0, 'track_total': '21', 'track': '01', 'filesize': 2119, 'title': 'Gran día', 'artist': 'Paso a paso', 'album': 'S/T', 'bitrate': 0.0, 'year': None, 'audio_offset': 0, 'samplerate': None}),
     ('samples/empty_file.mp3', {'channels': None, 'samplerate': None, 'track_total': None, 'album': None, 'year': None, 'duration': 0.0, 'title': None, 'track': None, 'artist': None}),
@@ -46,7 +46,7 @@ testfiles = OrderedDict([
 
     ('samples/flac1sMono.flac', {'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art'}),
     ('samples/flac453sStereo.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None}),
-    ('samples/flac1.5sStereo.flac', {'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art'}),
+    ('samples/flac1.5sStereo.flac', {'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art', 'albumartist': 'alba'}),
     ('samples/flac_application.flac', {'track_total': '11', 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4', 'artist': 'Belle and Sebastian'}),
     ('samples/no-tags.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None}),
     ('samples/variable-block.flac', {'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites'}),
@@ -117,7 +117,7 @@ def test_mp3_length_estimation():
     ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
     print(tag.duration)
-    assert 3.5 < tag.duration < 4.0 
+    assert 3.5 < tag.duration < 4.0
 
 @raises(TinyTagException)
 def test_invalid_flac_file():
