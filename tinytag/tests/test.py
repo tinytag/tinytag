@@ -140,3 +140,8 @@ def test_mp3_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
+
+def test_to_str():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/empty.ogg'))
+    assert str(tag)  # since the dict is not ordered we cannot == 'somestring'
+    assert repr(tag)  # since the dict is not ordered we cannot == 'somestring'

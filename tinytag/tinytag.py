@@ -259,8 +259,7 @@ class ID3(TinyTag):
 
     def _parse_xing_header(self, fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
-        if not fh.read(4) == b'Xing':
-            return
+        fh.read(4) # read over Xing header
         header_flags = struct.unpack('>i', fh.read(4))[0]
         frames = byte_count = toc = vbr_scale = None
         if header_flags & 1: # FRAMES FLAG
