@@ -20,6 +20,7 @@ Features:
     * Wave
     * OGG
     * FLAC
+    * WMA
   * pure python
   * supports python 2 and 3 (without 2to3)
   * is tested 
@@ -39,6 +40,8 @@ List of possible attributes you can get with TinyTag:
     tag.artist        # artist name as string
     tag.audio_offset  # number of bytes before audio data begins
     tag.bitrate       # bitrate in kBits/s
+    tag.disc          # disc number
+    tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
     tag.filesize      # file size in bytes
     tag.genre         # genre as string

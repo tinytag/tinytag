@@ -42,10 +42,8 @@ class TinyTag(object):
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
         self.channels = None
- 
         self.disc = None
         self.disc_total = None
-
         self.duration = 0
         self.genre = None
         self.samplerate = None
