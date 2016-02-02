@@ -112,17 +112,20 @@ class TinyTag(object):
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname, bytestring, transfunc=None):
+    def _set_field(self, fieldname, bytestring, transfunc=None, overwrite=True):
         """convienience function to set fields of the tinytag by name.
         the payload (bytestring) can be changed using the transfunc"""
         if getattr(self, fieldname):
             return
         value = bytestring if transfunc is None else transfunc(bytestring)
+        if fieldname == 'genre' and value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
+            # funky: id3v1 genre hidden in a id3v2 field
+            value = ID3.ID3V1_GENRES[int(value)]
         if fieldname in ("track", "disc"):
             current = total = None
             if '/' in str(value):
                 current, total = str(value).split('/')
-            else:   
+            else:
                 current = value
             setattr(self, fieldname, current)
             setattr(self, "%s_total" % fieldname, total)
@@ -273,7 +276,6 @@ class ID3(TinyTag):
     def _determine_duration(self, fh):
         max_estimation_frames = (ID3._MAX_ESTIMATION_SEC*44100) // ID3.samples_per_frame
         frame_size_accu = 0
-        # set sample rate from first found frame later, default to 44khz
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
         bitrate_accu = 0  # add up bitrates to find average bitrate
@@ -316,6 +318,7 @@ class ID3(TinyTag):
                     if frames is not None and byte_count is not None:
                         self.duration = frames * ID3.samples_per_frame / float(self.samplerate)
                         self.bitrate = byte_count * 8 / self.duration
+                        self.audio_offset = fh.tell()
                         return
                     continue
 
@@ -372,8 +375,7 @@ class ID3(TinyTag):
                 extd_size = self._calc_size(size_bytes, 7)
                 extended_header = fh.read(extd_size - 6)
             while parsed_size < size:
-                is_id3_v22 = major == 2
-                frame_size = self._parse_frame(fh, is_v22=is_id3_v22)
+                frame_size = self._parse_frame(fh, id3version=major)
                 if frame_size == 0:
                     break
                 parsed_size += frame_size
@@ -393,13 +395,13 @@ class ID3(TinyTag):
             if genre_id < len(ID3.ID3V1_GENRES):
                 self.genre = ID3.ID3V1_GENRES[genre_id]
 
-    def _parse_frame(self, fh, is_v22=False):
+    def _parse_frame(self, fh, id3version=False):
         encoding = 'ISO-8859-1'  # default encoding used in most mp3 tags
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
-        frame_header_size = 6 if is_v22 else 10
-        frame_size_bytes = 3 if is_v22 else 4
-        binformat = '3s3B' if is_v22 else '4s4B2B'
-        bits_per_byte = 7 if is_v22 else 8
+        frame_header_size = 6 if id3version == 2 else 10
+        frame_size_bytes = 3 if id3version == 2 else 4
+        binformat = '3s3B' if id3version == 2 else '4s4B2B'
+        bits_per_byte = 7 if id3version == 4 else 8  # only id3v2.4 is synchsafe
         frame_header_data = fh.read(frame_header_size)
         if len(frame_header_data) == 0:
             return 0
