@@ -78,6 +78,7 @@ class TinyTag(object):
                 ('.wav'): Wave,
                 ('.flac'): Flac,
                 ('.wma'): Wma,
+                ('.m4a', '.mp4'): MP4,
             }
             for fileextension, tagclass in mapping.items():
                 if filename.lower().endswith(fileextension):
@@ -160,6 +161,23 @@ class TinyTag(object):
     def _unpad(self, s):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
         return s[:s.index('\x00')] if '\x00' in s else s
+
+class MP4(TinyTag):
+    def _determine_duration(self, fh):
+        raise NotImplementedError()
+
+    def _parse_tag(self, fh):
+        raise NotImplementedError()
+
+    def _parse_boxes(self, fh):
+        # http://atomicparsley.sourceforge.net/mpeg-4files.html
+        box_header = fh.read(8)
+        if len(box_header) < 8:
+            raise Exception('its broken :(')
+        box_size = struct.unpack('I', box_header[:4])
+        box_type = box_header[5:]
+        # return {box_type: self._parse_boxes(fh)}
+
 
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
