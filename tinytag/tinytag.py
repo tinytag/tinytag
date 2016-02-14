@@ -22,6 +22,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 #
+from collections import MutableMapping
 
 import codecs
 import struct
@@ -162,20 +163,106 @@ class TinyTag(object):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
         return s[:s.index('\x00')] if '\x00' in s else s
 
+
 class MP4(TinyTag):
+    # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
+    # and: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
+
+    #     b'ID32': 'parse_id3'
+    DATA_ATOM_TYPE = {
+        '\x00\x00\x00\x00': int,
+        '\x00\x00\x00\x01': str,
+    }
+
+    @classmethod
+    def parse_data_atom(cls, data):
+        data_type = cls.DATA_ATOM_TYPE.get(data[:4])
+        if data_type is None:
+            print('Cannot convert data type ', data[:4])
+        if data_type == str:
+            print(codecs.decode(data[5:], 'utf-8'))
+        elif data_type == int:
+            print(data[5:])
+        else:
+            print('????', data)
+
+    ATOM_TRAVERSAL_TREE = (
+        {b'moov': { b'udta': {b'meta': {b'ilst': {
+            # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
+            b'\xa9alb': {b'data': parse_data_atom},  # album
+            b'\xa9ART': {b'data': parse_data_atom},  # artist
+            b'aART':    {b'data': parse_data_atom},  # album artist
+            b'cpil':    {b'data': parse_data_atom},  # compilation
+            b'covr':    {b'data': parse_data_atom},  # cover art
+            b'disk':    {b'data': parse_data_atom},  # disk number
+            b'\xa9wrt': {b'data': parse_data_atom},  # composer
+            b'\xa9day': {b'data': parse_data_atom},  # year
+            b'\xa9gen': {b'data': parse_data_atom},  # genre string
+            b'gnre':    {b'data': parse_data_atom},  # genre number
+            b'\xa9nam': {b'data': parse_data_atom},  # title
+            b'trkn':    {b'data': parse_data_atom},  # track
+        }}}}}
+    )
+
+    VERSIONED_ATOMS = (b'meta',)# b'data')  # version prefixes are skipped for now
+
     def _determine_duration(self, fh):
-        raise NotImplementedError()
+        pass
 
     def _parse_tag(self, fh):
-        raise NotImplementedError()
+        return self._traverse_atoms(fh, traverse_atom_path=self.ATOM_TRAVERSAL_TREE, stop_at_pos=None)
 
-    def _parse_boxes(self, fh):
-        # http://atomicparsley.sourceforge.net/mpeg-4files.html
+    def _traverse_atoms(self, fh, traverse_atom_path, indent=0, stop_at_pos=None):
+        spaces = ' ' * indent
+        print(spaces, traverse_atom_path)
+        #print(spaces, 'pos', fh.tell(), stop_at_pos)
+        atom_header = fh.read(8)
+        while len(atom_header) == 8:
+            atom_size = struct.unpack('>I', atom_header[:4])[0] - 8
+            atom_type = atom_header[4:]
+            assert atom_size >= 0
+            if atom_size == 0:
+                atom_header = fh.read(8)
+                continue
+            print(spaces, atom_type, atom_size+8)
+
+            if atom_type in self.VERSIONED_ATOMS:
+                fh.seek(4, os.SEEK_CUR)  # jump over atom version for now
+            #print(spaces, 'path options', meta_path_options)
+            next_sub_path = traverse_atom_path.get(atom_type, None)
+            #print(spaces, 'next_sub_path', next_sub_path)
+            if issubclass(type(next_sub_path), MutableMapping):#$ is not None:
+                after_atom_pos = fh.tell() + atom_size
+                self._traverse_atoms(fh, traverse_atom_path=next_sub_path, indent=indent + 4, stop_at_pos=after_atom_pos)
+                #assert fh.tell() == after_atom_pos, '%s != %s' % (fh.tell(), after_atom_pos)
+            elif callable(next_sub_path):
+                print(spaces, 'calling on atom', atom_type)
+                # if the end of the tree is a callable, call it on the data
+                # within the atom
+                next_sub_path(fh.read(atom_size))
+            else:
+                print(callable(next_sub_path))
+                print(spaces, 'skipping atom', atom_type)
+                fh.seek(atom_size, os.SEEK_CUR) # jump over the atom
+            if stop_at_pos and fh.tell() >= stop_at_pos:
+                return  # return to parent (last node in tree)
+            atom_header = fh.read(8) # read next atom
+
+
+
+
+    def _parse_boxes(self, fh, read_until=None, indent=0):
         box_header = fh.read(8)
-        if len(box_header) < 8:
-            raise Exception('its broken :(')
-        box_size = struct.unpack('I', box_header[:4])
-        box_type = box_header[5:]
+        while len(box_header) == 8:
+            box_size = struct.unpack('>I', box_header[:4])[0]
+            box_type = box_header[4:]
+            print(' '*indent, box_type, box_size)
+            if box_size == 0:
+                return
+            # jump over top level box content
+            fh.read(box_size - 8)  # we already read the header (8 bytes)
+            print(fh.tell())
+            box_header = fh.read(8)
         # return {box_type: self._parse_boxes(fh)}
 
 
