@@ -170,100 +170,123 @@ class MP4(TinyTag):
 
     #     b'ID32': 'parse_id3'
     DATA_ATOM_TYPE = {
-        '\x00\x00\x00\x00': int,
-        '\x00\x00\x00\x01': str,
+        0: lambda x: x, # 'reserved',
+        1: lambda x: codecs.decode(x, 'utf-8'),  # UTF-8
+        2: lambda x: codecs.decode(x, 'utf-16'), # UTF-16
+        3: lambda x: codecs.decode(x, 's/jis'),  # S/JIS
+
+        # 16: duration in millis
+
+        #13: lambda x: x, # JPEG
+        #14: lambda x: x, # PNG
+        21: lambda x: struct.unpack('>b', x)[0], # BE Signed Integer
+        22: lambda x: struct.unpack('>B', x)[0], # BE Unsigned Integer
+        23: lambda x: struct.unpack('>f', x)[0], # BE Float32
+        24: lambda x: struct.unpack('>d', x)[0], # BE Float64
+        # 27: lambda x: x, # BMP
+        # 28: lambda x: x, # QuickTime Metadata atom
+        65: lambda x: struct.unpack('b', x)[0],  # 8-bit Signed Integer
+        66: lambda x: struct.unpack('>h', x)[0], # BE 16-bit Signed Integer
+        67: lambda x: struct.unpack('>i', x)[0], # BE 32-bit Signed Integer
+        74: lambda x: struct.unpack('>q', x)[0], # BE 64-bit Signed Integer
+        75: lambda x: struct.unpack('B', x)[0],  # 8-bit Unsigned Integer
+        76: lambda x: struct.unpack('>H', x)[0], # BE 16-bit Unsigned Integer
+        77: lambda x: struct.unpack('>I', x)[0], # BE 32-bit Unsigned Integer
+        78: lambda x: struct.unpack('>Q', x)[0], # BE 64-bit Unsigned Integer
     }
 
-    @classmethod
-    def parse_data_atom(cls, data):
-        data_type = cls.DATA_ATOM_TYPE.get(data[:4])
-        if data_type is None:
-            print('Cannot convert data type ', data[:4])
-        if data_type == str:
-            print(codecs.decode(data[5:], 'utf-8'))
-        elif data_type == int:
-            print(data[5:])
-        else:
-            print('????', data)
+    @staticmethod
+    def parse_data_atom(data_atom):
+        conversion = MP4.DATA_ATOM_TYPE.get(struct.unpack('>I', data_atom[:4])[0])
+        if conversion is None:
+            return  # don't know how to convert data atom
+        return conversion(data_atom[8:])  # skip header & null-bytes, convert rest
 
-    ATOM_TRAVERSAL_TREE = (
-        {b'moov': { b'udta': {b'meta': {b'ilst': {
-            # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
-            b'\xa9alb': {b'data': parse_data_atom},  # album
-            b'\xa9ART': {b'data': parse_data_atom},  # artist
-            b'aART':    {b'data': parse_data_atom},  # album artist
-            b'cpil':    {b'data': parse_data_atom},  # compilation
-            b'covr':    {b'data': parse_data_atom},  # cover art
-            b'disk':    {b'data': parse_data_atom},  # disk number
-            b'\xa9wrt': {b'data': parse_data_atom},  # composer
-            b'\xa9day': {b'data': parse_data_atom},  # year
-            b'\xa9gen': {b'data': parse_data_atom},  # genre string
-            b'gnre':    {b'data': parse_data_atom},  # genre number
-            b'\xa9nam': {b'data': parse_data_atom},  # title
-            b'trkn':    {b'data': parse_data_atom},  # track
-        }}}}}
-    )
+    @staticmethod
+    def parse_id3v1_genre(data_atom):
+        idx = struct.unpack('>H', data_atom[8:])[0]
+        return ID3.ID3V1_GENRES[idx] if idx < len(ID3.ID3V1_GENRES) else None
 
-    VERSIONED_ATOMS = (b'meta',)# b'data')  # version prefixes are skipped for now
+    @staticmethod
+    def parse_number_tuple(number_count, data_atom):
+        return struct.unpack('>'+'H' * number_count, data_atom[8:])
+
+    META_DATA_TREE = {b'moov': { b'udta': {b'meta': {b'ilst': {
+        # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
+        b'\xa9alb': {b'data': lambda x: MP4.parse_data_atom(x)},  # album
+        b'\xa9ART': {b'data': lambda x: MP4.parse_data_atom(x)},  # artist
+        b'aART':    {b'data': lambda x: MP4.parse_data_atom(x)},  # album artist
+        b'cpil':    {b'data': lambda x: MP4.parse_data_atom(x)},  # compilation
+        b'covr':    {b'data': lambda x: MP4.parse_data_atom(x)},  # cover art
+        b'disk':    {b'data': lambda x: MP4.parse_number_tuple(4, x)},  # disk number
+        b'\xa9wrt': {b'data': lambda x: MP4.parse_data_atom(x)},  # composer
+        b'\xa9day': {b'data': lambda x: MP4.parse_data_atom(x)},  # year
+        b'\xa9gen': {b'data': lambda x: MP4.parse_data_atom(x)},  # genre string
+        b'gnre':    {b'data': lambda x: MP4.parse_id3v1_genre(x)},  # id3v1 genre
+        b'\xa9nam': {b'data': lambda x: MP4.parse_data_atom(x)},  # title
+        b'trkn':    {b'data': lambda x: MP4.parse_number_tuple(4, x)},  # track
+    }}}}}
+
+    AUDIO_DATA_TREE = {
+
+    }
+
+    ATOM_NAME_TO_FIELD_NAME = {
+        b'\xa9alb': 'album',
+        b'\xa9ART': 'artist',
+        b'aART': 'albumartist',
+        b'cpil': 'compilation',
+        b'disk': 'disk',
+        b'\xa9wrt': 'composer',
+        b'\xa9day': 'year',
+        b'\xa9gen': 'genre',
+        b'gnre': 'genre',
+        b'\xa9nam': 'title',
+        b'trkn': 'track',
+    }
 
     def _determine_duration(self, fh):
-        pass
+        # print('DETERMINE DURATION')
+        return self._traverse_atoms(fh, path=self.META_DATA_TREE)
 
     def _parse_tag(self, fh):
-        return self._traverse_atoms(fh, traverse_atom_path=self.ATOM_TRAVERSAL_TREE, stop_at_pos=None)
+        # print('PARSE TAGS')
+        return self._traverse_atoms(fh, path=self.META_DATA_TREE)
 
-    def _traverse_atoms(self, fh, traverse_atom_path, indent=0, stop_at_pos=None):
-        spaces = ' ' * indent
-        print(spaces, traverse_atom_path)
-        #print(spaces, 'pos', fh.tell(), stop_at_pos)
-        atom_header = fh.read(8)
-        while len(atom_header) == 8:
-            atom_size = struct.unpack('>I', atom_header[:4])[0] - 8
+    def _traverse_atoms(self, fh, path, indent=0, stop_pos=None, curr_path=None):
+        header_size = 8
+        atom_header = fh.read(header_size)
+        while len(atom_header) == header_size:
+            # print(fh.tell() - header_size)
+            atom_size = struct.unpack('>I', atom_header[:4])[0] - header_size
             atom_type = atom_header[4:]
-            assert atom_size >= 0
-            if atom_size == 0:
-                atom_header = fh.read(8)
+            if curr_path is None:  # keep track how we traversed in the tree
+                curr_path = [atom_type]
+            if atom_size == 0:  # empty atom, jump to next one
+                atom_header = fh.read(header_size)
                 continue
-            print(spaces, atom_type, atom_size+8)
-
-            if atom_type in self.VERSIONED_ATOMS:
-                fh.seek(4, os.SEEK_CUR)  # jump over atom version for now
-            #print(spaces, 'path options', meta_path_options)
-            next_sub_path = traverse_atom_path.get(atom_type, None)
-            #print(spaces, 'next_sub_path', next_sub_path)
-            if issubclass(type(next_sub_path), MutableMapping):#$ is not None:
-                after_atom_pos = fh.tell() + atom_size
-                self._traverse_atoms(fh, traverse_atom_path=next_sub_path, indent=indent + 4, stop_at_pos=after_atom_pos)
-                #assert fh.tell() == after_atom_pos, '%s != %s' % (fh.tell(), after_atom_pos)
-            elif callable(next_sub_path):
-                print(spaces, 'calling on atom', atom_type)
-                # if the end of the tree is a callable, call it on the data
-                # within the atom
-                next_sub_path(fh.read(atom_size))
+            # print(' ' * 4 * len(curr_path), atom_type, atom_size + header_size)
+            if atom_type == b'meta':  # jump over atom version for now
+                fh.seek(4, os.SEEK_CUR)
+            sub_path = path.get(atom_type, None)
+            if issubclass(type(sub_path), MutableMapping):
+                atom_end_pos = fh.tell() + atom_size
+                self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
+                                     curr_path=curr_path + [atom_type])
+            elif callable(sub_path):
+                # call the leaf of ATOM_TRAVERSAL_TREE with the data of the atom
+                value = sub_path(fh.read(atom_size))
+                tiny_field = self.ATOM_NAME_TO_FIELD_NAME.get(curr_path[-1])
+                if value and tiny_field:
+                    if tiny_field in ('track', 'disk'):
+                        # track/disk number are 4 ints but only 2nd and 3rd matter
+                        value = '%d/%d' % (value[1], value[2]) # parsed by _set_field
+                    self._set_field(tiny_field, value)
             else:
-                print(callable(next_sub_path))
-                print(spaces, 'skipping atom', atom_type)
                 fh.seek(atom_size, os.SEEK_CUR) # jump over the atom
-            if stop_at_pos and fh.tell() >= stop_at_pos:
+            if stop_pos and fh.tell() >= stop_pos:
                 return  # return to parent (last node in tree)
-            atom_header = fh.read(8) # read next atom
-
-
-
-
-    def _parse_boxes(self, fh, read_until=None, indent=0):
-        box_header = fh.read(8)
-        while len(box_header) == 8:
-            box_size = struct.unpack('>I', box_header[:4])[0]
-            box_type = box_header[4:]
-            print(' '*indent, box_type, box_size)
-            if box_size == 0:
-                return
-            # jump over top level box content
-            fh.read(box_size - 8)  # we already read the header (8 bytes)
-            print(fh.tell())
-            box_header = fh.read(8)
-        # return {box_type: self._parse_boxes(fh)}
+            atom_header = fh.read(header_size) # read next atom
 
 
 class ID3(TinyTag):
