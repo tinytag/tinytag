@@ -126,7 +126,7 @@ class TinyTag(object):
         if fieldname in ("track", "disc"):
             current = total = None
             if '/' in str(value):
-                current, total = str(value).split('/')
+                current, total = str(value).split('/')[:2]
             else:
                 current = value
             setattr(self, fieldname, current)
