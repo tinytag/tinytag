@@ -32,6 +32,8 @@ import os
 import io
 from io import BytesIO
 
+DEBUG = True
+
 class TinyTagException(Exception):
     pass
 
@@ -131,10 +133,11 @@ class TinyTag(object):
             current = total = None
             if '/' in str(value):
                 current, total = str(value).split('/')[:2]
+                setattr(self, "%s_total" % fieldname, total)
             else:
                 current = value
             setattr(self, fieldname, current)
-            setattr(self, "%s_total" % fieldname, total)
+            
         else:
             setattr(self, fieldname, value)
 
@@ -174,14 +177,14 @@ class MP4(TinyTag):
     # and: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
 
     class Parser:
-        DATA_ATOM_TYPE = {
+        ATOM_DECODER_BY_TYPE = {
             0: lambda x: x, # 'reserved',
             1: lambda x: codecs.decode(x, 'utf-8'),  # UTF-8
             2: lambda x: codecs.decode(x, 'utf-16'), # UTF-16
             3: lambda x: codecs.decode(x, 's/jis'),  # S/JIS
             # 16: duration in millis
-            #13: lambda x: x, # JPEG
-            #14: lambda x: x, # PNG
+            13: lambda x: x, # JPEG
+            14: lambda x: x, # PNG
             21: lambda x: struct.unpack('>b', x)[0], # BE Signed Integer
             22: lambda x: struct.unpack('>B', x)[0], # BE Unsigned Integer
             23: lambda x: struct.unpack('>f', x)[0], # BE Float32
@@ -201,26 +204,31 @@ class MP4(TinyTag):
         @classmethod
         def make_data_atom_parser(cls, fieldname):
             def parse_data_atom(data_atom):
-                conversion = cls.DATA_ATOM_TYPE.get(struct.unpack('>I', data_atom[:4])[0])
+                data_type = struct.unpack('>I', data_atom[:4])[0]
+                conversion = cls.ATOM_DECODER_BY_TYPE.get(data_type)
                 if conversion is None:
-                    return  # don't know how to convert data atom
+                    print('Cannot convert data type: %s' % data_type)
+                    return {}  # don't know how to convert data atom
                 # skip header & null-bytes, convert rest
                 return {fieldname: conversion(data_atom[8:])}
             return parse_data_atom
 
         @classmethod
-        def make_number_parser(cls, *fieldnames):
+        def make_number_parser(cls, fieldname1, fieldname2):
             def _(data_atom):
-                numbers = struct.unpack('>HHHH', data_atom[8:])
-                return dict(zip(fieldnames, numbers[2:3]))
+                number_data = data_atom[8:14]
+                numbers = struct.unpack('>HHH', number_data)
+                # for some reason the first number is always irrelevant.
+                print({fieldname1: numbers[1], fieldname2: numbers[2]})
+                return {fieldname1: numbers[1], fieldname2: numbers[2]}
             return _
 
         @classmethod
         def parse_id3v1_genre(cls, data_atom):
             idx = struct.unpack('>H', data_atom[8:])[0]
-            return {'genre':
-                ID3.ID3V1_GENRES[idx] if idx < len(ID3.ID3V1_GENRES) else None
-            }
+            if idx < len(ID3.ID3V1_GENRES):
+                return {'genre': ID3.ID3V1_GENRES[idx]}
+            return {'genre': None}
 
         @classmethod
         def parse_audio_sample_entry(cls, data):
@@ -228,6 +236,27 @@ class MP4(TinyTag):
             samplerate = struct.unpack('>H', data[24:26])[0]
             return {'channels': channels, 'samplerate': samplerate}
 
+        @classmethod
+        def parse_mvhd(cls, data):
+            # http://stackoverflow.com/a/3639993/1191373
+            print(data)
+            print(len(data))
+            version_and_flags = data[0:4]
+            creation_time = data[4:12]
+            modification_time = data[12:20]
+            time_scale = data[20:24]
+            duration = data[24:28]
+            print(time_scale, duration)
+            return {}
+
+        @classmethod
+        def debug(cls, data):
+            print(data)
+            return {}
+
+    # The parser tree: Each key is an atom branch which is traversed if existing.
+    # Leaves of the parser tree are callables which receive the atom data.
+    # callables return {fieldname: value} which is applied to the tinytag instance.
     META_DATA_TREE = {b'moov': { b'udta': {b'meta': {b'ilst': {
         # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
         b'\xa9alb': {b'data': Parser.make_data_atom_parser('album')},
@@ -235,31 +264,37 @@ class MP4(TinyTag):
         b'aART':    {b'data': Parser.make_data_atom_parser('albumartist')},
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
         # b'covr':    {b'data': Parser.make_data_atom_parser('coverart')},
-        b'disk':    {b'data': Parser.make_number_parser('track', 'track_total')},
+        b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
         # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'gnre':    {b'data': Parser.parse_id3v1_genre},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
-        b'trkn':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
+        b'trkn':    {b'data': Parser.make_number_parser('track', 'track_total')},
+        # b'covr':    {b'data': Parser.make_data_atom_parser('_image_data')},
     }}}}}
 
     # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
-    AUDIO_DATA_TREE = (
-        {b'moov': {b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {b'mp4a':
-            Parser.parse_audio_sample_entry
-        }}}}}}}
-    )
+    AUDIO_DATA_TREE = {
+        b'moov': {
+            b'mvhd': Parser.parse_mvhd,
+            b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {b'mp4a':
+                Parser.parse_audio_sample_entry
+            }}}}}
+        }
+    }
 
-    VERSIONED_ATOMS = {b'meta', b'stsd'}
-    FLAGGED_ATOMS = {b'stsd'}
+    VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
+    FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
     def _determine_duration(self, fh):
-        print('DETERMINE DURATION')
+        if DEBUG:
+            print('DETERMINE DURATION')
         return self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
 
     def _parse_tag(self, fh):
-        print('PARSE TAGS')
+        if DEBUG:
+            print('PARSE TAGS')
         return self._traverse_atoms(fh, path=self.META_DATA_TREE)
 
     def _traverse_atoms(self, fh, path, indent=0, stop_pos=None, curr_path=None):
@@ -273,26 +308,31 @@ class MP4(TinyTag):
             if atom_size == 0:  # empty atom, jump to next one
                 atom_header = fh.read(header_size)
                 continue
-            # print(' ' * 4 * len(curr_path), atom_type, atom_size + header_size)
+            if DEBUG:
+                print(' ' * 4 * len(curr_path), atom_type, atom_size + header_size)
             if atom_type in self.VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, os.SEEK_CUR)
             if atom_type in self.FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, os.SEEK_CUR)
             sub_path = path.get(atom_type, None)
+            # if the path leaf is a dict, traverse deeper into the tree:
             if issubclass(type(sub_path), MutableMapping):
                 atom_end_pos = fh.tell() + atom_size
                 self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
                                      curr_path=curr_path + [atom_type])
+            # if the path-leaf is a callable, call it on the atom
             elif callable(sub_path):
-                # call the leaf of ATOM_TRAVERSAL_TREE with the data of the atom
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
-                    print(fieldname)
+                    if DEBUG:
+                        print(' ' * 4 * len(curr_path), 'FIELDNAME: ', fieldname)
                     if fieldname:
                         self._set_field(fieldname, value)
+            # if no action was specified using dict or callable, jump over atom
             else:
-                fh.seek(atom_size, os.SEEK_CUR) # jump over the atom
+                fh.seek(atom_size, os.SEEK_CUR)
+            # check if we have reached the end of this branch:
             if stop_pos and fh.tell() >= stop_pos:
-                return  # return to parent (last node in tree)
+                return  # return to parent (next parent node in tree)
             atom_header = fh.read(header_size) # read next atom
 
 
