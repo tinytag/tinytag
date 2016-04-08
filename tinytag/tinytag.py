@@ -241,12 +241,25 @@ class MP4(TinyTag):
             # http://stackoverflow.com/a/3639993/1191373
             print(data)
             print(len(data))
-            version_and_flags = data[0:4]
-            creation_time = data[4:12]
-            modification_time = data[12:20]
-            time_scale = data[20:24]
-            duration = data[24:28]
-            print(time_scale, duration)
+            version = struct.unpack('>I', data[0:4])
+            if version == 0:  # uses 32 bit integers for timestamps
+                creation_time = data[12:16]
+                print('creation_time', creation_time, struct.unpack('>I', creation_time))
+                modification_time = data[16:20]
+                print('modification_time', modification_time, struct.unpack('>I', modification_time))
+                time_scale = data[20:24]
+                print('time_scale', time_scale, struct.unpack('>I', time_scale))
+                duration = data[24:28]
+                print('duration', duration, struct.unpack('>I', duration))
+            else:  # uses 64 bit integers for timestamps
+                creation_time = data[12:20]
+                print('creation_time', creation_time, struct.unpack('>q', creation_time))
+                modification_time = data[20:28]
+                print('modification_time', modification_time, struct.unpack('>q', modification_time))
+                time_scale = data[28:32]
+                print('time_scale', time_scale, struct.unpack('>I', time_scale))
+                duration = data[32:36]
+                print('duration', duration, struct.unpack('>I', duration))
             return {}
 
         @classmethod
