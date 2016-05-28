@@ -137,7 +137,6 @@ class TinyTag(object):
             else:
                 current = value
             setattr(self, fieldname, current)
-            
         else:
             setattr(self, fieldname, value)
 
@@ -241,25 +240,30 @@ class MP4(TinyTag):
             # http://stackoverflow.com/a/3639993/1191373
             print(data)
             print(len(data))
-            version = struct.unpack('>I', data[0:4])
+            walker = BytesIO(data)
+            version = struct.unpack('b', walker.read(1))[0]
+            flags = walker.read(3)
+            print('version', version)
             if version == 0:  # uses 32 bit integers for timestamps
-                creation_time = data[12:16]
+                creation_time = walker.read(4)
                 print('creation_time', creation_time, struct.unpack('>I', creation_time))
-                modification_time = data[16:20]
+                modification_time = walker.read(4)
                 print('modification_time', modification_time, struct.unpack('>I', modification_time))
-                time_scale = data[20:24]
+                time_scale = walker.read(4)
                 print('time_scale', time_scale, struct.unpack('>I', time_scale))
-                duration = data[24:28]
+                duration = walker.read(4)
                 print('duration', duration, struct.unpack('>I', duration))
-            else:  # uses 64 bit integers for timestamps
-                creation_time = data[12:20]
+            elif version == 1:  # uses 64 bit integers for timestamps
+                creation_time = walker.read(8)
                 print('creation_time', creation_time, struct.unpack('>q', creation_time))
-                modification_time = data[20:28]
+                modification_time = walker.read(8)
                 print('modification_time', modification_time, struct.unpack('>q', modification_time))
-                time_scale = data[28:32]
+                time_scale = walker.read(8)
                 print('time_scale', time_scale, struct.unpack('>I', time_scale))
-                duration = data[32:36]
+                duration = walker.read(8)
                 print('duration', duration, struct.unpack('>I', duration))
+            else:
+                raise TinyTagException('Cannot parse mvhd atom of version %d!' % version)
             return {}
 
         @classmethod
