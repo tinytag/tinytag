@@ -32,7 +32,7 @@ import os
 import io
 from io import BytesIO
 
-DEBUG = True
+DEBUG = False  # some of the parsers will print some debug info when set to True
 
 class TinyTagException(Exception):
     pass
@@ -218,7 +218,6 @@ class MP4(TinyTag):
                 number_data = data_atom[8:14]
                 numbers = struct.unpack('>HHH', number_data)
                 # for some reason the first number is always irrelevant.
-                print({fieldname1: numbers[1], fieldname2: numbers[2]})
                 return {fieldname1: numbers[1], fieldname2: numbers[2]}
             return _
 
@@ -231,44 +230,42 @@ class MP4(TinyTag):
 
         @classmethod
         def parse_audio_sample_entry(cls, data):
-            channels = struct.unpack('>H', data[16:18])[0]
-            samplerate = struct.unpack('>H', data[24:26])[0]
-            return {'channels': channels, 'samplerate': samplerate}
+            # this atom also contains the esds atom:
+            # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
+            # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
+            datafh = BytesIO(data)
+            datafh.seek(16, os.SEEK_CUR) # jump over version and flags
+            channels = struct.unpack('>H', datafh.read(2))[0]
+            bit_depth = struct.unpack('>H', datafh.read(2))[0]
+            datafh.seek(2, os.SEEK_CUR)  # jump over QT compr id & pkt size
+            sr = struct.unpack('>I', datafh.read(4))[0]
+            esds_atom_size = struct.unpack('>I', data[28:32])[0]
+            esds_atom = BytesIO(data[36:36 + esds_atom_size])
+            # http://sasperger.tistory.com/103
+            esds_atom.seek(22, os.SEEK_CUR)  # jump over most data...
+            max_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000 # use
+            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000 # kbit/s
+            return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
 
         @classmethod
         def parse_mvhd(cls, data):
             # http://stackoverflow.com/a/3639993/1191373
-            print(data)
-            print(len(data))
             walker = BytesIO(data)
             version = struct.unpack('b', walker.read(1))[0]
             flags = walker.read(3)
-            print('version', version)
             if version == 0:  # uses 32 bit integers for timestamps
-                creation_time = walker.read(4)
-                print('creation_time', creation_time, struct.unpack('>I', creation_time))
-                modification_time = walker.read(4)
-                print('modification_time', modification_time, struct.unpack('>I', modification_time))
-                time_scale = walker.read(4)
-                print('time_scale', time_scale, struct.unpack('>I', time_scale))
-                duration = walker.read(4)
-                print('duration', duration, struct.unpack('>I', duration))
-            elif version == 1:  # uses 64 bit integers for timestamps
-                creation_time = walker.read(8)
-                print('creation_time', creation_time, struct.unpack('>q', creation_time))
-                modification_time = walker.read(8)
-                print('modification_time', modification_time, struct.unpack('>q', modification_time))
-                time_scale = walker.read(8)
-                print('time_scale', time_scale, struct.unpack('>I', time_scale))
-                duration = walker.read(8)
-                print('duration', duration, struct.unpack('>I', duration))
-            else:
-                raise TinyTagException('Cannot parse mvhd atom of version %d!' % version)
-            return {}
+                walker.seek(8, os.SEEK_CUR) # jump over create & mod times
+                time_scale = struct.unpack('>I', walker.read(4))[0]
+                duration = struct.unpack('>I', walker.read(4))[0]
+            else: # version == 1:  # uses 64 bit integers for timestamps
+                walker.seek(16, os.SEEK_CUR) # jump over create & mod times
+                time_scale = struct.unpack('>I', walker.read(4))[0]
+                duration = struct.unpack('>q', walker.read(8))[0]
+            return {'duration': duration / time_scale}
 
         @classmethod
-        def debug(cls, data):
-            print(data)
+        def debug_atom(cls, data):
+            print(data)  # use this function to inspect atoms in an atom tree
             return {}
 
     # The parser tree: Each key is an atom branch which is traversed if existing.
@@ -280,7 +277,6 @@ class MP4(TinyTag):
         b'\xa9ART': {b'data': Parser.make_data_atom_parser('artist')},
         b'aART':    {b'data': Parser.make_data_atom_parser('albumartist')},
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
-        # b'covr':    {b'data': Parser.make_data_atom_parser('coverart')},
         b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
         # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
@@ -305,13 +301,9 @@ class MP4(TinyTag):
     FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
     def _determine_duration(self, fh):
-        if DEBUG:
-            print('DETERMINE DURATION')
         return self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
 
     def _parse_tag(self, fh):
-        if DEBUG:
-            print('PARSE TAGS')
         return self._traverse_atoms(fh, path=self.META_DATA_TREE)
 
     def _traverse_atoms(self, fh, path, indent=0, stop_pos=None, curr_path=None):
@@ -337,7 +329,7 @@ class MP4(TinyTag):
                 atom_end_pos = fh.tell() + atom_size
                 self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
                                      curr_path=curr_path + [atom_type])
-            # if the path-leaf is a callable, call it on the atom
+            # if the path-leaf is a callable, call it on the atom data
             elif callable(sub_path):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if DEBUG:
