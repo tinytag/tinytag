@@ -22,10 +22,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 #
-import time
 
 from collections import MutableMapping
-
 import codecs
 import struct
 import os
@@ -223,7 +221,8 @@ class MP4(TinyTag):
 
         @classmethod
         def parse_id3v1_genre(cls, data_atom):
-            idx = struct.unpack('>H', data_atom[8:])[0]
+            # dunno why the genre is offset by -1 but this is how mutagen does it
+            idx = struct.unpack('>H', data_atom[8:])[0] - 1
             if idx < len(ID3.ID3V1_GENRES):
                 return {'genre': ID3.ID3V1_GENRES[idx]}
             return {'genre': None}
@@ -261,7 +260,7 @@ class MP4(TinyTag):
                 walker.seek(16, os.SEEK_CUR) # jump over create & mod times
                 time_scale = struct.unpack('>I', walker.read(4))[0]
                 duration = struct.unpack('>q', walker.read(8))[0]
-            return {'duration': duration / time_scale}
+            return {'duration': float(duration) / time_scale}
 
         @classmethod
         def debug_atom(cls, data):
@@ -318,7 +317,7 @@ class MP4(TinyTag):
                 atom_header = fh.read(header_size)
                 continue
             if DEBUG:
-                print(' ' * 4 * len(curr_path), atom_type, atom_size + header_size)
+                print('%s pos: %d atom: %s len: %d' % (' ' * 4 * len(curr_path), fh.tell() - header_size, atom_type, atom_size + header_size))
             if atom_type in self.VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, os.SEEK_CUR)
             if atom_type in self.FLAGGED_ATOMS:  # jump atom flags for now
