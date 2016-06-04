@@ -55,6 +55,10 @@ testfiles = OrderedDict([
     ('samples/106-short-picture-block-size.flac', {}),
 
     ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
+
+    ('samples/test.m4a', {'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
+    ('samples/test2.m4a', {'bitrate': 256.0, 'track': 1, 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1, 'title': 'Go Out and Get Some'}),
+
 ])
 
 testfolder = os.path.join(os.path.dirname(__file__))
