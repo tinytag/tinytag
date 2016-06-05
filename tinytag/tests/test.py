@@ -23,6 +23,7 @@ except ImportError:
 
 
 testfiles = OrderedDict([
+    # MP3
     ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
@@ -35,16 +36,22 @@ testfiles = OrderedDict([
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050}),
     ('samples/id3v24-long-title.mp3', {'track': '1', 'audio_offset': 0, 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'duration': 0, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'bitrate': 0.0, 'samplerate': None, 'year': None, 'disc': '1'}),
 
+    # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
     ('samples/multipagecomment.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
     ('samples/multipage-setup.ogg', {'genre': 'JRock', 'track_total': None, 'duration': 4.128798185941043, 'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False}),
     ('samples/test.ogg', {'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False}),
 
+    # OPUS
+    ('samples/test.opus', {'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2, 'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25', 'filesize': 10000, 'artist': 'nomico', 'album': 'Exserens - A selection of Alstroemeria Records'}),
+
+    # WAV
     ('samples/test.wav', {'duration': 1.0}),
     ('samples/test3sMono.wav', {'duration': 3.0}),
     ('samples/test-tagged.wav', {'duration': 1.0}),
     ('samples/silence-22khz-mono-1s.wav', {'duration': 1.0}),
 
+    # FLAC
     ('samples/flac1sMono.flac', {'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art'}),
     ('samples/flac453sStereo.flac', {'track_total': None, 'album': None, 'year': None, 'duration': 453.51473922902494, 'title': None, 'track': None, 'artist': None}),
     ('samples/flac1.5sStereo.flac', {'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art'}),
@@ -54,7 +61,13 @@ testfiles = OrderedDict([
     ('samples/106-invalid-streaminfo.flac', {}),
     ('samples/106-short-picture-block-size.flac', {}),
 
+    # WMA
     ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
+
+    # M4A/MP4
+    ('samples/test.m4a', {'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
+    ('samples/test2.m4a', {'bitrate': 256.0, 'track': 1, 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1, 'title': 'Go Out and Get Some'}),
+
 ])
 
 testfolder = os.path.join(os.path.dirname(__file__))

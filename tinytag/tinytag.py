@@ -23,11 +23,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 #
 
+from collections import MutableMapping
 import codecs
 import struct
 import os
 import io
 from io import BytesIO
+
+DEBUG = False  # some of the parsers will print some debug info when set to True
 
 class TinyTagException(Exception):
     pass
@@ -76,10 +79,11 @@ class TinyTag(object):
             """choose which tag reader should be used by file extension"""
             mapping = {
                 ('.mp3',): ID3,
-                ('.oga', '.ogg'): Ogg,
+                ('.oga', '.ogg', '.opus'): Ogg,
                 ('.wav'): Wave,
                 ('.flac'): Flac,
                 ('.wma'): Wma,
+                ('.m4a', '.mp4'): MP4,
             }
             for fileextension, tagclass in mapping.items():
                 if filename.lower().endswith(fileextension):
@@ -127,10 +131,10 @@ class TinyTag(object):
             current = total = None
             if '/' in str(value):
                 current, total = str(value).split('/')[:2]
+                setattr(self, "%s_total" % fieldname, total)
             else:
                 current = value
             setattr(self, fieldname, current)
-            setattr(self, "%s_total" % fieldname, total)
         else:
             setattr(self, fieldname, value)
 
@@ -163,6 +167,182 @@ class TinyTag(object):
     def _unpad(self, s):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
         return s[:s.index('\x00')] if '\x00' in s else s
+
+
+class MP4(TinyTag):
+    # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
+    # and: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
+
+    class Parser:
+        ATOM_DECODER_BY_TYPE = {
+            0: lambda x: x, # 'reserved',
+            1: lambda x: codecs.decode(x, 'utf-8'),  # UTF-8
+            2: lambda x: codecs.decode(x, 'utf-16'), # UTF-16
+            3: lambda x: codecs.decode(x, 's/jis'),  # S/JIS
+            # 16: duration in millis
+            13: lambda x: x, # JPEG
+            14: lambda x: x, # PNG
+            21: lambda x: struct.unpack('>b', x)[0], # BE Signed Integer
+            22: lambda x: struct.unpack('>B', x)[0], # BE Unsigned Integer
+            23: lambda x: struct.unpack('>f', x)[0], # BE Float32
+            24: lambda x: struct.unpack('>d', x)[0], # BE Float64
+            # 27: lambda x: x, # BMP
+            # 28: lambda x: x, # QuickTime Metadata atom
+            65: lambda x: struct.unpack('b', x)[0],  # 8-bit Signed Integer
+            66: lambda x: struct.unpack('>h', x)[0], # BE 16-bit Signed Integer
+            67: lambda x: struct.unpack('>i', x)[0], # BE 32-bit Signed Integer
+            74: lambda x: struct.unpack('>q', x)[0], # BE 64-bit Signed Integer
+            75: lambda x: struct.unpack('B', x)[0],  # 8-bit Unsigned Integer
+            76: lambda x: struct.unpack('>H', x)[0], # BE 16-bit Unsigned Integer
+            77: lambda x: struct.unpack('>I', x)[0], # BE 32-bit Unsigned Integer
+            78: lambda x: struct.unpack('>Q', x)[0], # BE 64-bit Unsigned Integer
+        }
+
+        @classmethod
+        def make_data_atom_parser(cls, fieldname):
+            def parse_data_atom(data_atom):
+                data_type = struct.unpack('>I', data_atom[:4])[0]
+                conversion = cls.ATOM_DECODER_BY_TYPE.get(data_type)
+                if conversion is None:
+                    print('Cannot convert data type: %s' % data_type)
+                    return {}  # don't know how to convert data atom
+                # skip header & null-bytes, convert rest
+                return {fieldname: conversion(data_atom[8:])}
+            return parse_data_atom
+
+        @classmethod
+        def make_number_parser(cls, fieldname1, fieldname2):
+            def _(data_atom):
+                number_data = data_atom[8:14]
+                numbers = struct.unpack('>HHH', number_data)
+                # for some reason the first number is always irrelevant.
+                return {fieldname1: numbers[1], fieldname2: numbers[2]}
+            return _
+
+        @classmethod
+        def parse_id3v1_genre(cls, data_atom):
+            # dunno why the genre is offset by -1 but this is how mutagen does it
+            idx = struct.unpack('>H', data_atom[8:])[0] - 1
+            if idx < len(ID3.ID3V1_GENRES):
+                return {'genre': ID3.ID3V1_GENRES[idx]}
+            return {'genre': None}
+
+        @classmethod
+        def parse_audio_sample_entry(cls, data):
+            # this atom also contains the esds atom:
+            # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
+            # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
+            datafh = BytesIO(data)
+            datafh.seek(16, os.SEEK_CUR) # jump over version and flags
+            channels = struct.unpack('>H', datafh.read(2))[0]
+            bit_depth = struct.unpack('>H', datafh.read(2))[0]
+            datafh.seek(2, os.SEEK_CUR)  # jump over QT compr id & pkt size
+            sr = struct.unpack('>I', datafh.read(4))[0]
+            esds_atom_size = struct.unpack('>I', data[28:32])[0]
+            esds_atom = BytesIO(data[36:36 + esds_atom_size])
+            # http://sasperger.tistory.com/103
+            esds_atom.seek(22, os.SEEK_CUR)  # jump over most data...
+            max_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000 # use
+            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000 # kbit/s
+            return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
+
+        @classmethod
+        def parse_mvhd(cls, data):
+            # http://stackoverflow.com/a/3639993/1191373
+            walker = BytesIO(data)
+            version = struct.unpack('b', walker.read(1))[0]
+            flags = walker.read(3)
+            if version == 0:  # uses 32 bit integers for timestamps
+                walker.seek(8, os.SEEK_CUR) # jump over create & mod times
+                time_scale = struct.unpack('>I', walker.read(4))[0]
+                duration = struct.unpack('>I', walker.read(4))[0]
+            else: # version == 1:  # uses 64 bit integers for timestamps
+                walker.seek(16, os.SEEK_CUR) # jump over create & mod times
+                time_scale = struct.unpack('>I', walker.read(4))[0]
+                duration = struct.unpack('>q', walker.read(8))[0]
+            return {'duration': float(duration) / time_scale}
+
+        @classmethod
+        def debug_atom(cls, data):
+            print(data)  # use this function to inspect atoms in an atom tree
+            return {}
+
+    # The parser tree: Each key is an atom branch which is traversed if existing.
+    # Leaves of the parser tree are callables which receive the atom data.
+    # callables return {fieldname: value} which is applied to the tinytag instance.
+    META_DATA_TREE = {b'moov': { b'udta': {b'meta': {b'ilst': {
+        # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
+        b'\xa9alb': {b'data': Parser.make_data_atom_parser('album')},
+        b'\xa9ART': {b'data': Parser.make_data_atom_parser('artist')},
+        b'aART':    {b'data': Parser.make_data_atom_parser('albumartist')},
+        # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
+        b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
+        # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
+        b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
+        b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
+        b'gnre':    {b'data': Parser.parse_id3v1_genre},
+        b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
+        b'trkn':    {b'data': Parser.make_number_parser('track', 'track_total')},
+        # b'covr':    {b'data': Parser.make_data_atom_parser('_image_data')},
+    }}}}}
+
+    # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
+    AUDIO_DATA_TREE = {
+        b'moov': {
+            b'mvhd': Parser.parse_mvhd,
+            b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {b'mp4a':
+                Parser.parse_audio_sample_entry
+            }}}}}
+        }
+    }
+
+    VERSIONED_ATOMS = set((b'meta', b'stsd'))  # those have an extra 4 byte header
+    FLAGGED_ATOMS = set((b'stsd',))  # these also have an extra 4 byte header
+
+    def _determine_duration(self, fh):
+        return self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
+
+    def _parse_tag(self, fh):
+        return self._traverse_atoms(fh, path=self.META_DATA_TREE)
+
+    def _traverse_atoms(self, fh, path, indent=0, stop_pos=None, curr_path=None):
+        header_size = 8
+        atom_header = fh.read(header_size)
+        while len(atom_header) == header_size:
+            atom_size = struct.unpack('>I', atom_header[:4])[0] - header_size
+            atom_type = atom_header[4:]
+            if curr_path is None:  # keep track how we traversed in the tree
+                curr_path = [atom_type]
+            if atom_size == 0:  # empty atom, jump to next one
+                atom_header = fh.read(header_size)
+                continue
+            if DEBUG:
+                print('%s pos: %d atom: %s len: %d' % (' ' * 4 * len(curr_path), fh.tell() - header_size, atom_type, atom_size + header_size))
+            if atom_type in self.VERSIONED_ATOMS:  # jump atom version for now
+                fh.seek(4, os.SEEK_CUR)
+            if atom_type in self.FLAGGED_ATOMS:  # jump atom flags for now
+                fh.seek(4, os.SEEK_CUR)
+            sub_path = path.get(atom_type, None)
+            # if the path leaf is a dict, traverse deeper into the tree:
+            if issubclass(type(sub_path), MutableMapping):
+                atom_end_pos = fh.tell() + atom_size
+                self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
+                                     curr_path=curr_path + [atom_type])
+            # if the path-leaf is a callable, call it on the atom data
+            elif callable(sub_path):
+                for fieldname, value in sub_path(fh.read(atom_size)).items():
+                    if DEBUG:
+                        print(' ' * 4 * len(curr_path), 'FIELDNAME: ', fieldname)
+                    if fieldname:
+                        self._set_field(fieldname, value)
+            # if no action was specified using dict or callable, jump over atom
+            else:
+                fh.seek(atom_size, os.SEEK_CUR)
+            # check if we have reached the end of this branch:
+            if stop_pos and fh.tell() >= stop_pos:
+                return  # return to parent (next parent node in tree)
+            atom_header = fh.read(header_size) # read next atom
+
 
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
@@ -487,14 +667,25 @@ class Ogg(TinyTag):
         page_start_pos = fh.tell()  # set audio_offest later if its audio data
         for packet in self._parse_pages(fh):
             walker = BytesIO(packet)
-            header = walker.read(7)
-            if header == b"\x01vorbis":
+            if packet[0:7] == b"\x01vorbis":
                 (channels, self.samplerate, max_bitrate, bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
                 if not self.audio_offset:
                     self.bitrate = bitrate / 1024
                     self.audio_offset = page_start_pos
-            elif header == b"\x03vorbis":
+            elif packet[0:7] == b"\x03vorbis":
+                walker.seek(7, os.SEEK_CUR)  # jump over header name
+                self._parse_vorbis_comment(walker)
+            elif packet[0:8] == b'OpusHead':  # parse opus header
+                # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
+                # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
+                walker.seek(8, os.SEEK_CUR)  # jump over header name
+                (version, ch, _, sr, _, _) = struct.unpack("<BBHIHB", walker.read(11))
+                if (version & 0xF0) == 0:  # only major version 0 supported
+                    self.channels = ch
+                    self.samplerate = sr
+            elif packet[0:8] == b'OpusTags':  # parse opus metadata:
+                walker.seek(8, os.SEEK_CUR)  # jump over header name
                 self._parse_vorbis_comment(walker)
             else:
                 break
@@ -748,7 +939,7 @@ class Wma(TinyTag):
                     'WM/TrackNumber': 'track',
                     'WM/PartOfSet': 'disc',
                     'WM/Year': 'year',
-                    'WM/AlbumArtist': 'artist',
+                    'WM/AlbumArtist': 'albumartist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
                 }
