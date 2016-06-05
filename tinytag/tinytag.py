@@ -920,8 +920,8 @@ class Wma(TinyTag):
         while True:
             object_id = fh.read(16)
             object_size = self._bytes_to_int_le(fh.read(8))
-            if object_size == 0:
-                break
+            if object_size == 0 or object_size > self.filesize:
+                break  # invalid object, stop parsing.
             if object_id == Wma.ASF_CONTENT_DESCRIPTION_OBJECT:
                 len_blocks = self.read_blocks(fh, [
                     ('title_length', 2, True),
@@ -999,7 +999,7 @@ class Wma(TinyTag):
                     self.samplerate = stream_info['samples_per_second']
                     self.bitrate = stream_info['avg_bytes_per_second'] * 8 / float(1000)
                     already_read = 16
-                fh.read(blocks['type_specific_data_length'] - already_read)
-                fh.read(blocks['error_correction_data_length'])
+                fh.seek(blocks['type_specific_data_length'] - already_read, os.SEEK_CUR)
+                fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
             else:
-                fh.read(object_size - 24) # read over onknown object ids
+                fh.seek(object_size - 24, os.SEEK_CUR) # read over onknown object ids
