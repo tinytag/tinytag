@@ -296,8 +296,8 @@ class MP4(TinyTag):
         }
     }
 
-    VERSIONED_ATOMS = set(b'meta', b'stsd')  # those have an extra 4 byte header
-    FLAGGED_ATOMS = set(b'stsd')  # these also have an extra 4 byte header
+    VERSIONED_ATOMS = set((b'meta', b'stsd'))  # those have an extra 4 byte header
+    FLAGGED_ATOMS = set((b'stsd',))  # these also have an extra 4 byte header
 
     def _determine_duration(self, fh):
         return self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
