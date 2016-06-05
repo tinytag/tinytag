@@ -130,8 +130,8 @@ class TinyTag(object):
             value = ID3.ID3V1_GENRES[int(value)]
         if fieldname in ("track", "disc"):
             current = total = None
-            if '/' in str(value):
-                current, total = str(value).split('/')[:2]
+            if type(value).__name__ in ('str', 'unicode') and '/' in value:
+                current, total = value.split('/')[:2]
                 setattr(self, "%s_total" % fieldname, total)
             else:
                 current = value
