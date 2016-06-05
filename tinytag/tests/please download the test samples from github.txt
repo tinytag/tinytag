@@ -1,0 +1,3 @@
+If you installed tinytag from pip, it is missing the test samples needed to
+run the test suite. please download the sources (including the test samples)
+from github to run the test suite. See: https://github.com/devsnd/tinytag
