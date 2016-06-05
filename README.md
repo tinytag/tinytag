@@ -69,4 +69,5 @@ and possibly more.
 
 Changelog:
 
+ * 0.15.0: fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
  * 0.14.0: MP4/M4A and Opus support
