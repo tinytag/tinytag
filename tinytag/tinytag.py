@@ -592,13 +592,13 @@ class ID3(TinyTag):
             return 0
         frame = struct.unpack(binformat, frame_header_data)
         frame_id = self._decode_string(frame[0])
-        # Stop parsing the frame if an invalid frame ID is found
-        if not re.match(r'[A-Z0-9]{3,4}', frame_id):
-            return 0
-
         frame_size = self._calc_size(frame[1:1+frame_size_bytes], bits_per_byte)
+        parsable = frame_id in ID3.FRAME_ID_TO_FIELD or frame_id == 'APIC'
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
+            if not parsable:  # jump over unparsable frames
+                fh.seek(frame_size, os.SEEK_CUR)
+                return frame_size
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
