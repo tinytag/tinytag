@@ -25,6 +25,7 @@
 
 from collections import MutableMapping
 import codecs
+import re
 import struct
 import os
 import io
@@ -551,7 +552,7 @@ class ID3(TinyTag):
             extended = (header[3] & 0x40) > 0
             experimental = (header[3] & 0x20) > 0
             footer = (header[3] & 0x10) > 0
-            size = self._calc_size(header[4:9], 7)
+            size = self._calc_size(header[4:8], 7)
             self._bytepos_after_id3v2 = size
             parsed_size = 0
             if extended:  # just read over the extended header.
@@ -591,6 +592,9 @@ class ID3(TinyTag):
             return 0
         frame = struct.unpack(binformat, frame_header_data)
         frame_id = self._decode_string(frame[0])
+        # Stop parsing the frame if an invalid frame ID is found
+        if not re.match(r'[A-Z0-9]{3,4}', frame_id):
+            return 0
 
         frame_size = self._calc_size(frame[1:1+frame_size_bytes], bits_per_byte)
         if frame_size > 0:
