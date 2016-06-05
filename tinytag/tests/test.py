@@ -35,6 +35,7 @@ testfiles = OrderedDict([
     ('samples/silence-44khz-56k-mono-1s.mp3', {'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'samplerate': 44100}),
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050}),
     ('samples/id3v24-long-title.mp3', {'track': '1', 'audio_offset': 0, 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'duration': 0, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'bitrate': 0.0, 'samplerate': None, 'year': None, 'disc': '1'}),
+    ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),

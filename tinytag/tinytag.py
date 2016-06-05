@@ -620,9 +620,11 @@ class ID3(TinyTag):
         if first_byte == b'\x00':
             return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
         elif first_byte == b'\x01':
+            # read byte order mark to determine endianess
+            encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
             # strip the bom and optional null bytes
             bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
-            return self._unpad(codecs.decode(bytestr, 'UTF-16be'))
+            return self._unpad(codecs.decode(bytestr, encoding))
         elif first_byte == b'\x02':
             # strip optional null byte
             bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
