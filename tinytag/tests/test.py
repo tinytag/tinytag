@@ -134,6 +134,11 @@ def test_mp3_length_estimation():
     print(tag.duration)
     assert 3.5 < tag.duration < 4.0 
 
+
+@raises(TinyTagException)
+def test_unexpected_eof():
+    tag = ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
+
 @raises(TinyTagException)
 def test_invalid_flac_file():
     tag = Flac.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
