@@ -900,11 +900,11 @@ class Wma(TinyTag):
 
     def __decode_ext_desc(self, value_type, value):
         ''' decode ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values'''
-        if value_type == 0:
+        if value_type == 0:  # Unicode string
             return self.__decode_string(value)
-        elif value_type == 1:
+        elif value_type == 1:  # BYTE array
             return value
-        elif 1 < value_type < 6:
+        elif 1 < value_type < 6:  # DWORD / QWORD / WORD
             return self._bytes_to_int_le(value)
 
     def _parse_tag(self, fh):
@@ -960,7 +960,7 @@ class Wma(TinyTag):
                     field_name = mapping.get(name)
                     if field_name:
                         field_value = self.__decode_ext_desc(value_type, value)
-                        self._set_field(field_name, str(field_value))
+                        self._set_field(field_name, field_value)
             elif object_id == Wma.ASF_FILE_PROPERTY_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('file_id', 16, False),
