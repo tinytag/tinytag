@@ -25,7 +25,7 @@
 
 from collections import MutableMapping
 import codecs
-import re
+from functools import reduce
 import struct
 import os
 import io
@@ -35,6 +35,12 @@ DEBUG = False  # some of the parsers will print some debug info when set to True
 
 class TinyTagException(Exception):
     pass
+
+def _read(fh, nbytes):  # helper function to check if we haven't reached EOF
+    b = fh.read(nbytes)
+    if len(b) < nbytes:
+        raise TinyTagException('Unexpected end of file')
+    return b
 
 class TinyTag(object):
     """Base class for all tag types"""
@@ -154,16 +160,13 @@ class TinyTag(object):
                 setattr(self, key, getattr(other, key))
 
     def _bytes_to_int(self, b):
-        result = 0
-        for byte in b:
-            result = (result << 8) + byte
-        return result
+        return reduce(lambda accu, elem: (accu << 8) + elem, b, 0)
 
     def _bytes_to_int_le(self, b):
-        result = 0
-        for idx in range(len(b)): # uglyness for py2/3 compat
-            result += (struct.unpack('B', b[idx:idx+1])[0] << 8*idx)
-        return result
+        fmt = {1: '<B', 2: '<H', 4: '<I', 8: '<Q'}
+        if len(b) not in fmt:
+            return 0
+        return struct.unpack(fmt[len(b)], b)[0] if len(b) else 0
 
     def _unpad(self, s):
         # strings in mp3 and asf _can_ be terminated with a zero byte at the end
@@ -314,7 +317,7 @@ class MP4(TinyTag):
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
-            if atom_size == 0:  # empty atom, jump to next one
+            if atom_size <= 0:  # empty atom, jump to next one
                 atom_header = fh.read(header_size)
                 continue
             if DEBUG:
@@ -537,13 +540,13 @@ class ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        if not self.has_all_tags():  # try to get more info using id3v1
-            fh.seek(-128, 2)  # id3v1 occuppies the last 128 bytes
+        if not self.has_all_tags() and self.filesize > 128:
+            fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in the last 128 bytes
             self._parse_id3v1(fh)
 
     def _parse_id3v2(self, fh):
         # for info on the specs, see: http://id3.org/Developer%20Information
-        header = struct.unpack('3sBBB4B', fh.read(10))
+        header = struct.unpack('3sBBB4B', _read(fh, 10))
         tag = codecs.decode(header[0], 'ISO-8859-1')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
@@ -556,7 +559,7 @@ class ID3(TinyTag):
             self._bytepos_after_id3v2 = size
             parsed_size = 0
             if extended:  # just read over the extended header.
-                size_bytes = struct.unpack('4B', fh.read(6)[0:4])
+                size_bytes = struct.unpack('4B', _read(fh, 6)[0:4])
                 extd_size = self._calc_size(size_bytes, 7)
                 fh.seek(extd_size - 6, os.SEEK_CUR)  # jump over extended_header
             while parsed_size < size:
@@ -616,22 +619,25 @@ class ID3(TinyTag):
 
     def _decode_string(self, b):
         # it's not my fault, this is the spec.
-        first_byte = b[:1]
-        if first_byte == b'\x00':
-            return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
-        elif first_byte == b'\x01':
-            # read byte order mark to determine endianess
-            encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
-            # strip the bom and optional null bytes
-            bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
-            return self._unpad(codecs.decode(bytestr, encoding))
-        elif first_byte == b'\x02':
-            # strip optional null byte
-            bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
-            return self._unpad(codecs.decode(bytestr, 'UTF-16le'))
-        elif first_byte == b'\x03':
-            return codecs.decode(b[1:], 'UTF-8')
-        return self._unpad(codecs.decode(b, 'ISO-8859-1'))
+        try:
+            first_byte = b[:1]
+            if first_byte == b'\x00':
+                return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
+            elif first_byte == b'\x01':
+                # read byte order mark to determine endianess
+                encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
+                # strip the bom and optional null bytes
+                bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
+                return self._unpad(codecs.decode(bytestr, encoding))
+            elif first_byte == b'\x02':
+                # strip optional null byte
+                bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
+                return self._unpad(codecs.decode(bytestr, 'UTF-16le'))
+            elif first_byte == b'\x03':
+                return codecs.decode(b[1:], 'UTF-8')
+            return self._unpad(codecs.decode(b, 'ISO-8859-1'))
+        except UnicodeDecodeError:
+            raise TinyTagException('Error decoding ID3 Tag!')
 
     def _calc_size(self, bytestr, bits_per_byte):
         # length of some mp3 header fields is described
