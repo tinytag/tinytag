@@ -445,7 +445,7 @@ class ID3(TinyTag):
 
     def _parse_xing_header(self, fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
-        fh.read(4) # read over Xing header
+        fh.seek(4, os.SEEK_CUR) # read over Xing header
         header_flags = struct.unpack('>i', fh.read(4))[0]
         frames = byte_count = toc = vbr_scale = None
         if header_flags & 1: # FRAMES FLAG
@@ -558,7 +558,7 @@ class ID3(TinyTag):
             if extended:  # just read over the extended header.
                 size_bytes = struct.unpack('4B', fh.read(6)[0:4])
                 extd_size = self._calc_size(size_bytes, 7)
-                extended_header = fh.read(extd_size - 6)
+                fh.seek(extd_size - 6, os.SEEK_CUR)  # jump over extended_header
             while parsed_size < size:
                 frame_size = self._parse_frame(fh, id3version=major)
                 if frame_size == 0:
@@ -711,7 +711,7 @@ class Ogg(TinyTag):
             'genre': 'genre'
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
-        vendor = fh.read(vendor_length)
+        fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
         elements = struct.unpack('I', fh.read(4))[0]
         for i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
@@ -878,6 +878,7 @@ class Wma(TinyTag):
             self._parse_tag(fh)
 
     def read_blocks(self, fh, blocks):
+        # blocks are a list(tuple('fieldname', byte_count, cast_int), ...)
         decoded = {}
         for block in blocks:
             val = fh.read(block[1])

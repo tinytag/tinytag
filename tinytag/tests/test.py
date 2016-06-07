@@ -63,7 +63,7 @@ testfiles = OrderedDict([
     ('samples/106-short-picture-block-size.flac', {}),
 
     # WMA
-    ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': '1', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
+    ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'audio_offset': 0, 'track': 1, 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative'}),
 
     # M4A/MP4
     ('samples/test.m4a', {'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
