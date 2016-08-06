@@ -20,10 +20,10 @@ if 'upload' in sys.argv or 'register' in sys.argv:
     from urllib.parse import quote
     import json
     import codecs
-    url = 'http://johnmacfarlane.net/cgi-bin/trypandoc?text=%s&from=markdown&to=rst'
+    url = 'http://pandoc.org/cgi-bin/trypandoc?from=markdown&to=rst&text=%s'
     urlhandler = urlopen(url % quote(readmemd))
     result = json.loads(codecs.decode(urlhandler.read(), 'utf-8'))
-    long_description = result['result']
+    long_description = result['html']
 else:
     long_description = "\n" + "\n".join([read('README.md')])
 
