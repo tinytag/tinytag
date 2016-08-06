@@ -178,11 +178,12 @@ class MP4(TinyTag):
     # and: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
 
     class Parser:
+        # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
         ATOM_DECODER_BY_TYPE = {
             0: lambda x: x, # 'reserved',
-            1: lambda x: codecs.decode(x, 'utf-8'),  # UTF-8
-            2: lambda x: codecs.decode(x, 'utf-16'), # UTF-16
-            3: lambda x: codecs.decode(x, 's/jis'),  # S/JIS
+            1: lambda x: codecs.decode(x, 'utf-8', 'replace'),  # UTF-8
+            2: lambda x: codecs.decode(x, 'utf-16', 'replace'), # UTF-16
+            3: lambda x: codecs.decode(x, 's/jis', 'replace'),  # S/JIS
             # 16: duration in millis
             13: lambda x: x, # JPEG
             14: lambda x: x, # PNG
