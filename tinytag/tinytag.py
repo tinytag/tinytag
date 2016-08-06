@@ -288,7 +288,6 @@ class MP4(TinyTag):
         b'gnre':    {b'data': Parser.parse_id3v1_genre},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
         b'trkn':    {b'data': Parser.make_number_parser('track', 'track_total')},
-        # b'covr':    {b'data': Parser.make_data_atom_parser('_image_data')},
     }}}}}
 
     # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
@@ -301,14 +300,21 @@ class MP4(TinyTag):
         }
     }
 
+    IMAGE_DATA_TREE = {b'moov': { b'udta': {b'meta': {b'ilst': {
+        b'covr': {b'data': Parser.make_data_atom_parser('_image_data')},
+    }}}}}
+
     VERSIONED_ATOMS = set((b'meta', b'stsd'))  # those have an extra 4 byte header
     FLAGGED_ATOMS = set((b'stsd',))  # these also have an extra 4 byte header
 
     def _determine_duration(self, fh):
-        return self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
+        self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
 
     def _parse_tag(self, fh):
-        return self._traverse_atoms(fh, path=self.META_DATA_TREE)
+        self._traverse_atoms(fh, path=self.META_DATA_TREE)
+        if self._load_image:           # A bit inefficient, we rewind the file
+            self._filehandler.seek(0)  # to parse it again for the image
+            self._traverse_atoms(fh, path=self.IMAGE_DATA_TREE)
 
     def _traverse_atoms(self, fh, path, indent=0, stop_pos=None, curr_path=None):
         header_size = 8

@@ -68,6 +68,7 @@ testfiles = OrderedDict([
     # M4A/MP4
     ('samples/test.m4a', {'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
     ('samples/test2.m4a', {'bitrate': 256.0, 'track': 1, 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1, 'title': 'Go Out and Get Some'}),
+    ('samples/iso8859_with_image.m4a', {'artist': 'Major Lazer', 'filesize': 57017, 'title': 'Cold Water (feat. Justin Bieber & M�)', 'album': 'Cold Water (feat. Justin Bieber & M�) - Single', 'year': '2016', 'samplerate': 44100, 'duration': 188.545, 'genre': 'Electronic;Music', 'albumartist': 'Major Lazer', 'channels': 2}),
 
 ])
 
@@ -160,6 +161,12 @@ def test_mp3_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
+
+def test_mp4_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 20000 < len(image_data) < 25000, 'Image is %d bytes but should be around 22kb' % len(image_data)
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/empty.ogg'))
