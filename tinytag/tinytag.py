@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # tinytag - an audio meta info reader
-# Copyright (c) 2014-2015 Tom Wallroth
+# Copyright (c) 2014-2016 Tom Wallroth
 #
 # Sources on github:
 # http://github.com/devsnd/tinytag/
@@ -23,12 +23,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 #
 
+from __future__ import print_function
 from collections import MutableMapping
 import codecs
 from functools import reduce
 import struct
 import os
 import io
+import sys
 from io import BytesIO
 
 DEBUG = False  # some of the parsers will print some debug info when set to True
@@ -41,6 +43,10 @@ def _read(fh, nbytes):  # helper function to check if we haven't reached EOF
     if len(b) < nbytes:
         raise TinyTagException('Unexpected end of file')
     return b
+
+def stderr(*args):
+    sys.stderr.write('%s\n' % ' '.join(args))
+    sys.stderr.flush()
 
 class TinyTag(object):
     """Base class for all tag types"""
@@ -128,9 +134,11 @@ class TinyTag(object):
     def _set_field(self, fieldname, bytestring, transfunc=None, overwrite=True):
         """convienience function to set fields of the tinytag by name.
         the payload (bytestring) can be changed using the transfunc"""
-        if getattr(self, fieldname):
+        if getattr(self, fieldname):  # do not overwrite existing data
             return
         value = bytestring if transfunc is None else transfunc(bytestring)
+        if DEBUG:
+            stderr('Setting field "%s" to "%s"' % (fieldname, value))
         if fieldname == 'genre' and value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
             # funky: id3v1 genre hidden in a id3v2 field
             value = ID3.ID3V1_GENRES[int(value)]
@@ -209,7 +217,7 @@ class MP4(TinyTag):
                 data_type = struct.unpack('>I', data_atom[:4])[0]
                 conversion = cls.ATOM_DECODER_BY_TYPE.get(data_type)
                 if conversion is None:
-                    print('Cannot convert data type: %s' % data_type)
+                    stderr('Cannot convert data type: %s' % data_type)
                     return {}  # don't know how to convert data atom
                 # skip header & null-bytes, convert rest
                 return {fieldname: conversion(data_atom[8:])}
@@ -269,7 +277,7 @@ class MP4(TinyTag):
 
         @classmethod
         def debug_atom(cls, data):
-            print(data)  # use this function to inspect atoms in an atom tree
+            stderr(data)  # use this function to inspect atoms in an atom tree
             return {}
 
     # The parser tree: Each key is an atom branch which is traversed if existing.
@@ -328,7 +336,7 @@ class MP4(TinyTag):
                 atom_header = fh.read(header_size)
                 continue
             if DEBUG:
-                print('%s pos: %d atom: %s len: %d' % (' ' * 4 * len(curr_path), fh.tell() - header_size, atom_type, atom_size + header_size))
+                stderr('%s pos: %d atom: %s len: %d' % (' ' * 4 * len(curr_path), fh.tell() - header_size, atom_type, atom_size + header_size))
             if atom_type in self.VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, os.SEEK_CUR)
             if atom_type in self.FLAGGED_ATOMS:  # jump atom flags for now
@@ -343,7 +351,7 @@ class MP4(TinyTag):
             elif callable(sub_path):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if DEBUG:
-                        print(' ' * 4 * len(curr_path), 'FIELDNAME: ', fieldname)
+                        stderr(' ' * 4 * len(curr_path), 'FIELDNAME: ', fieldname)
                     if fieldname:
                         self._set_field(fieldname, value)
             # if no action was specified using dict or callable, jump over atom
@@ -365,6 +373,7 @@ class ID3(TinyTag):
         'TCON': 'genre',  'TPOS': 'disc',
         'TPE2': 'albumartist',
     }
+    IMAGE_FRAME_IDS = set(['APIC', 'PIC'])
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
@@ -558,6 +567,8 @@ class ID3(TinyTag):
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
             major, rev = header[1:3]
+            if DEBUG:
+                stderr('Found id3 v2.%s' % major)
             unsync = (header[3] & 0x80) > 0
             extended = (header[3] & 0x40) > 0
             experimental = (header[3] & 0x20) > 0
@@ -603,7 +614,9 @@ class ID3(TinyTag):
         frame = struct.unpack(binformat, frame_header_data)
         frame_id = self._decode_string(frame[0])
         frame_size = self._calc_size(frame[1:1+frame_size_bytes], bits_per_byte)
-        parsable = frame_id in ID3.FRAME_ID_TO_FIELD or frame_id == 'APIC'
+        if DEBUG:
+            stderr('Found Frame %s at %d-%d' % (frame_id, fh.tell(), fh.tell() + frame_size))
+        parsable = frame_id in ID3.FRAME_ID_TO_FIELD or frame_id in self.IMAGE_FRAME_IDS
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             if not parsable:  # jump over unparsable frames
@@ -613,11 +626,14 @@ class ID3(TinyTag):
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
                 self._set_field(fieldname, content, self._decode_string)
-            elif frame_id == 'APIC' and self._load_image:
+            elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
-                mimetype_end_pos = content[1:].index(b'\x00')+1
-                desc_start_pos = mimetype_end_pos + 2
-                desc_end_pos = desc_start_pos + content[desc_start_pos:].index(b'\x00')
+                if frame_id == 'PIC':  # ID3 v2.2:
+                    desc_end_pos = content.index(b'\x00', 1) + 1
+                else:  # ID3 v2.3+
+                    mimetype_end_pos = content.index(b'\x00', 1) + 1
+                    desc_start_pos = mimetype_end_pos + 2
+                    desc_end_pos = desc_start_pos + content.index(b'\x00', desc_start_pos)
                 if content[desc_end_pos:desc_end_pos+1] == b'\x00':
                     desc_end_pos += 1 # the description ends with 1 or 2 null bytes
                 self._image_data = content[desc_end_pos:]

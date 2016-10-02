@@ -36,6 +36,7 @@ testfiles = OrderedDict([
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050}),
     ('samples/id3v24-long-title.mp3', {'track': '1', 'audio_offset': 0, 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'duration': 0, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'bitrate': 0.0, 'samplerate': None, 'year': None, 'disc': '1'}),
     ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None}),
+    ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008'}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
@@ -135,7 +136,6 @@ def test_mp3_length_estimation():
     print(tag.duration)
     assert 3.5 < tag.duration < 4.0 
 
-
 @raises(TinyTagException)
 def test_unexpected_eof():
     tag = ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
@@ -161,6 +161,12 @@ def test_mp3_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
+
+def test_mp3_id3v22_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22_image.mp3'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 18000 < len(image_data) < 19000, 'Image is %d bytes but should be around 18.1kb' % len(image_data)
 
 def test_mp4_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)
