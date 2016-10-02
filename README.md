@@ -69,6 +69,7 @@ and possibly more.
 
 Changelog:
 
+ * 0.17.0: supporting ID3v2.2 images
  * 0.16.0: MP4 cover image support
  * 0.15.2: fixed crash for malformed MP4 files (#34)
  * 0.15.0: fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
