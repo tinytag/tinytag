@@ -15,7 +15,7 @@ python:
 # command to install dependencies
 install:
   - "pip install coveralls"
-  - "if [[ $TRAVIS_PYTHON_VERSION = 2.6 ]]; then pip install unittest2 --use-mirrors; fi"
+  - "if [[ $TRAVIS_PYTHON_VERSION = 2.6 ]]; then pip install unittest2; fi"
 
 # command to run tests
 script:
