@@ -99,7 +99,7 @@ class TinyTag(object):
             return TinyTag(None, 0)
         if cls == TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
             mapping = {
-                ('.mp3',): ID3,
+                ('.mp3','.mpeg'): ID3,
                 ('.oga', '.ogg', '.opus'): Ogg,
                 ('.wav',): Wave,
                 ('.flac',): Flac,
