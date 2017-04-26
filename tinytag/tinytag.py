@@ -516,7 +516,7 @@ class ID3(TinyTag):
                 if xing_header_offset != -1:
                     fh.seek(xing_header_offset, os.SEEK_CUR)
                     xframes, byte_count, toc, vbr_scale = self._parse_xing_header(fh)
-                    if xframes is not None and byte_count is not None:
+                    if xframes and xframes != 0 and ID3.samples_per_frame != 0 and byte_count:
                         self.duration = xframes * ID3.samples_per_frame / float(self.samplerate)
                         self.bitrate = byte_count * 8 / self.duration
                         self.audio_offset = fh.tell()
