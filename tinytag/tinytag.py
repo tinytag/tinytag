@@ -85,36 +85,29 @@ class TinyTag(object):
     def get_image(self):
         return self._image_data
 
-    def has_all_tags(self):
-        """check if all tags are already defined. Useful for ID3 tags
-        since multiple kinds of tags can be in one audio file"""
-        return all((self.track, self.track_total, self.title, self.artist,
-                    self.album, self.albumartist, self.year, self.genre))
-
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
-        parser_class = None
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
+        ext_mapping = {
+            ('.mp3',): ID3,
+            ('.oga', '.ogg', '.opus'): Ogg,
+            ('.wav',): Wave,
+            ('.flac',): Flac,
+            ('.wma',): Wma,
+            ('.m4a', '.mp4'): MP4,
+        }
         if cls == TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
-            mapping = {
-                ('.mp3',): ID3,
-                ('.oga', '.ogg', '.opus'): Ogg,
-                ('.wav',): Wave,
-                ('.flac',): Flac,
-                ('.wma',): Wma,
-                ('.m4a', '.mp4'): MP4,
-            }
-            # choose which tag reader should be used by file extension
-            for fileextension, tagclass in mapping.items():
-                if filename.lower().endswith(fileextension):
-                    parser_class = tagclass
-                    break
+            try:
+                parser_class = next((
+                    parser for exts, parser in ext_mapping.items()
+                    if filename.lower().endswith(exts)
+                ))
+            except StopIteration:
+                raise LookupError('No tag reader found to support filetype! ')
         else:  # otherwise use the class on which `get` was invoked
             parser_class = cls
-        if parser_class is None:
-            raise LookupError('No tag reader found to support filetype! ')
         with io.open(filename, 'rb') as af:
             tag = parser_class(af, size)
             tag.load(tags=tags, duration=duration, image=image)
@@ -146,12 +139,14 @@ class TinyTag(object):
         value = bytestring if transfunc is None else transfunc(bytestring)
         if DEBUG:
             stderr('Setting field "%s" to "%s"' % (fieldname, value))
-        if fieldname == 'genre' and value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
-            # funky: id3v1 genre hidden in a id3v2 field
-            value = ID3.ID3V1_GENRES[int(value)]
+        if fieldname == 'genre' and value.isdigit():
+            try:  # funky: id3v1 genre hidden in a id3v2 field
+                value = ID3.ID3V1_GENRES[int(value)]
+            except IndexError:
+                pass
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
-                current, total = value.split('/')[:2]
+                current, total = value.split('/', 1)[:2]
                 setattr(self, "%s_total" % fieldname, total)
             else:
                 current = value
@@ -375,6 +370,7 @@ class ID3(TinyTag):
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
+    MAX_SYNC_FAILS = 10
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
 
     ID3V1_GENRES = [
@@ -426,6 +422,7 @@ class ID3(TinyTag):
         TinyTag.__init__(self, filehandler, filesize)
         # save position after the ID3 tag for duration mesurement speedup
         self._bytepos_after_id3v2 = 0
+        self._mp3_sync_fail_count = 0
 
     @classmethod
     def set_estimation_precision(cls, estimation_in_seconds):
@@ -452,6 +449,7 @@ class ID3(TinyTag):
         [None, v1l3, v1l2, v1l1],  # MPEG Version 1    # reserved
     ]
     samples_per_frame = 1152  # the default frame size for mp3
+
     channels_per_channel_mode = [
         2,  # 00 Stereo
         2,  # 01 Joint stereo (Stereo)
@@ -507,7 +505,12 @@ class ID3(TinyTag):
                 self.samplerate = ID3.samplerates[mpeg_id][sr_id]
                 frame_bitrate = ID3.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
             except (IndexError, TypeError):
-                raise TinyTagException('mp3 parsing failed')
+                if self._mp3_sync_fail_count >= self.__class__.MAX_SYNC_FAILS:
+                    raise TinyTagException('mp3 parsing failed')
+                if DEBUG: stderr('mp3 sync error at %s' % fh.tell())
+                self._mp3_sync_fail_count += 1
+                fh.seek(max(idx, 1), os.SEEK_CUR)
+                continue
             # There might be a xing header in the first frame that contains
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
@@ -536,16 +539,16 @@ class ID3(TinyTag):
             # if bitrate does not change over time its probably CBR
             is_cbr = (frames == ID3._CBR_DETECTION_FRAME_COUNT and
                       len(set(last_bitrates)) == 1)
+            # estimate duration (but remove last 128 of id3v1 tag)
+            audio_stream_size = (self.filesize - 128) - self.audio_offset
+            est_frame_count = audio_stream_size / (frame_size_accu / float(frames))
+            samples = est_frame_count * ID3.samples_per_frame
+            # print(layer_id)
+            # print(samples, self.samplerate)
+            self.duration = samples / float(self.samplerate)
+            self.bitrate = bitrate_accu / frames
             if frames == max_estimation_frames or is_cbr:
-                # try to estimate duration
-                fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
-                audio_stream_size = fh.tell() - self.audio_offset
-                est_frame_count = audio_stream_size / (frame_size_accu / float(frames))
-                samples = est_frame_count * ID3.samples_per_frame
-                self.duration = samples / float(self.samplerate)
-                self.bitrate = bitrate_accu / frames
-                return
-
+                return  # stop estimating
             if frame_length > 1:  # jump over current frame body
                 fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         if self.samplerate:
@@ -553,7 +556,9 @@ class ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        if not self.has_all_tags() and self.filesize > 128:
+        all_tags = all((self.track, self.track_total, self.title, self.artist,
+                        self.album, self.albumartist, self.year, self.genre))
+        if not all_tags and self.filesize > 128:
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 

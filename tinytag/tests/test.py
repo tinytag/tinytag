@@ -24,7 +24,7 @@ except ImportError:
 
 testfiles = OrderedDict([
     # MP3
-    ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
+    ('samples/vbri.mp3', {'bitrate': 0.0, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
     ('samples/silence-44-s-v1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Darkwave', 'track_total': None, 'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2'}),
@@ -37,6 +37,9 @@ testfiles = OrderedDict([
     ('samples/id3v24-long-title.mp3', {'track': '1', 'audio_offset': 0, 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'duration': 0, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'bitrate': 0.0, 'samplerate': None, 'year': None, 'disc': '1'}),
     ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None}),
     ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008'}),
+    ('samples/sync_errors/Chant.mp3', {'duration': 2.66}),
+    ('samples/sync_errors/WitchDie.mp3', {'duration': 1.98}),
+    ('samples/sync_errors/ShieldBroken.mp3', {'duration': 1.15}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False}),
@@ -97,7 +100,7 @@ for filename in os.listdir(custom_samples_folder):
 
 def get_info(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    print(filename)
+    # print(filename)
     tag = TinyTag.get(filename)
 
     for key, expected_val in expected.items():
@@ -133,7 +136,7 @@ def test_unsubclassed_tinytag_parse_tag():
 def test_mp3_length_estimation():
     ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
-    print(tag.duration)
+    # print(tag.duration)
     assert 3.5 < tag.duration < 4.0 
 
 @raises(TinyTagException)
