@@ -18,7 +18,7 @@ Features:
     * WMA
     * MP4/M4A
   * pure python
-  * supports python 2 and 3 (without 2to3)
+  * supports python 2.6+ and 3.2+
   * is tested 
   * Just a few hundred lines of code (just include it in your project!) 
 
@@ -63,6 +63,7 @@ and possibly more.
 
 Changelog:
 
+ * 0.18.0: fixed wrong bitrate and crash when parsing xing header
  * 0.17.0: supporting ID3v2.2 images
  * 0.16.0: MP4 cover image support
  * 0.15.2: fixed crash for malformed MP4 files (#34)
