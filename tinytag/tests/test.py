@@ -11,10 +11,13 @@
 from __future__ import unicode_literals
 import timeit
 
-import os
+import os, sys
 import re
 from nose.tools import *
-from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
+
+# workaround to be compatible with new cherrymusic
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tinytag.tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
 
 try:
     from collections import OrderedDict
