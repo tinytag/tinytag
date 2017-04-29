@@ -26,6 +26,8 @@ testfiles = OrderedDict([
     # MP3
     ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01'}),
+    # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
+    ('samples/vbr_xing_header.mp3', {'bitrate': 186.04383278145696, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367}),
     ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3'}),
     ('samples/silence-44-s-v1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Darkwave', 'track_total': None, 'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2'}),
     ('samples/id3v1-latin1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Rock', 'samplerate': None, 'album': 'The Young Americans', 'title': 'Play Dead', 'bitrate': 0.0, 'filesize': 256, 'audio_offset': 0, 'track': '12', 'artist': 'Björk', 'duration': 0, 'track_total': None, 'year': '1993'}),
@@ -97,7 +99,7 @@ for filename in os.listdir(custom_samples_folder):
 
 def get_info(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    print(filename)
+    # print(filename)
     tag = TinyTag.get(filename)
 
     for key, expected_val in expected.items():
