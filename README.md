@@ -63,9 +63,10 @@ and possibly more.
 
 Changelog:
 
- * 0.18.0: fixed wrong bitrate and crash when parsing xing header
- * 0.17.0: supporting ID3v2.2 images
- * 0.16.0: MP4 cover image support
- * 0.15.2: fixed crash for malformed MP4 files (#34)
- * 0.15.0: fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
- * 0.14.0: MP4/M4A and Opus support
+ * 0.19.0 (2018/02/11): fixed corrupted images for some mp3s (#45)
+ * 0.18.0 (2017/04/29): fixed wrong bitrate and crash when parsing xing header
+ * 0.17.0 (2016/10/02): supporting ID3v2.2 images
+ * 0.16.0 (2016/08/06): MP4 cover image support
+ * 0.15.2 (2016/08/06): fixed crash for malformed MP4 files (#34)
+ * 0.15.0 (2016/08/06): fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
+ * 0.14.0 (2016/06/05): MP4/M4A and Opus support
