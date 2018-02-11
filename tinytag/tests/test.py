@@ -163,12 +163,21 @@ def test_mp3_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 140000 < len(image_data) < 150000, 'Image is %d bytes but should be around 145kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 def test_mp3_id3v22_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22_image.mp3'), image=True)
     image_data = tag.get_image()
     assert image_data is not None
     assert 18000 < len(image_data) < 19000, 'Image is %d bytes but should be around 18.1kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
+
+def test_mp3_image_loading_without_description():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3image_without_description.mp3'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 28600 < len(image_data) < 28700, 'Image is %d bytes but should be around 28.6kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 def test_mp4_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)

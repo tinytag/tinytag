@@ -628,8 +628,8 @@ class ID3(TinyTag):
                     desc_end_pos = content.index(b'\x00', 1) + 1
                 else:  # ID3 v2.3+
                     mimetype_end_pos = content.index(b'\x00', 1) + 1
-                    desc_start_pos = mimetype_end_pos + 2
-                    desc_end_pos = desc_start_pos + content.index(b'\x00', desc_start_pos)
+                    desc_start_pos = mimetype_end_pos + 1  # jump over picture type
+                    desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
                 if content[desc_end_pos:desc_end_pos+1] == b'\x00':
                     desc_end_pos += 1 # the description ends with 1 or 2 null bytes
                 self._image_data = content[desc_end_pos:]
