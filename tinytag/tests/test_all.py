@@ -18,7 +18,10 @@ from nose.tools import *
 from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
 
 from collections import OrderedDict  # not needed for Python >= 3.5
-
+try:
+    from pathlib import Path
+except ImportError:
+    Path = None
 
 
 testfiles = OrderedDict([
@@ -188,3 +191,9 @@ def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/empty.ogg'))
     assert str(tag)  # since the dict is not ordered we cannot == 'somestring'
     assert repr(tag)  # since the dict is not ordered we cannot == 'somestring'
+
+@pytest.mark.skipif(Path is None, reason='requires pathlib.Path')
+def test_pathlib():
+    tag = TinyTag.get(os.path.join(testfolder, Path('samples/empty.ogg')))
+    assert str(tag)
+    assert repr(tag)

@@ -18,7 +18,7 @@ Features:
     * WMA
     * MP4/M4A
   * pure python
-  * supports python 2.6+ and 3.2+
+  * supports python 2.7+ and 3.4+
   * is tested 
   * Just a few hundred lines of code (just include it in your project!) 
 
@@ -55,8 +55,8 @@ Additionally you can also get cover images from ID3 tags:
 
 supported python versions:
 
- * 2.6+
- * 3.2+
+ * 2.7+
+ * 3.4+
  * pypy
 
 and possibly more.
