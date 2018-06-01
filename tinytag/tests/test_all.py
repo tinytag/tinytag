@@ -194,6 +194,6 @@ def test_to_str():
 
 @pytest.mark.skipif(Path is None, reason='requires pathlib.Path')
 def test_pathlib():
-    tag = TinyTag.get(os.path.join(testfolder, Path('samples/empty.ogg')))
+    tag = TinyTag.get(os.path.join(testfolder, Path('samples') / 'empty.ogg'))
     assert str(tag)
     assert repr(tag)
