@@ -6,21 +6,28 @@
 
 language: python
 python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
+  - 2.7
+  - 3.4
+  - 3.5
+  - 3.6
+  - "3.7-dev"
   - "pypy"
+  
+group: travis_latest
+
+git:
+  depth: 3
+
 
 # command to install dependencies
 install:
-  - "pip install coveralls"
-  - "if [[ $TRAVIS_PYTHON_VERSION = 2.6 ]]; then pip install unittest2; fi"
+  - pip -q install -e .[tests]
 
 # command to run tests
-script:
-  coverage run --source=tinytag $(command -v nosetests)
+script: pytest -v
 
 after_success:
-  coveralls
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]] then
+    coverage run --source=tinytag $(command -v pytest)
+    coveralls;
+    fi

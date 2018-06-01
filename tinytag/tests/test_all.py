@@ -7,8 +7,9 @@
 # see custom_samples/instructions.txt
 #
 
-
 from __future__ import unicode_literals
+import pytest
+xfail = pytest.mark.xfail
 import timeit
 
 import os
@@ -16,10 +17,8 @@ import re
 from nose.tools import *
 from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    OrderedDict = dict  # python 2.6 and 3.2 compat
+from collections import OrderedDict  # not needed for Python >= 3.5
+
 
 
 testfiles = OrderedDict([
@@ -117,17 +116,17 @@ def test_generator():
     for testfile, expected in testfiles.items():
         yield get_info, testfile, expected
 
-@raises(LookupError)
+@xfail(raises=LookupError, strict=True)
 def test_unsupported_extension():
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
     TinyTag.get(bogus_file)
 
-@raises(NotImplementedError)
+@xfail(raises=NotImplementedError, strict=True)
 def test_unsubclassed_tinytag_duration():
     tag = TinyTag(None, 0)
     tag._determine_duration(None)
 
-@raises(NotImplementedError)
+@xfail(raises=NotImplementedError, strict=True)
 def test_unsubclassed_tinytag_parse_tag():
     tag = TinyTag(None, 0)
     tag._parse_tag(None)
@@ -138,23 +137,23 @@ def test_mp3_length_estimation():
     print(tag.duration)
     assert 3.5 < tag.duration < 4.0 
 
-@raises(TinyTagException)
+@xfail(raises=TinyTagException, strict=True)
 def test_unexpected_eof():
     tag = ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
 
-@raises(TinyTagException)
+@xfail(raises=TinyTagException, strict=True)
 def test_invalid_flac_file():
     tag = Flac.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
 
-@raises(TinyTagException)
+@xfail(raises=TinyTagException, strict=True)
 def test_invalid_mp3_file():
     tag = ID3.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
-@raises(TinyTagException)
+@xfail(raises=TinyTagException, strict=True)
 def test_invalid_ogg_file():
     tag = Ogg.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
-@raises(TinyTagException)
+@xfail(raises=TinyTagException, strict=True)
 def test_invalid_wave_file():
     tag = Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
