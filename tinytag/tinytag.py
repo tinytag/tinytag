@@ -78,6 +78,7 @@ class TinyTag(object):
         self.audio_offset = 0
         self.bitrate = 0.0  # must be float for later VBR calculations
         self.channels = None
+        self.comment = None
         self.disc = None
         self.disc_total = None
         self.duration = 0
@@ -371,6 +372,7 @@ class MP4(TinyTag):
 
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
+        'COMM': 'comment', #TODO: add id3v2.1 comment field!
         'TRCK': 'track',  'TRK': 'track',
         'TYER': 'year',   'TYE': 'year',
         'TALB': 'album',  'TAL': 'album',
@@ -601,6 +603,7 @@ class ID3(TinyTag):
             self._set_field('album', fields[60:90], transfunc=asciidecode)
             self._set_field('year', fields[90:94], transfunc=asciidecode)
             comment = fields[94:124]
+            self._set_field('comment', comment, transfunc=asciidecode)
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
                 self._set_field('track', str(ord(comment[-1:])))
             genre_id = ord(fields[124:125])
