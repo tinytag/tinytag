@@ -75,12 +75,12 @@ class TinyTag(object):
         self.album = None
         self.albumartist = None
         self.artist = None
-        self.audio_offset = 0
-        self.bitrate = 0.0  # must be float for later VBR calculations
+        self.audio_offset = None
+        self.bitrate = None
         self.channels = None
         self.disc = None
         self.disc_total = None
-        self.duration = 0
+        self.duration = None
         self.genre = None
         self.samplerate = None
         self.title = None
