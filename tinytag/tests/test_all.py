@@ -46,10 +46,10 @@ testfiles = OrderedDict([
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),
     ('samples/multipagecomment.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 135694, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),
     ('samples/multipage-setup.ogg', {'genre': 'JRock', 'track_total': None, 'duration': 4.128798185941043, 'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False, 'filesize': 76983, 'audio_offset': 0, 'bitrate': 156.25, 'samplerate': 44100}),
-    ('samples/test.ogg', {'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False, 'filesize': 7467, 'audio_offset': 0, 'bitrate': 156.25, 'samplerate': 44100}),
+    ('samples/test.ogg', {'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False, 'filesize': 7467, 'audio_offset': 0, 'bitrate': 156.25, 'samplerate': 44100, 'comment': 'hello!'}),
 
     # OPUS
-    ('samples/test.opus', {'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2, 'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25', 'filesize': 10000, 'artist': 'nomico', 'album': 'Exserens - A selection of Alstroemeria Records'}),
+    ('samples/test.opus', {'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2, 'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25', 'filesize': 10000, 'artist': 'nomico', 'album': 'Exserens - A selection of Alstroemeria Records', 'comment': 'ARCD0018 - Lovelight'}),
 
     # WAV
     ('samples/test.wav', {'duration': 1.0, 'filesize': 176444, 'bitrate': 1378.125, 'samplerate': 44100, 'audio_offest': 36}),
