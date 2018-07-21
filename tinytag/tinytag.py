@@ -178,7 +178,7 @@ class TinyTag(object):
         # update the values of this tag with the values from another tag
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
-                    'genre', 'disc', 'disc_total']:
+                    'genre', 'disc', 'disc_total', 'comment']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -296,6 +296,7 @@ class MP4(TinyTag):
         b'\xa9ART': {b'data': Parser.make_data_atom_parser('artist')},
         b'aART':    {b'data': Parser.make_data_atom_parser('albumartist')},
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
+        b'\xa9cmt': {b'data': Parser.make_data_atom_parser('comment')},
         b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
         # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
@@ -969,7 +970,7 @@ class Wma(TinyTag):
                     ('title', len_blocks['title_length'], False),
                     ('artist', len_blocks['author_length'], False),
                     ('', len_blocks['copyright_length'], True),
-                    ('', len_blocks['description_length'], True),
+                    ('comment', len_blocks['description_length'], False),
                     ('', len_blocks['rating_length'], True),
                 ])
                 for field_name, bytestring in data_blocks.items():
