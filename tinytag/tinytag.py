@@ -603,9 +603,10 @@ class ID3(TinyTag):
             self._set_field('album', fields[60:90], transfunc=asciidecode)
             self._set_field('year', fields[90:94], transfunc=asciidecode)
             comment = fields[94:124]
-            self._set_field('comment', comment, transfunc=asciidecode)
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
                 self._set_field('track', str(ord(comment[-1:])))
+                comment = comment[:-2]
+            self._set_field('comment', comment, transfunc=asciidecode)
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
                 self.genre = ID3.ID3V1_GENRES[genre_id]
@@ -632,7 +633,8 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                self._set_field(fieldname, content, self._decode_string)
+                transfunc = self._decode_comment if fieldname == 'comment' else self._decode_string
+                self._set_field(fieldname, content, transfunc)
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 if frame_id == 'PIC':  # ID3 v2.2:
@@ -646,6 +648,10 @@ class ID3(TinyTag):
                 self._image_data = content[desc_end_pos:]
             return frame_size
         return 0
+
+    def _decode_comment(self, b):
+        comment = self._decode_string(b)
+        return comment[4:] if comment[:3] == 'eng' else comment   # remove language
 
     def _decode_string(self, b):
         try:  # it's not my fault, this is the spec.
