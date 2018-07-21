@@ -744,7 +744,8 @@ class Ogg(TinyTag):
             'date': 'year',
             'tracknumber': 'track',
             'discnumber': 'disc',
-            'genre': 'genre'
+            'genre': 'genre',
+            'description': 'comment',
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
