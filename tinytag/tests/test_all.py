@@ -83,12 +83,12 @@ testfolder = os.path.join(os.path.dirname(__file__))
 # load custom samples
 custom_samples_folder = os.path.join(testfolder, 'custom_samples')
 pattern_field_name_type = [
-    ('sr(\d+)', 'samplerate', int),
-    ('dn(\d+)', 'disc', str),
-    ('dt(\d+)', 'disc_total', str),
-    ('d(\d+.?\d*)', 'duration', float),
-    ('b(\d+)', 'bitrate', int),
-    ('c(\d)', 'channels', int),
+    ('sr=(\d+)', 'samplerate', int),
+    ('dn=(\d+)', 'disc', str),
+    ('dt=(\d+)', 'disc_total', str),
+    ('d=(\d+.?\d*)', 'duration', float),
+    ('b=(\d+)', 'bitrate', int),
+    ('c=(\d)', 'channels', int),
 ]
 for filename in os.listdir(custom_samples_folder):
     if filename == 'instructions.txt':

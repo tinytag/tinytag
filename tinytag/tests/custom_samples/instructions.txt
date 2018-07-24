@@ -5,7 +5,7 @@ The name of the test file will automatically create a test, when running nosetes
 
 For example the file
 
-    some-funky-name-d10.5-sr44100.mp3
+    some-funky-name-d=10.5-sr=44100.mp3
 
 will run a test that checks if the file has a duration of 10.5 and a samplerate
 of 44100 seconds.
