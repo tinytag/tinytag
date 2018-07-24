@@ -30,7 +30,6 @@
 # SOFTWARE.
 
 
-
 from __future__ import print_function
 from collections import MutableMapping
 import codecs
@@ -138,8 +137,7 @@ class TinyTag(object):
         return str(self)
 
     def load(self, tags, duration, image=False):
-        if image:
-            self._load_image = True
+        self._load_image = image
         if tags:
             self._parse_tag(self._filehandler)
         if duration:
@@ -373,7 +371,7 @@ class MP4(TinyTag):
 
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
-        'COMM': 'comment', #TODO: add id3v2.1 comment field!
+        'COMM': 'comment', 'COM': 'comment',
         'TRCK': 'track',  'TRK': 'track',
         'TYER': 'year',   'TYE': 'year',
         'TALB': 'album',  'TAL': 'album',
