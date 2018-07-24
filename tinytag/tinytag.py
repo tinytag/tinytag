@@ -261,7 +261,7 @@ class MP4(TinyTag):
             # http://sasperger.tistory.com/103
             esds_atom.seek(22, os.SEEK_CUR)  # jump over most data...
             esds_atom.seek(4, os.SEEK_CUR)   # jump over max bitrate
-            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
+            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000.0  # kbit/s
             return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
 
         @classmethod
@@ -712,7 +712,7 @@ class Ogg(TinyTag):
                 (channels, self.samplerate, max_bitrate, bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
                 if not self.audio_offset:
-                    self.bitrate = bitrate / 1024
+                    self.bitrate = bitrate / 1024.0
                     self.audio_offset = page_start_pos
             elif packet[0:7] == b"\x03vorbis":
                 walker.seek(7, os.SEEK_CUR)  # jump over header name
@@ -806,7 +806,7 @@ class Wave(TinyTag):
             if subchunkid == b'fmt ':
                 _, channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
-                self.bitrate = self.samplerate * channels * bitdepth / 1024
+                self.bitrate = self.samplerate * channels * bitdepth / 1024.0
             elif subchunkid == b'data':
                 self.duration = float(subchunksize)/channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
