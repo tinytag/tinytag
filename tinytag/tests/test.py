@@ -88,6 +88,8 @@ pattern_field_name_type = [
     ('c(\d)', 'channels', int),
 ]
 for filename in os.listdir(custom_samples_folder):
+    if filename == 'instructions.txt':
+        continue
     expected_values = {}
     for pattern, fieldname, _type in pattern_field_name_type:
         match = re.findall(pattern, filename)
@@ -95,6 +97,9 @@ for filename in os.listdir(custom_samples_folder):
             expected_values[fieldname] = _type(match[0])
     if expected_values:
         testfiles[os.path.join('custom_samples', filename)] = expected_values
+    else:
+        # if there are no expected values, just try parsing the file
+        testfiles[os.path.join('custom_samples', filename)] = {}
 
 
 def get_info(testfile, expected):
