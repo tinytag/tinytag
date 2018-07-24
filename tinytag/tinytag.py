@@ -42,7 +42,7 @@ from io import BytesIO
 DEBUG = False  # some of the parsers will print some debug info when set to True
 
 
-class TinyTagException(Exception):
+class TinyTagException(LookupError):
     pass
 
 
@@ -122,7 +122,7 @@ class TinyTag(object):
         else:  # otherwise use the class on which `get` was invoked
             parser_class = cls
         if parser_class is None:
-            raise LookupError('No tag reader found to support filetype! ')
+            raise TinyTagException('No tag reader found to support filetype! ')
         with io.open(filename, 'rb') as af:
             tag = parser_class(af, size)
             tag.load(tags=tags, duration=duration, image=image)
