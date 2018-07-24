@@ -757,7 +757,10 @@ class Ogg(TinyTag):
         elements = struct.unpack('I', fh.read(4))[0]
         for i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
-            keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
+            try:
+                keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
+            except UnicodeDecodeError:
+                continue
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
                 fieldname = comment_type_to_attr_mapping.get(key.lower())
