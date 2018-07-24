@@ -832,8 +832,15 @@ class Flac(TinyTag):
     METADATA_VORBIS_COMMENT = 4
 
     def load(self, tags, duration, image=False):
-        if self._filehandler.read(4) != b'fLaC':
+        header = self._filehandler.peek(4)
+        if header[:3] == b'ID3':  # jump over ID3 header if it exists
+            id3 = ID3(self._filehandler, 0)
+            id3._parse_id3v2(self._filehandler)
+            self.update(id3)
+            header = self._filehandler.read(4)  # after ID3 should be fLaC
+        if header[:4] != b'fLaC':
             raise TinyTagException('Invalid flac header')
+        self._filehandler.seek(4, os.SEEK_CUR)
         self._determine_duration(self._filehandler, skip_tags=not tags)
 
     def _determine_duration(self, fh, skip_tags=False):
