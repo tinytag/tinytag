@@ -792,11 +792,16 @@ class Ogg(TinyTag):
 
 class Wave(TinyTag):
     riff_mapping = {
-        'INAM': 'title',
-        'IART': 'artist',
-        'ICMT': 'comment',
-        'ICRD': 'year',
-        'IGNR': 'genre',
+        b'INAM': 'title',
+        b'TITL': 'title',
+        b'IART': 'artist',
+        b'ICMT': 'comment',
+        b'ICRD': 'year',
+        b'IGNR': 'genre',
+        b'TRCK': 'track',
+        b'PRT1': 'track',
+        b'PRT2': 'track_number',
+        b'YEAR': 'year',
     }
 
     def __init__(self, filehandler, filesize):

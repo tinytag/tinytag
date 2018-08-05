@@ -53,7 +53,7 @@ testfiles = OrderedDict([
     # WAV
     ('samples/test.wav', {'duration': 1.0, 'filesize': 176444, 'bitrate': 1378.125, 'samplerate': 44100, 'audio_offest': 36}),
     ('samples/test3sMono.wav', {'duration': 3.0, 'filesize': 264644, 'bitrate': 689.0625, 'duration': 3.0, 'samplerate': 44100, 'audio_offest': 36}),
-    ('samples/test-tagged.wav', {'duration': 1.0, 'filesize': 176688, 'album': 'thealbum', 'artist': 'theartisst', 'bitrate': 1378.125, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': '66', 'audio_offest': 36}),
+    ('samples/test-tagged.wav', {'duration': 1.0, 'filesize': 176688, 'album': 'thealbum', 'artist': 'theartisst', 'bitrate': 1378.125, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': '66', 'audio_offest': 36, 'comment': 'hello', 'year': '2014'}),
     ('samples/silence-22khz-mono-1s.wav', {'duration': 1.0, 'filesize': 48160, 'bitrate': 344.53125, 'samplerate': 22050, 'audio_offest': 4088}),
 
     # FLAC
@@ -149,7 +149,6 @@ def test_unsubclassed_tinytag_parse_tag():
 def test_mp3_length_estimation():
     ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
-    print(tag.duration)
     assert 3.5 < tag.duration < 4.0 
 
 @raises(TinyTagException)
