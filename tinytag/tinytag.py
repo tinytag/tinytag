@@ -89,6 +89,7 @@ class TinyTag(object):
         self.year = None
         self._load_image = False
         self._image_data = None
+	    self.composer = None
 
     @classmethod
     def is_supported(cls, filename):
@@ -105,7 +106,7 @@ class TinyTag(object):
             ('.wav',): Wave,
             ('.flac',): Flac,
             ('.wma',): Wma,
-            ('.m4a', '.mp4'): MP4,
+            ('.m4a', '.m4b', '.mp4'): MP4,
         }
         for fileextension, tagclass in mapping.items():
             if filename.lower().endswith(fileextension):
@@ -176,7 +177,8 @@ class TinyTag(object):
         # update the values of this tag with the values from another tag
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
-                    'genre', 'disc', 'disc_total', 'comment']:
+                    'genre', 'disc', 'disc_total', 'comment', 
+                    'composer']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -296,7 +298,7 @@ class MP4(TinyTag):
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
         b'\xa9cmt': {b'data': Parser.make_data_atom_parser('comment')},
         b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
-        # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
+        b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'gnre':    {b'data': Parser.parse_id3v1_genre},
@@ -378,7 +380,7 @@ class ID3(TinyTag):
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
         'TCON': 'genre',  'TPOS': 'disc',
-        'TPE2': 'albumartist',
+        'TPE2': 'albumartist', 'TCOM': 'composer',
     }
     IMAGE_FRAME_IDS = set(['APIC', 'PIC'])
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
@@ -747,6 +749,7 @@ class Ogg(TinyTag):
             'discnumber': 'disc',
             'genre': 'genre',
             'description': 'comment',
+            'composer': 'composer',
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
@@ -991,6 +994,7 @@ class Wma(TinyTag):
                     'WM/AlbumArtist': 'albumartist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
+                    'WM/Composer': 'composer',
                 }
                 # see: http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))
@@ -1046,3 +1050,4 @@ class Wma(TinyTag):
                 fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
             else:
                 fh.seek(object_size - 24, os.SEEK_CUR) # read over onknown object ids
+                
