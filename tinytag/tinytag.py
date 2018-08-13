@@ -89,7 +89,7 @@ class TinyTag(object):
         self.year = None
         self._load_image = False
         self._image_data = None
-	    self.composer = None
+        self.composer = None
 
     @classmethod
     def is_supported(cls, filename):
