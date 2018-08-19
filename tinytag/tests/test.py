@@ -65,7 +65,9 @@ testfiles = OrderedDict([
     ('samples/variable-block.flac', {'channels': 2, 'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites', 'filesize': 10240, 'bitrate': 0.3057169061449098, 'disc': '1', 'genre': 'Anime Soundtrack', 'samplerate': 44100}),
     ('samples/106-invalid-streaminfo.flac', {'filesize': 4692}),
     ('samples/106-short-picture-block-size.flac', {'filesize': 4692, 'bitrate': 9.94818718614612, 'channels': 2, 'duration': 3.68, 'samplerate': 44100}),
-    ('samples/with_id3_header.flac', {'filesize': 49805, 'album': '   ', 'artist': '群星', 'disc': '0', 'title': 'A 梦 哆啦 机器猫 短信铃声', 'track': '0'}),
+    ('samples/with_id3_header.flac', {'filesize': 64837, 'album': '   ', 'artist': '群星', 'disc': '0', 'title': 'A 梦 哆啦 机器猫 短信铃声', 'track': '0', 'bitrate': 1116.9186328125, 'channels': 1, 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'year': '2018'}),
+    ('samples/with_padded_id3_header.flac', {'filesize': 16070, 'album': 'album', 'albumartist': None, 'artist': 'artist', 'audio_offset': None, 'bitrate': 276.830859375, 'channels': 1, 'comment': None, 'disc': None, 'disc_total': None, 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'title': 'title', 'track': '1', 'track_total': None, 'year': '2018'}),
+    ('samples/with_padded_id3_header2.flac', {'filesize': 19522, 'album': 'Unbekannter Titel', 'albumartist': None, 'artist': 'Unbekannter Künstler', 'audio_offset': None, 'bitrate': 336.29695312499996, 'channels': 1, 'comment': None, 'disc': '1', 'disc_total': '1', 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'title': 'Track01', 'track': '01', 'track_total': '05', 'year': '2018'}),
 
     # WMA
     ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': 1, 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': ''}),

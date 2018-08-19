@@ -583,6 +583,7 @@ class ID3(TinyTag):
             # footer = (header[3] & 0x10) > 0
             size = self._calc_size(header[4:8], 7)
             self._bytepos_after_id3v2 = size
+            end_pos = fh.tell() + size
             parsed_size = 0
             if extended:  # just read over the extended header.
                 size_bytes = struct.unpack('4B', _read(fh, 6)[0:4])
@@ -593,6 +594,7 @@ class ID3(TinyTag):
                 if frame_size == 0:
                     break
                 parsed_size += frame_size
+            fh.seek(end_pos, os.SEEK_SET)
 
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
@@ -833,11 +835,11 @@ class Flac(TinyTag):
 
     def load(self, tags, duration, image=False):
         header = self._filehandler.peek(4)
-        if header[:3] == b'ID3':  # jump over ID3 header if it exists
+        if header[:3] == b'ID3':  # parse ID3 header if it exists
             id3 = ID3(self._filehandler, 0)
             id3._parse_id3v2(self._filehandler)
             self.update(id3)
-            header = self._filehandler.read(4)  # after ID3 should be fLaC
+            header = self._filehandler.peek(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
             raise TinyTagException('Invalid flac header')
         self._filehandler.seek(4, os.SEEK_CUR)
