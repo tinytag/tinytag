@@ -9,9 +9,7 @@
 
 from __future__ import unicode_literals
 import pytest
-xfail = pytest.mark.xfail
 import timeit
-
 import os
 import re
 from nose.tools import *
@@ -22,7 +20,7 @@ try:
     from pathlib import Path
 except ImportError:
     Path = None
-
+xfail = pytest.mark.xfail
 
 testfiles = OrderedDict([
     # MP3
@@ -131,7 +129,7 @@ def get_info(testfile, expected):
 
 def test_generator():
     for testfile, expected in testfiles.items():
-        yield get_info, testfile, expected
+        get_info(testfile, expected)
 
 @xfail(raises=LookupError, strict=True)
 def test_unsupported_extension():
@@ -152,7 +150,7 @@ def test_mp3_length_estimation():
     ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
     print(tag.duration)
-    assert 3.5 < tag.duration < 4.0 
+    assert 3.5 < tag.duration < 4.0
 
 @xfail(raises=TinyTagException, strict=True)
 def test_unexpected_eof():
