@@ -21,7 +21,7 @@ git:
 
 # command to install dependencies
 install:
-  - pip -q install -e .[tests]
+  - pip install -e .[tests]
 
 # command to run tests
 script: 
