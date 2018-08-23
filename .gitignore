@@ -1,3 +1,6 @@
+*.log
+.eggs/
+.pytest_cache/
 *.py[cod]
 
 # C extensions
