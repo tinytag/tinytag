@@ -960,8 +960,8 @@ class Wma(TinyTag):
         guid = fh.read(16)  # 128 bit GUID
         if guid != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel':
             return  # not a valid ASF container! see: http://www.garykessler.net/library/file_sigs.html
-        # size = struct.unpack('Q', fh.read(8))[0]
-        # obj_count = struct.unpack('I', fh.read(4))[0]
+        struct.unpack('Q', fh.read(8))[0]
+        struct.unpack('I', fh.read(4))[0]
         if fh.read(2) != b'\x01\x02':
             # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
             return  # not a valid asf header!

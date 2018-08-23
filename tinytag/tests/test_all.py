@@ -16,7 +16,7 @@ from collections import OrderedDict  # not needed for Python >= 3.5
 try:
     from pathlib import Path
 except ImportError:
-    Path = None
+    Path = None  # type: ignore
 xfail = pytest.mark.xfail
 
 
