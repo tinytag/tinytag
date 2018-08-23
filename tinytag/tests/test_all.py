@@ -151,11 +151,7 @@ def get_info(testfile, expected):
             if abs(result - expected_val) < 0.100:
                 if expected_val and min(result, expected_val) / max(result, expected_val) > 0.99:
                     continue
-        try:
-         assert result == expected_val, fmt_string % fmt_values
-        except AssertionError:
-         tag = TinyTag.get(filename)
-
+        assert result == expected_val, fmt_string % fmt_values
     undefined_in_fixture = {}
     for key, val in tag.__dict__.items():
         if key.startswith('_') or val is None:

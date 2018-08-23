@@ -90,28 +90,14 @@ class TinyTag(object):
         self._load_image = False
         self._image_data = None
 
-    @classmethod
-    def is_supported(cls, filename):
-        return cls._get_parser_for_filename(filename) is not None
-
     def get_image(self):
         return self._image_data
 
-    @classmethod
-    def _get_parser_for_filename(cls, filename, exception=False):
-        mapping = {
-            ('.mp3',): ID3,
-            ('.oga', '.ogg', '.opus'): Ogg,
-            ('.wav',): Wave,
-            ('.flac',): Flac,
-            ('.wma',): Wma,
-            ('.m4a', '.mp4'): MP4,
-        }
-        for fileextension, tagclass in mapping.items():
-            if filename.lower().endswith(fileextension):
-                return tagclass
-        if exception:
-            raise TinyTagException('No tag reader found to support filetype! ')
+    def has_all_tags(self):
+        """check if all tags are already defined. Useful for ID3 tags
+        since multiple kinds of tags can be in one audio file"""
+        return all((self.track, self.track_total, self.title, self.artist,
+                    self.album, self.albumartist, self.year, self.genre))
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
@@ -124,9 +110,23 @@ class TinyTag(object):
         if not size > 0:
             return TinyTag(None, 0)
         if cls == TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
-            parser_class = cls._get_parser_for_filename(filename, exception=True)
+            mapping = {
+                ('.mp3',): ID3,
+                ('.oga', '.ogg', '.opus'): Ogg,
+                ('.wav',): Wave,
+                ('.flac',): Flac,
+                ('.wma',): Wma,
+                ('.m4a', '.mp4'): MP4,
+            }
+            # choose which tag reader should be used by file extension
+            for fileextension, tagclass in mapping.items():
+                if filename.lower().endswith(fileextension):
+                    parser_class = tagclass
+                    break
         else:  # otherwise use the class on which `get` was invoked
             parser_class = cls
+        if parser_class is None:
+            raise TinyTagException('No tag reader found to support filetype! ')
         with io.open(filename, 'rb') as af:
             tag = parser_class(af, size)
             tag.load(tags=tags, duration=duration, image=image)
@@ -265,7 +265,7 @@ class MP4(TinyTag):
             # http://sasperger.tistory.com/103
             esds_atom.seek(22, os.SEEK_CUR)  # jump over most data...
             esds_atom.seek(4, os.SEEK_CUR)   # jump over max bitrate
-            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000.0  # kbit/s
+            avg_br = struct.unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
             return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
 
         @classmethod
@@ -567,9 +567,7 @@ class ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        has_all_tags = all((self.track, self.track_total, self.title,
-                            self.artist, self.album, self.albumartist, self.year, self.genre))
-        if not has_all_tags and self.filesize > 128:
+        if not self.has_all_tags() and self.filesize > 128:
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 
@@ -719,7 +717,7 @@ class Ogg(TinyTag):
                 (channels, self.samplerate, max_bitrate, bitrate,
                  min_bitrate) = struct.unpack("<B4i", packet[11:28])
                 if not self.audio_offset:
-                    self.bitrate = bitrate / 1024.0
+                    self.bitrate = bitrate / 1024
                     self.audio_offset = page_start_pos
             elif packet[0:7] == b"\x03vorbis":
                 walker.seek(7, os.SEEK_CUR)  # jump over header name
@@ -813,7 +811,7 @@ class Wave(TinyTag):
             if subchunkid == b'fmt ':
                 _, channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
-                self.bitrate = self.samplerate * channels * bitdepth / 1024.0
+                self.bitrate = self.samplerate * channels * bitdepth / 1024
             elif subchunkid == b'data':
                 self.duration = float(subchunksize)/channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
@@ -860,7 +858,7 @@ class Flac(TinyTag):
             if block_type == Flac.METADATA_STREAMINFO:
                 stream_info_header = fh.read(size)
                 if len(stream_info_header) < 34:  # invalid streaminfo
-                    return
+                    break
                 header = struct.unpack('HH3s3s8B16s', stream_info_header)
                 # From the ciph documentation:
                 # py | <bits>
@@ -874,10 +872,12 @@ class Flac(TinyTag):
                 #    | <5>   (bits per sample)-1.
                 #    | <36>  Total samples in stream.
                 # 16s| <128> MD5 signature
+                #
                 min_blk, max_blk, min_frm, max_frm = header[0:4]
                 min_frm = _bytes_to_int(struct.unpack('3B', min_frm))
                 max_frm = _bytes_to_int(struct.unpack('3B', max_frm))
-                #                 channels--.  bits      total samples
+                #                 channels-
+                #                          `.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
                 # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
@@ -900,8 +900,9 @@ class Flac(TinyTag):
                 fh.seek(size, 1)  # seek over this block
 
             if is_last_block:
-                return
-            header_data = fh.read(4)
+                break
+            else:
+                header_data = fh.read(4)
 
 
 class Wma(TinyTag):
