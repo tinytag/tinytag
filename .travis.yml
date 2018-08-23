@@ -10,8 +10,8 @@ python:
   - 3.4
   - 3.5
   - 3.6
-  - "3.7-dev"
-  - "pypy"
+  - 3.7-dev
+  - pypy
   
 group: travis_latest
 
@@ -24,7 +24,9 @@ install:
   - pip -q install -e .[tests]
 
 # command to run tests
-script: pytest -v
+script: 
+  - pytest -rsv
+  - flake8
 
 after_success:
   - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]] then
