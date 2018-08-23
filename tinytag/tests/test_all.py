@@ -167,7 +167,7 @@ def test_generator():
         get_info(testfile, expected)
 
 
-@xfail(raises=LookupError, strict=True)
+@xfail(raises=TinyTagException, strict=True)
 def test_unsupported_extension():
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
     TinyTag.get(bogus_file)
