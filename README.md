@@ -5,6 +5,7 @@ tinytag is a library for reading music meta data of MP3, OGG, OPUS, MP4, M4A, FL
 
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
+[![Build status](https://ci.appveyor.com/api/projects/status/ichlbguugrxqpfkc?svg=true)](https://ci.appveyor.com/project/scivision/tinytag)
 
 Features:
 
