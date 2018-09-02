@@ -35,7 +35,7 @@ setup(
     author='Tom Wallroth',
     author_email='tomwallroth@gmail.com',
     url='https://github.com/devsnd/tinytag/',
-    license='GPLv3',
+    license='MIT',
     packages=find_packages(),
     install_requires=[],
     classifiers=[
