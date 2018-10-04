@@ -794,6 +794,19 @@ class Ogg(TinyTag):
 
 
 class Wave(TinyTag):
+    riff_mapping = {
+        b'INAM': 'title',
+        b'TITL': 'title',
+        b'IART': 'artist',
+        b'ICMT': 'comment',
+        b'ICRD': 'year',
+        b'IGNR': 'genre',
+        b'TRCK': 'track',
+        b'PRT1': 'track',
+        b'PRT2': 'track_number',
+        b'YEAR': 'year',
+    }
+
     def __init__(self, filehandler, filesize):
         TinyTag.__init__(self, filehandler, filesize)
         self._duration_parsed = False
@@ -816,6 +829,21 @@ class Wave(TinyTag):
                 self.duration = float(subchunksize)/channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
+            elif subchunkid == b'LIST':
+                is_info = fh.read(4)  # check INFO header
+                if is_info != b'INFO':  # jump over non-INFO sections
+                    fh.seek(subchunksize - 4, os.SEEK_CUR)
+                    continue
+                sub_fh = BytesIO(fh.read(subchunksize - 4))
+                field = sub_fh.read(4)
+                while len(field):
+                    data_length = struct.unpack('I', sub_fh.read(4))[0]
+                    data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
+                    data = codecs.decode(data, 'utf-8')
+                    fieldname = self.riff_mapping.get(field)
+                    if fieldname:
+                        self._set_field(fieldname, data)
+                    field = sub_fh.read(4)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
