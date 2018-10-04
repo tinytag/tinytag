@@ -108,7 +108,7 @@ class TinyTag(object):
             ('.wav',): Wave,
             ('.flac',): Flac,
             ('.wma',): Wma,
-            ('.m4a', '.mp4'): MP4,
+            ('.m4b', '.m4a', '.mp4'): MP4,
         }
         for fileextension, tagclass in mapping.items():
             if filename.lower().endswith(fileextension):
