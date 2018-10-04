@@ -90,6 +90,9 @@ class TinyTag(object):
         self._load_image = False
         self._image_data = None
 
+    def as_dict(self):
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+
     @classmethod
     def is_supported(cls, filename):
         return cls._get_parser_for_filename(filename) is not None
@@ -105,7 +108,7 @@ class TinyTag(object):
             ('.wav',): Wave,
             ('.flac',): Flac,
             ('.wma',): Wma,
-            ('.m4a', '.mp4'): MP4,
+            ('.m4b', '.m4a', '.mp4'): MP4,
         }
         for fileextension, tagclass in mapping.items():
             if filename.lower().endswith(fileextension):
