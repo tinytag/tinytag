@@ -90,14 +90,31 @@ class TinyTag(object):
         self._load_image = False
         self._image_data = None
 
+    def as_dict(self):
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+
+    @classmethod
+    def is_supported(cls, filename):
+        return cls._get_parser_for_filename(filename) is not None
+
     def get_image(self):
         return self._image_data
 
-    def has_all_tags(self):
-        """check if all tags are already defined. Useful for ID3 tags
-        since multiple kinds of tags can be in one audio file"""
-        return all((self.track, self.track_total, self.title, self.artist,
-                    self.album, self.albumartist, self.year, self.genre))
+    @classmethod
+    def _get_parser_for_filename(cls, filename, exception=False):
+        mapping = {
+            ('.mp3',): ID3,
+            ('.oga', '.ogg', '.opus'): Ogg,
+            ('.wav',): Wave,
+            ('.flac',): Flac,
+            ('.wma',): Wma,
+            ('.m4b', '.m4a', '.mp4'): MP4,
+        }
+        for fileextension, tagclass in mapping.items():
+            if filename.lower().endswith(fileextension):
+                return tagclass
+        if exception:
+            raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
@@ -296,16 +313,16 @@ class MP4(TinyTag):
         # see: http://atomicparsley.sourceforge.net/mpeg-4files.html
         b'\xa9alb': {b'data': Parser.make_data_atom_parser('album')},
         b'\xa9ART': {b'data': Parser.make_data_atom_parser('artist')},
-        b'aART': {b'data': Parser.make_data_atom_parser('albumartist')},
+        b'aART':    {b'data': Parser.make_data_atom_parser('albumartist')},
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
         b'\xa9cmt': {b'data': Parser.make_data_atom_parser('comment')},
-        b'disk': {b'data': Parser.make_number_parser('disc', 'disc_total')},
+        b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
         # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
-        b'gnre': {b'data': Parser.parse_id3v1_genre},
+        b'gnre':    {b'data': Parser.parse_id3v1_genre},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
-        b'trkn': {b'data': Parser.make_number_parser('track', 'track_total')},
+        b'trkn':    {b'data': Parser.make_number_parser('track', 'track_total')},
     }}}}}
 
     # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
@@ -377,12 +394,12 @@ class MP4(TinyTag):
 class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
         'COMM': 'comment', 'COM': 'comment',
-        'TRCK': 'track', 'TRK': 'track',
-        'TYER': 'year', 'TYE': 'year',
-        'TALB': 'album', 'TAL': 'album',
+        'TRCK': 'track',  'TRK': 'track',
+        'TYER': 'year',   'TYE': 'year',
+        'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
-        'TIT2': 'title', 'TT2': 'title',
-        'TCON': 'genre', 'TPOS': 'disc',
+        'TIT2': 'title',  'TT2': 'title',
+        'TCON': 'genre',  'TPOS': 'disc',
         'TPE2': 'albumartist',
     }
     IMAGE_FRAME_IDS = set(['APIC', 'PIC'])
@@ -567,7 +584,9 @@ class ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        if not self.has_all_tags() and self.filesize > 128:
+        has_all_tags = all((self.track, self.track_total, self.title,
+            self.artist, self.album, self.albumartist, self.year, self.genre))
+        if not has_all_tags and self.filesize > 128:
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 
@@ -794,6 +813,19 @@ class Ogg(TinyTag):
 
 
 class Wave(TinyTag):
+    riff_mapping = {
+        b'INAM': 'title',
+        b'TITL': 'title',
+        b'IART': 'artist',
+        b'ICMT': 'comment',
+        b'ICRD': 'year',
+        b'IGNR': 'genre',
+        b'TRCK': 'track',
+        b'PRT1': 'track',
+        b'PRT2': 'track_number',
+        b'YEAR': 'year',
+    }
+
     def __init__(self, filehandler, filesize):
         TinyTag.__init__(self, filehandler, filesize)
         self._duration_parsed = False
@@ -816,6 +848,21 @@ class Wave(TinyTag):
                 self.duration = float(subchunksize) / channels / self.samplerate / (bitdepth / 8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
+            elif subchunkid == b'LIST':
+                is_info = fh.read(4)  # check INFO header
+                if is_info != b'INFO':  # jump over non-INFO sections
+                    fh.seek(subchunksize - 4, os.SEEK_CUR)
+                    continue
+                sub_fh = BytesIO(fh.read(subchunksize - 4))
+                field = sub_fh.read(4)
+                while len(field):
+                    data_length = struct.unpack('I', sub_fh.read(4))[0]
+                    data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
+                    data = codecs.decode(data, 'utf-8')
+                    fieldname = self.riff_mapping.get(field)
+                    if fieldname:
+                        self._set_field(fieldname, data)
+                    field = sub_fh.read(4)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
@@ -858,7 +905,7 @@ class Flac(TinyTag):
             if block_type == Flac.METADATA_STREAMINFO:
                 stream_info_header = fh.read(size)
                 if len(stream_info_header) < 34:  # invalid streaminfo
-                    break
+                    return
                 header = struct.unpack('HH3s3s8B16s', stream_info_header)
                 # From the ciph documentation:
                 # py | <bits>
@@ -872,12 +919,10 @@ class Flac(TinyTag):
                 #    | <5>   (bits per sample)-1.
                 #    | <36>  Total samples in stream.
                 # 16s| <128> MD5 signature
-                #
                 min_blk, max_blk, min_frm, max_frm = header[0:4]
                 min_frm = _bytes_to_int(struct.unpack('3B', min_frm))
                 max_frm = _bytes_to_int(struct.unpack('3B', max_frm))
-                #                 channels-
-                #                          `.  bits      total samples
+                #                 channels--.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
                 # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
@@ -900,9 +945,8 @@ class Flac(TinyTag):
                 fh.seek(size, 1)  # seek over this block
 
             if is_last_block:
-                break
-            else:
-                header_data = fh.read(4)
+                return
+            header_data = fh.read(4)
 
 
 class Wma(TinyTag):
