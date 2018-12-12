@@ -19,7 +19,6 @@ try:
     formatting = pop_param('--format', 'json')
     filename = sys.argv[1]
 except:
-    raise
     usage()
 
 try:
