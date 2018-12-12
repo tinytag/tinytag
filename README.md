@@ -37,6 +37,7 @@ List of possible attributes you can get with TinyTag:
     tag.artist        # artist name as string
     tag.audio_offset  # number of bytes before audio data begins
     tag.bitrate       # bitrate in kBits/s
+    tag.comment       # file comment as string
     tag.disc          # disc number
     tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
@@ -63,10 +64,24 @@ and possibly more.
 
 Changelog:
 
- * 0.19.0 (2018/02/11): fixed corrupted images for some mp3s (#45)
- * 0.18.0 (2017/04/29): fixed wrong bitrate and crash when parsing xing header
- * 0.17.0 (2016/10/02): supporting ID3v2.2 images
- * 0.16.0 (2016/08/06): MP4 cover image support
- * 0.15.2 (2016/08/06): fixed crash for malformed MP4 files (#34)
- * 0.15.0 (2016/08/06): fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
- * 0.14.0 (2016/06/05): MP4/M4A and Opus support
+ * 1.0.0  (2018-12-12):
+   - added comment field
+   - added wav-riff format support
+   - use MP4 parser for m4b files
+   - added simple cli tool
+   - fix parsing of FLAC files with ID3 header (thanks to minus7)
+   - added method `TinyTag.is_supported(filename)`
+ * 0.19.0 (2018-02-11):
+   - fixed corrupted images for some mp3s (#45)
+ * 0.18.0 (2017-04-29):
+   - fixed wrong bitrate and crash when parsing xing header
+ * 0.17.0 (2016-10-02):
+   - supporting ID3v2.2 images
+ * 0.16.0 (2016-08-06):
+   - MP4 cover image support
+ * 0.15.2 (2016-08-06):
+   - fixed crash for malformed MP4 files (#34)
+ * 0.15.0 (2016-08-06):
+   - fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
+ * 0.14.0 (2016-06-05):
+   - MP4/M4A and Opus support
