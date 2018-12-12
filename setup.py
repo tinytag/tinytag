@@ -32,6 +32,7 @@ setup(
     version=get_version(),
     description='Read music meta data and length of MP3, OGG, OPUS, MP4, M4A, FLAC, WMA and Wave files',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     author='Tom Wallroth',
     author_email='tomwallroth@gmail.com',
     url='https://github.com/devsnd/tinytag/',
