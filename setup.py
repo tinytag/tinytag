@@ -4,7 +4,8 @@ import sys
 import os
 
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+    with open(os.path.join(os.path.dirname(__file__), fname)) as f:
+        return f.read()
 
 def get_version():
     with open(join('tinytag', '__init__.py')) as f:
