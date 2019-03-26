@@ -835,17 +835,17 @@ class Wave(TinyTag):
                 is_info = fh.read(4)  # check INFO header
                 if is_info != b'INFO':  # jump over non-INFO sections
                     fh.seek(subchunksize - 4, os.SEEK_CUR)
-                    continue
-                sub_fh = BytesIO(fh.read(subchunksize - 4))
-                field = sub_fh.read(4)
-                while len(field):
-                    data_length = struct.unpack('I', sub_fh.read(4))[0]
-                    data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
-                    data = codecs.decode(data, 'utf-8')
-                    fieldname = self.riff_mapping.get(field)
-                    if fieldname:
-                        self._set_field(fieldname, data)
+                else:
+                    sub_fh = BytesIO(fh.read(subchunksize - 4))
                     field = sub_fh.read(4)
+                    while len(field):
+                        data_length = struct.unpack('I', sub_fh.read(4))[0]
+                        data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
+                        data = codecs.decode(data, 'utf-8')
+                        fieldname = self.riff_mapping.get(field)
+                        if fieldname:
+                            self._set_field(fieldname, data)
+                        field = sub_fh.read(4)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
