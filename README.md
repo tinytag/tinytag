@@ -72,6 +72,8 @@ supported python versions:
 and possibly more.
 
 Changelog:
+ * 1.2.1  (2019-04-13):
+   - fixed wav files not correctly reporting the number of channels #61
 
  * 1.2.0  (2019-04-13):
    - using setup.cfg instead of setup.py (thanks to scivision)
