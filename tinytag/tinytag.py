@@ -39,7 +39,7 @@ import os
 import io
 import sys
 from io import BytesIO
-DEBUG = False  # some of the parsers will print some debug info when set to True
+DEBUG = os.environ.get('DEBUG', False)  # some of the parsers will print some debug info when set to True
 
 
 class TinyTagException(LookupError):  # inherit LookupError for backwards compat
@@ -632,7 +632,7 @@ class ID3(TinyTag):
         frame_id = self._decode_string(frame[0])
         frame_size = self._calc_size(frame[1:1+frame_size_bytes], bits_per_byte)
         if DEBUG:
-            stderr('Found Frame %s at %d-%d' % (frame_id, fh.tell(), fh.tell() + frame_size))
+            stderr('Found id3 Frame %s at %d-%d of %d' % (frame_id, fh.tell(), fh.tell() + frame_size, self.filesize))
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             if frame_id not in ID3.PARSABLE_FRAME_IDS:  # jump over unparsable frames
