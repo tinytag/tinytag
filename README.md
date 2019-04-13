@@ -72,7 +72,8 @@ and possibly more.
 
 Changelog:
 
-
+ * 1.1.0  (2019-04-13):
+   - added new field "composer" (Thanks to Phil Borman)
  * 1.0.1  (2019-04-13):
    - fixed ID3 loading for files with corrupt header (thanks to Ian Homer)
    - fixed parsing of duration in wav file (thanks to Ian Homer)
