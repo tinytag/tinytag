@@ -72,6 +72,8 @@ and possibly more.
 
 Changelog:
 
+ * 1.2.0  (unreleased):
+   - using setup.cfg instead of setup.py (thanks to scivision)
  * 1.1.0  (2019-04-13):
    - added new field "composer" (Thanks to Phil Borman)
  * 1.0.1  (2019-04-13):
