@@ -624,7 +624,7 @@ class ID3(TinyTag):
         binformat = '3s3B' if id3version == 2 else '4s4B2B'
         bits_per_byte = 7 if id3version == 4 else 8  # only id3v2.4 is synchsafe
         frame_header_data = fh.read(frame_header_size)
-        if len(frame_header_data) == 0:
+        if len(frame_header_data) != frame_header_size:
             return 0
         frame = struct.unpack(binformat, frame_header_data)
         frame_id = self._decode_string(frame[0])
