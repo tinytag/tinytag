@@ -1,7 +1,7 @@
 You can easily check if tinytag does the right thing by placing test files in
 this folder.
 
-The name of the test file will automatically create a test, when running nosetests.
+The name of the test file will automatically create a test, when running pytest.
 
 For example the file
 
