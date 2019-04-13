@@ -24,7 +24,7 @@ except ImportError:
 
 testfiles = OrderedDict([
     # MP3
-    ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\uff00þ\uff00勾椀瀀瀀攀搀\u2000戀礀\u2000吀䠀匀䰀䤀嘀䔀'}),
+    ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\uff00þ\uff00勾椀瀀瀀攀搀\u2000戀礀\u2000吀䠀匀䰀䤀嘀䔀', 'composer': ''}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'XXX'}),
     # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
     ('samples/vbr_xing_header.mp3', {'bitrate': 186.04383278145696, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367, 'filesize': 91731, 'audio_offset': 441}),
@@ -36,7 +36,7 @@ testfiles = OrderedDict([
     ('samples/empty_file.mp3', {'channels': None, 'samplerate': None, 'track_total': None, 'album': None, 'year': None, 'title': None, 'track': None, 'artist': None, 'filesize': 0}),
     ('samples/silence-44khz-56k-mono-1s.mp3', {'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'samplerate': 44100, 'filesize': 7280, 'audio_offset': 0, 'bitrate': 56.0}),
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050, 'filesize': 4284, 'audio_offset': 0, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
-    ('samples/id3v24-long-title.mp3', {'track': '1', 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'albumartist': 'Courtney Barnett', 'samplerate': None, 'year': None, 'disc': '1', 'comment': 'Amazon.com Song ID: 240853806'}),
+    ('samples/id3v24-long-title.mp3', {'track': '1', 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'albumartist': 'Courtney Barnett', 'samplerate': None, 'year': None, 'disc': '1', 'comment': 'Amazon.com Song ID: 240853806', 'composer': 'Courtney Barnett'}),
     ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None, 'channels': 2}),
     ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': 2}),
 
@@ -46,6 +46,7 @@ testfiles = OrderedDict([
     ('samples/multipage-setup.ogg', {'genre': 'JRock', 'track_total': None, 'duration': 4.128798185941043, 'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7', '_tags_parsed': False, 'filesize': 76983, 'audio_offset': 0, 'bitrate': 156.25, 'samplerate': 44100}),
     ('samples/test.ogg', {'track_total': None, 'duration': 1.0, 'album': 'the boss', 'year': '2006', 'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False, 'filesize': 7467, 'audio_offset': 0, 'bitrate': 156.25, 'samplerate': 44100, 'comment': 'hello!'}),
     ('samples/corrupt_metadata.ogg', {'filesize': 18648, 'audio_offset': 0, 'bitrate': 78.125, 'duration': 2.132358276643991, 'samplerate': 44100}),
+    ('samples/composer.ogg', {'filesize': 4480, 'album': 'An Album', 'artist': 'An Artist', 'audio_offset': 0, 'bitrate': 109.375, 'duration': 3.684716553287982, 'genre': 'Some Genre', 'samplerate': 44100, 'title': 'A Title', 'track': '2', 'year': '2007', 'composer': 'some composer'}),
 
     # OPUS
     ('samples/test.opus', {'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2, 'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25', 'filesize': 10000, 'artist': 'nomico', 'album': 'Exserens - A selection of Alstroemeria Records', 'comment': 'ARCD0018 - Lovelight'}),
@@ -64,7 +65,7 @@ testfiles = OrderedDict([
     ('samples/flac1.5sStereo.flac', {'channels': 2, 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.4995238095238095, 'title': 'track', 'track': '23', 'artist': 'art', 'filesize': 59868, 'bitrate': 311.9115195300095, 'genre': 'Avantgarde', 'samplerate': 44100}),
     ('samples/flac_application.flac', {'channels': 2, 'track_total': '11', 'album': 'Belle and Sebastian Write About Love', 'year': '2010-10-11', 'duration': 273.64, 'title': 'I Want the World to Stop', 'track': '4', 'artist': 'Belle and Sebastian', 'filesize': 13000, 'bitrate': 0.37115370559859673, 'samplerate': 44100}),
     ('samples/no-tags.flac', {'channels': 2, 'track_total': None, 'album': None, 'year': None, 'duration': 3.684716553287982, 'title': None, 'track': None, 'artist': None, 'filesize': 4692, 'bitrate': 9.94818718614612, 'samplerate': 44100}),
-    ('samples/variable-block.flac', {'channels': 2, 'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites', 'filesize': 10240, 'bitrate': 0.3057169061449098, 'disc': '1', 'genre': 'Anime Soundtrack', 'samplerate': 44100}),
+    ('samples/variable-block.flac', {'channels': 2, 'track_total': None, 'album': 'Appleseed Original Soundtrack', 'year': '2004', 'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': '01', 'artist': 'Boom Boom Satellites', 'filesize': 10240, 'bitrate': 0.3057169061449098, 'disc': '1', 'genre': 'Anime Soundtrack', 'samplerate': 44100, 'composer': 'Boom Boom Satellites (Lyrics)'}),
     ('samples/106-invalid-streaminfo.flac', {'filesize': 4692}),
     ('samples/106-short-picture-block-size.flac', {'filesize': 4692, 'bitrate': 9.94818718614612, 'channels': 2, 'duration': 3.68, 'samplerate': 44100}),
     ('samples/with_id3_header.flac', {'filesize': 64837, 'album': '   ', 'artist': '群星', 'disc': '0', 'title': 'A 梦 哆啦 机器猫 短信铃声', 'track': '0', 'bitrate': 1116.9186328125, 'channels': 1, 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'year': '2018'}),
@@ -72,11 +73,11 @@ testfiles = OrderedDict([
     ('samples/with_padded_id3_header2.flac', {'filesize': 19522, 'album': 'Unbekannter Titel', 'albumartist': None, 'artist': 'Unbekannter Künstler', 'audio_offset': None, 'bitrate': 336.29695312499996, 'channels': 1, 'comment': None, 'disc': '1', 'disc_total': '1', 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'title': 'Track01', 'track': '01', 'track_total': '05', 'year': '2018'}),
 
     # WMA
-    ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': 1, 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': ''}),
+    ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': 1, 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': '', 'composer': 'Foo Fighters'}),
 
     # M4A/MP4
     ('samples/test.m4a', {'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
-    ('samples/test2.m4a', {'bitrate': 256.0, 'track': 1, 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1, 'title': 'Go Out and Get Some', 'comment': "Millie Jackson - Get It Out 'cha System - 1978"}),
+    ('samples/test2.m4a', {'bitrate': 256.0, 'track': 1, 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1, 'title': 'Go Out and Get Some', 'comment': "Millie Jackson - Get It Out 'cha System - 1978", 'composer': "Millie Jackson - Get It Out 'cha System - 1978"}),
     ('samples/iso8859_with_image.m4a', {'artist': 'Major Lazer', 'filesize': 57017, 'title': 'Cold Water (feat. Justin Bieber & M�)', 'album': 'Cold Water (feat. Justin Bieber & M�) - Single', 'year': '2016', 'samplerate': 44100, 'duration': 188.545, 'genre': 'Electronic;Music', 'albumartist': 'Major Lazer', 'channels': 2, 'bitrate': 303040.001, 'comment': '? 2016 Mad Decent'}),
 
 ])

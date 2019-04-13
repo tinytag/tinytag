@@ -78,6 +78,7 @@ class TinyTag(object):
         self.bitrate = None
         self.channels = None
         self.comment = None
+        self.composer = None
         self.disc = None
         self.disc_total = None
         self.duration = None
@@ -179,7 +180,7 @@ class TinyTag(object):
         # update the values of this tag with the values from another tag
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
-                    'genre', 'disc', 'disc_total', 'comment']:
+                    'genre', 'disc', 'disc_total', 'comment', 'composer']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -299,7 +300,7 @@ class MP4(TinyTag):
         # b'cpil':    {b'data': Parser.make_data_atom_parser('compilation')},
         b'\xa9cmt': {b'data': Parser.make_data_atom_parser('comment')},
         b'disk':    {b'data': Parser.make_number_parser('disc', 'disc_total')},
-        # b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
+        b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'gnre':    {b'data': Parser.parse_id3v1_genre},
@@ -381,7 +382,7 @@ class ID3(TinyTag):
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
         'TCON': 'genre',  'TPOS': 'disc',
-        'TPE2': 'albumartist',
+        'TPE2': 'albumartist', 'TCOM': 'composer',
     }
     IMAGE_FRAME_IDS = set(['APIC', 'PIC'])
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
@@ -742,6 +743,7 @@ class Ogg(TinyTag):
     def _parse_vorbis_comment(self, fh):
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
+        # https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Vorbis.html
         comment_type_to_attr_mapping = {
             'album': 'album',
             'albumartist': 'albumartist',
@@ -752,6 +754,7 @@ class Ogg(TinyTag):
             'discnumber': 'disc',
             'genre': 'genre',
             'description': 'comment',
+            'composer': 'composer',
         }
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
@@ -796,6 +799,7 @@ class Ogg(TinyTag):
 
 
 class Wave(TinyTag):
+    # https://sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html
     riff_mapping = {
         b'INAM': 'title',
         b'TITL': 'title',
@@ -807,6 +811,7 @@ class Wave(TinyTag):
         b'PRT1': 'track',
         b'PRT2': 'track_number',
         b'YEAR': 'year',
+        # riff format is lacking the composer field.
     }
 
     def __init__(self, filehandler, filesize):
@@ -1024,6 +1029,7 @@ class Wma(TinyTag):
                     'WM/AlbumArtist': 'albumartist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
+                    'WM/Composer': 'composer',
                 }
                 # see: http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))

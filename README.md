@@ -45,6 +45,7 @@ List of possible attributes you can get with TinyTag:
     tag.audio_offset  # number of bytes before audio data begins
     tag.bitrate       # bitrate in kBits/s
     tag.comment       # file comment as string
+    tag.composer      # composer as string 
     tag.disc          # disc number
     tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
