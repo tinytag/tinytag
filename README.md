@@ -71,6 +71,10 @@ and possibly more.
 
 Changelog:
 
+
+ * 1.0.1  (2019-04-13):
+   - fixed ID3 loading for files with corrupt header (thanks to Ian Homer)
+   - fixed parsing of duration in wav file (thanks to Ian Homer)
  * 1.0.0  (2018-12-12):
    - added comment field
    - added wav-riff format support
