@@ -73,7 +73,7 @@ and possibly more.
 
 Changelog:
 
- * 1.2.0  (unreleased):
+ * 1.2.0  (2019-04-13):
    - using setup.cfg instead of setup.py (thanks to scivision)
    - added support for calling TinyTag.get with pathlib.Path (thanks to scivision)
    - added appveyor windows test CI (thanks to scivision)
