@@ -136,6 +136,16 @@ def test_generator():
     for testfile, expected in testfiles.items():
         yield get_info, testfile, expected
 
+
+def test_pathlib_compatibility():
+    try:
+        import pathlib
+    except ImportError:
+        return
+    testfile = next(iter(testfiles.keys()))
+    filename = pathlib.Path(testfolder) / testfile
+    tag = TinyTag.get(filename)
+
 @raises(TinyTagException)
 def test_unsupported_extension():
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')

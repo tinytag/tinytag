@@ -119,6 +119,7 @@ class TinyTag(object):
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
+        filename = os.path.expanduser(str(filename))  # cast pathlib.Path to str
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
