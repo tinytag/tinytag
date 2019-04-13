@@ -19,5 +19,5 @@ install:
 - pip install mypy
 
 test_script: 
-- pytest -rsv
+- pytest --cov
 # - mypy . --ignore-missing-imports
