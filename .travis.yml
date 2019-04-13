@@ -19,7 +19,7 @@ install:
 
 # command to run tests
 script:
-  coverage run --source=tinytag $(command -v nosetests)
+  coverage run --source=tinytag $(command -v pytest)
 
 after_success:
   coveralls

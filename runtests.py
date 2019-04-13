@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import nose
+import pytest
 
 
 def runtests():
-    nose.run()
+    pytest.main()
 
 
 if __name__ == '__main__':
