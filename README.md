@@ -4,6 +4,7 @@ tinytag
 tinytag is a library for reading music meta data of MP3, OGG, OPUS, MP4, M4A, FLAC, WMA and Wave files with python
 
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
+[![Build status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
 
 Install
@@ -75,6 +76,8 @@ Changelog:
  * 1.2.0  (unreleased):
    - using setup.cfg instead of setup.py (thanks to scivision)
    - added support for calling TinyTag.get with pathlib.Path (thanks to scivision)
+   - added appveyor windows test CI (thanks to scivision)
+   - using pytest instead of nosetest (thanks to scivision)
  * 1.1.0  (2019-04-13):
    - added new field "composer" (Thanks to Phil Borman)
  * 1.0.1  (2019-04-13):
