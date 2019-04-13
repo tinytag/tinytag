@@ -1,0 +1,23 @@
+image:
+- Visual Studio 2017
+- Ubuntu
+
+stack: python 3
+
+environment:
+  PY_DIR: C:\Python37-x64
+
+clone_depth: 3
+
+build: off
+
+init:
+- cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
+
+install: 
+- pip install -e .[tests]
+- pip install mypy
+
+test_script: 
+- pytest -rsv
+- mypy . --ignore-missing-imports
