@@ -509,17 +509,17 @@ class ID3(TinyTag):
             mpeg_id = (conf >> 3) & 0x03
             layer_id = (conf >> 1) & 0x03
             channel_mode = (rest >> 6) & 0x03
-            self.channels = self.channels_per_channel_mode[channel_mode]
             # check for eleven 1s, validate bitrate and sample rate
-            if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3:
+            if not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0 or mpeg_id == 1:
                 idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
                 if idx == -1:
                     idx = len(b)  # not found: jump over the current peek buffer
                 fh.seek(max(idx, 1), os.SEEK_CUR)
                 continue
             try:
-                self.samplerate = ID3.samplerates[mpeg_id][sr_id]
+                self.channels = self.channels_per_channel_mode[channel_mode]
                 frame_bitrate = ID3.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
+                self.samplerate = ID3.samplerates[mpeg_id][sr_id]
             except (IndexError, TypeError):
                 raise TinyTagException('mp3 parsing failed')
             # There might be a xing header in the first frame that contains
