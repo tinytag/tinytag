@@ -119,7 +119,6 @@ class TinyTag(object):
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
-        parser_class = None
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
@@ -322,8 +321,8 @@ class MP4(TinyTag):
         b'covr': {b'data': Parser.make_data_atom_parser('_image_data')},
     }}}}}
 
-    VERSIONED_ATOMS = set((b'meta', b'stsd'))  # those have an extra 4 byte header
-    FLAGGED_ATOMS = set((b'stsd',))  # these also have an extra 4 byte header
+    VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
+    FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
     def _determine_duration(self, fh):
         self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
@@ -384,7 +383,7 @@ class ID3(TinyTag):
         'TCON': 'genre',  'TPOS': 'disc',
         'TPE2': 'albumartist', 'TCOM': 'composer',
     }
-    IMAGE_FRAME_IDS = set(['APIC', 'PIC'])
+    IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -472,7 +471,8 @@ class ID3(TinyTag):
         1,  # 11 Single channel (Mono)
     ]
 
-    def _parse_xing_header(self, fh):
+    @staticmethod
+    def _parse_xing_header(fh):
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
         fh.seek(4, os.SEEK_CUR)  # read over Xing header
         header_flags = struct.unpack('>i', fh.read(4))[0]
@@ -528,7 +528,7 @@ class ID3(TinyTag):
                 xing_header_offset = b.find(b'Xing')
                 if xing_header_offset != -1:
                     fh.seek(xing_header_offset, os.SEEK_CUR)
-                    xframes, byte_count, toc, vbr_scale = self._parse_xing_header(fh)
+                    xframes, byte_count, toc, vbr_scale = ID3._parse_xing_header(fh)
                     if xframes and xframes != 0 and byte_count:
                         self.duration = xframes * ID3.samples_per_frame / float(self.samplerate)
                         self.bitrate = byte_count * 8 / self.duration / 1000
@@ -634,7 +634,7 @@ class ID3(TinyTag):
             stderr('Found Frame %s at %d-%d' % (frame_id, fh.tell(), fh.tell() + frame_size))
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
-            if not frame_id in ID3.PARSABLE_FRAME_IDS:  # jump over unparsable frames
+            if frame_id not in ID3.PARSABLE_FRAME_IDS:  # jump over unparsable frames
                 fh.seek(frame_size, os.SEEK_CUR)
                 return frame_size
             content = fh.read(frame_size)
@@ -651,7 +651,7 @@ class ID3(TinyTag):
                     desc_start_pos = mimetype_end_pos + 1  # jump over picture type
                     desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
                 if content[desc_end_pos:desc_end_pos+1] == b'\x00':
-                    desc_end_pos += 1 # the description ends with 1 or 2 null bytes
+                    desc_end_pos += 1  # the description ends with 1 or 2 null bytes
                 self._image_data = content[desc_end_pos:]
             return frame_size
         return 0
@@ -693,18 +693,18 @@ class Ogg(TinyTag):
         self._max_samplenum = 0  # maximum sample position ever read
 
     def _determine_duration(self, fh):
-        MAX_PAGE_SIZE = 65536  # https://xiph.org/ogg/doc/libogg/ogg_page.html
+        max_page_size = 65536  # https://xiph.org/ogg/doc/libogg/ogg_page.html
         if not self._tags_parsed:
             self._parse_tag(fh)  # determine sample rate
             fh.seek(0)           # and rewind to start
-        if self.filesize > MAX_PAGE_SIZE:
-            fh.seek(-MAX_PAGE_SIZE, 2)  # go to last possible page position
+        if self.filesize > max_page_size:
+            fh.seek(-max_page_size, 2)  # go to last possible page position
         while True:
             b = fh.peek(4)
             if len(b) == 0:
                 return  # EOF
             if b[:4] == b'OggS':  # look for an ogg header
-                for packet in self._parse_pages(fh):
+                for _ in self._parse_pages(fh):
                     pass  # parse all remaining pages
                 self.duration = self._max_samplenum / float(self.samplerate)
             else:
@@ -908,8 +908,8 @@ class Flac(TinyTag):
                 #    | <36>  Total samples in stream.
                 # 16s| <128> MD5 signature
                 min_blk, max_blk, min_frm, max_frm = header[0:4]
-                min_frm = _bytes_to_int(struct.unpack('3B', min_frm))
-                max_frm = _bytes_to_int(struct.unpack('3B', max_frm))
+                # min_frm = _bytes_to_int(struct.unpack('3B', min_frm))
+                # max_frm = _bytes_to_int(struct.unpack('3B', max_frm))
                 #                 channels--.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
@@ -993,11 +993,11 @@ class Wma(TinyTag):
         guid = fh.read(16)  # 128 bit GUID
         if guid != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel':
             return  # not a valid ASF container! see: http://www.garykessler.net/library/file_sigs.html
-        size = struct.unpack('Q', fh.read(8))[0]
-        obj_count = struct.unpack('I', fh.read(4))[0]
+        struct.unpack('Q', fh.read(8))[0]  # size
+        struct.unpack('I', fh.read(4))[0]  # obj_count
         if fh.read(2) != b'\x01\x02':
             # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
-            return # not a valid asf header!
+            return  # not a valid asf header!
         while True:
             object_id = fh.read(16)
             object_size = _bytes_to_int_le(fh.read(8))
@@ -1084,4 +1084,4 @@ class Wma(TinyTag):
                 fh.seek(blocks['type_specific_data_length'] - already_read, os.SEEK_CUR)
                 fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
             else:
-                fh.seek(object_size - 24, os.SEEK_CUR) # read over onknown object ids
+                fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
