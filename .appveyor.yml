@@ -20,4 +20,4 @@ install:
 
 test_script: 
 - pytest -rsv
-- mypy . --ignore-missing-imports
+# - mypy . --ignore-missing-imports
