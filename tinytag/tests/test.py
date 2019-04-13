@@ -56,6 +56,7 @@ testfiles = OrderedDict([
     ('samples/test-tagged.wav', {'duration': 1.0, 'filesize': 176688, 'album': 'thealbum', 'artist': 'theartisst', 'bitrate': 1378.125, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': '66', 'audio_offest': 36, 'comment': 'hello', 'year': '2014'}),
     ('samples/test-riff-tags.wav', {'duration': 1.0, 'filesize': 176540, 'album': None, 'artist': 'theartisst', 'bitrate': 1378.125, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': None, 'audio_offest': 36, 'comment': 'hello', 'year': '2014'}),
     ('samples/silence-22khz-mono-1s.wav', {'duration': 1.0, 'filesize': 48160, 'bitrate': 344.53125, 'samplerate': 22050, 'audio_offest': 4088}),
+    ('samples/id3_header_with_a_zero_byte.wav', {'duration': 1.0, 'filesize': 44280, 'bitrate': 344.53125, 'samplerate': 22050, 'audio_offest': 122, 'artist': 'Purpley', 'title': 'Test000', 'track': '17'}),
 
     # FLAC
     ('samples/flac1sMono.flac', {'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art', 'channels': 1, 'filesize': 26632, 'bitrate': 208.0625, 'samplerate': 44100}),
@@ -85,12 +86,12 @@ testfolder = os.path.join(os.path.dirname(__file__))
 # load custom samples
 custom_samples_folder = os.path.join(testfolder, 'custom_samples')
 pattern_field_name_type = [
-    ('sr=(\d+)', 'samplerate', int),
-    ('dn=(\d+)', 'disc', str),
-    ('dt=(\d+)', 'disc_total', str),
-    ('d=(\d+.?\d*)', 'duration', float),
-    ('b=(\d+)', 'bitrate', int),
-    ('c=(\d)', 'channels', int),
+    (r'sr=(\d+)', 'samplerate', int),
+    (r'dn=(\d+)', 'disc', str),
+    (r'dt=(\d+)', 'disc_total', str),
+    (r'd=(\d+.?\d*)', 'duration', float),
+    (r'b=(\d+)', 'bitrate', int),
+    (r'c=(\d)', 'channels', int),
 ]
 for filename in os.listdir(custom_samples_folder):
     if filename == 'instructions.txt':

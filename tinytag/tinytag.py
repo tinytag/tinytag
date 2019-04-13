@@ -624,7 +624,7 @@ class ID3(TinyTag):
         binformat = '3s3B' if id3version == 2 else '4s4B2B'
         bits_per_byte = 7 if id3version == 4 else 8  # only id3v2.4 is synchsafe
         frame_header_data = fh.read(frame_header_size)
-        if len(frame_header_data) == 0:
+        if len(frame_header_data) != frame_header_size:
             return 0
         frame = struct.unpack(binformat, frame_header_data)
         frame_id = self._decode_string(frame[0])
@@ -835,17 +835,17 @@ class Wave(TinyTag):
                 is_info = fh.read(4)  # check INFO header
                 if is_info != b'INFO':  # jump over non-INFO sections
                     fh.seek(subchunksize - 4, os.SEEK_CUR)
-                    continue
-                sub_fh = BytesIO(fh.read(subchunksize - 4))
-                field = sub_fh.read(4)
-                while len(field):
-                    data_length = struct.unpack('I', sub_fh.read(4))[0]
-                    data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
-                    data = codecs.decode(data, 'utf-8')
-                    fieldname = self.riff_mapping.get(field)
-                    if fieldname:
-                        self._set_field(fieldname, data)
+                else:
+                    sub_fh = BytesIO(fh.read(subchunksize - 4))
                     field = sub_fh.read(4)
+                    while len(field):
+                        data_length = struct.unpack('I', sub_fh.read(4))[0]
+                        data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
+                        data = codecs.decode(data, 'utf-8')
+                        fieldname = self.riff_mapping.get(field)
+                        if fieldname:
+                            self._set_field(fieldname, data)
+                        field = sub_fh.read(4)
             elif subchunkid == b'id3 ' or subchunkid == b'ID3 ':
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
