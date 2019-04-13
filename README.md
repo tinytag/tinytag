@@ -18,12 +18,12 @@ Features:
   * Read tags, length and IDv3 cover images of music files
   * supported formats
     * MP3 (ID3 v1, v1.1, v2.2, v2.3+)
-    * Wave
+    * Wave/RIFF
     * OGG
     * OPUS
     * FLAC
     * WMA
-    * MP4/M4A
+    * MP4/M4A/M4B
   * pure python
   * supports python 2.6+ and 3.2+
   * is tested 
