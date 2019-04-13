@@ -6,7 +6,14 @@ tinytag is a library for reading music meta data of MP3, OGG, OPUS, MP4, M4A, FL
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
 
+Install
+-------
+
+```pip install tinytag```
+
+
 Features:
+---------
 
   * Read tags, length and IDv3 cover images of music files
   * supported formats
