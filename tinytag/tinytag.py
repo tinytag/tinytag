@@ -33,6 +33,7 @@
 from __future__ import print_function
 from collections import MutableMapping
 import codecs
+import locale
 from functools import reduce
 import struct
 import os
@@ -604,7 +605,11 @@ class ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
             def asciidecode(x):
-                return self._unpad(codecs.decode(x, 'latin1'))
+                try:
+                    return self._unpad(codecs.decode(x, locale.getpreferredencoding(False)))
+                except:
+                    return self._unpad(codecs.decode(x, 'latin1'))
+
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
             self._set_field('title', fields[:30], transfunc=asciidecode)
             self._set_field('artist', fields[30:60], transfunc=asciidecode)
@@ -665,7 +670,10 @@ class ID3(TinyTag):
         try:  # it's not my fault, this is the spec.
             first_byte = b[:1]
             if first_byte == b'\x00':  # ISO-8859-1
-                return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
+                try:
+                    return self._unpad(codecs.decode(b[1:], locale.getpreferredencoding(False)))
+                except:
+                    return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 # read byte order mark to determine endianess
                 encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
@@ -678,7 +686,11 @@ class ID3(TinyTag):
                 return self._unpad(codecs.decode(bytestr, 'UTF-16le'))
             elif first_byte == b'\x03':  # UTF-8
                 return codecs.decode(b[1:], 'UTF-8')
-            return self._unpad(codecs.decode(b, 'ISO-8859-1'))  # wild guess
+
+            try:
+                return self._unpad(codecs.decode(b, locale.getpreferredencoding(False)))
+            except:
+                return self._unpad(codecs.decode(b, 'ISO-8859-1'))  # wild guess
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
 
