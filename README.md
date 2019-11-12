@@ -73,7 +73,7 @@ and possibly more.
 
 Changelog:
  * 1.2.2  (2019-04-13):
-   - Improved stabiity when reading corrupted mp3 files
+   - Improved stability when reading corrupted mp3 files
  * 1.2.1  (2019-04-13):
    - fixed wav files not correctly reporting the number of channels #61
  * 1.2.0  (2019-04-13):
