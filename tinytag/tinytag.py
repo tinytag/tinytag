@@ -68,7 +68,7 @@ def _bytes_to_int(b):
 
 
 class TinyTag(object):
-    def __init__(self, filehandler, filesize):
+    def __init__(self, filehandler, filesize, ignore_errors=False):
         self._filehandler = filehandler
         self.filesize = filesize
         self.album = None
@@ -90,6 +90,7 @@ class TinyTag(object):
         self.year = None
         self._load_image = False
         self._image_data = None
+        self._ignore_errors = ignore_errors
 
     def as_dict(self):
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
@@ -118,7 +119,7 @@ class TinyTag(object):
             raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
-    def get(cls, filename, tags=True, duration=True, image=False):
+    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
         filename = os.path.expanduser(str(filename))  # cast pathlib.Path to str
         size = os.path.getsize(filename)
         if not size > 0:
@@ -128,7 +129,7 @@ class TinyTag(object):
         else:  # otherwise use the class on which `get` was invoked
             parser_class = cls
         with io.open(filename, 'rb') as af:
-            tag = parser_class(af, size)
+            tag = parser_class(af, size, ignore_errors=ignore_errors)
             tag.load(tags=tags, duration=duration, image=image)
             return tag
 
@@ -435,8 +436,8 @@ class ID3(TinyTag):
         'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     ]
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         # save position after the ID3 tag for duration mesurement speedup
         self._bytepos_after_id3v2 = 0
 
@@ -688,8 +689,8 @@ class ID3(TinyTag):
 
 
 class Ogg(TinyTag):
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
         self._max_samplenum = 0  # maximum sample position ever read
 
@@ -815,8 +816,8 @@ class Wave(TinyTag):
         # riff format is lacking the composer field.
     }
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._duration_parsed = False
 
     def _determine_duration(self, fh):
@@ -950,8 +951,8 @@ class Wma(TinyTag):
     # and (japanese, but none the less helpful)
     # http://uguisu.skr.jp/Windows/format_asf.html
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self.__tag_parsed = False
 
     def _determine_duration(self, fh):

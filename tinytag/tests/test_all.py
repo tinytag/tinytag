@@ -211,9 +211,14 @@ def test_mp3_image_loading_without_description():
     assert 28600 < len(image_data) < 28700, 'Image is %d bytes but should be around 28.6kb' % len(image_data)
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
-def test_mp3_utf_8_invalid_string():
+def test_mp3_utf_8_invalid_string_raises_exception():
     with raises(TinyTagException):
         tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
+
+def test_mp3_utf_8_invalid_string_can_be_ignored():
+    with raises(TinyTagException):
+        tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'), ignore_errors=True)
+
 
 def test_mp4_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)
