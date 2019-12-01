@@ -666,20 +666,25 @@ class ID3(TinyTag):
         try:  # it's not my fault, this is the spec.
             first_byte = b[:1]
             if first_byte == b'\x00':  # ISO-8859-1
-                return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
+                bytestr = b[1:]
+                encoding = 'ISO-8859-1'
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 # read byte order mark to determine endianess
                 encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom and optional null bytes
                 bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
-                return self._unpad(codecs.decode(bytestr, encoding))
             elif first_byte == b'\x02':  # UTF-16LE
                 # strip optional null byte, if byte count uneven
                 bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
-                return self._unpad(codecs.decode(bytestr, 'UTF-16le'))
+                encoding = 'UTF-16le'
             elif first_byte == b'\x03':  # UTF-8
-                return codecs.decode(b[1:], 'UTF-8')
-            return self._unpad(codecs.decode(b, 'ISO-8859-1'))  # wild guess
+                bytestr = b[1:]
+                encoding = 'UTF-8'
+                return codecs.decode(bytestr, encoding)
+            else:
+                bytestr = b
+                encoding = 'ISO-8859-1'  # wild guess
+            return self._unpad(codecs.decode(bytestr, encoding))
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
 
