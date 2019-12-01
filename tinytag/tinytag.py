@@ -188,7 +188,7 @@ class TinyTag(object):
     @staticmethod
     def _unpad(s):
         # strings in mp3 and asf *may* be terminated with a zero byte at the end
-        return s[:s.index('\x00')] if '\x00' in s else s
+        return s.replace('\x00', '')
 
 
 class MP4(TinyTag):
@@ -642,8 +642,7 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                transfunc = self._decode_comment if fieldname == 'comment' else self._decode_string
-                self._set_field(fieldname, content, transfunc)
+                self._set_field(fieldname, content, self._decode_string)
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 if frame_id == 'PIC':  # ID3 v2.2:
@@ -657,10 +656,6 @@ class ID3(TinyTag):
                 self._image_data = content[desc_end_pos:]
             return frame_size
         return 0
-
-    def _decode_comment(self, b):
-        comment = self._decode_string(b)
-        return comment[4:] if comment[:3] == 'eng' else comment   # remove language
 
     def _decode_string(self, b):
         try:  # it's not my fault, this is the spec.
@@ -680,10 +675,11 @@ class ID3(TinyTag):
             elif first_byte == b'\x03':  # UTF-8
                 bytestr = b[1:]
                 encoding = 'UTF-8'
-                return codecs.decode(bytestr, encoding)
             else:
                 bytestr = b
                 encoding = 'ISO-8859-1'  # wild guess
+            if bytestr[:4] == b'eng\x00':
+                bytestr = bytestr[4:]  # remove language
             return self._unpad(codecs.decode(bytestr, encoding))
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
