@@ -65,13 +65,16 @@ Additionally you can also get cover images from ID3 tags:
 
 supported python versions:
 
- * 2.6+
- * 3.2+
+ * 2.7+
+ * 3.4+
  * pypy
 
 and possibly more.
 
 Changelog:
+ * 1.3.0  (2020-03-09):
+   - added option to ignore encoding errors `ignore_errors` #73
+   - Improved text decoding for many malformed files
  * 1.2.2  (2019-04-13):
    - Improved stability when reading corrupted mp3 files
  * 1.2.1  (2019-04-13):
