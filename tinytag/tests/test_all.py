@@ -39,8 +39,9 @@ testfiles = OrderedDict([
     ('samples/silence-44khz-56k-mono-1s.mp3', {'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'samplerate': 44100, 'filesize': 7280, 'audio_offset': 0, 'bitrate': 56.0}),
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050, 'filesize': 4284, 'audio_offset': 0, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v24-long-title.mp3', {'track': '1', 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'albumartist': 'Courtney Barnett', 'samplerate': None, 'year': None, 'disc': '1', 'comment': 'Amazon.com Song ID: 240853806', 'composer': 'Courtney Barnett'}),
-    ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None, 'channels': None}),
-    ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None}),
+    ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': 'Rock', 'albumartist': None, 'disc': None, 'channels': None}),
+    ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None, 'genre': '.'}),
+    ('samples/id3v22.TCO.genre.mp3', {'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa', 'comment': 'engiTunPGAP0', 'genre': 'Pop', 'title': 'Applause'}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),

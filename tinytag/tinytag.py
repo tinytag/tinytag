@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # tinytag - an audio meta info reader
@@ -31,6 +32,8 @@
 
 
 from __future__ import print_function
+
+import re
 from collections import MutableMapping
 import codecs
 from functools import reduce
@@ -158,9 +161,14 @@ class TinyTag(object):
         value = bytestring if transfunc is None else transfunc(bytestring)
         if DEBUG:
             stderr('Setting field "%s" to "%s"' % (fieldname, value))
-        if fieldname == 'genre' and value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
-            # funky: id3v1 genre hidden in a id3v2 field
-            value = ID3.ID3V1_GENRES[int(value)]
+        if fieldname == 'genre':
+            if value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
+                # funky: id3v1 genre hidden in a id3v2 field
+                value = ID3.ID3V1_GENRES[int(value)]
+            else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
+                genre_in_parens = re.match('^\\((\\d+)\\)$', value)
+                if genre_in_parens:
+                    value = ID3.ID3V1_GENRES[int(genre_in_parens.group(1))]
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
                 current, total = value.split('/')[:2]
@@ -382,7 +390,8 @@ class ID3(TinyTag):
         'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
-        'TCON': 'genre',  'TPOS': 'disc',
+        'TCON': 'genre',  'TCO': 'genre',
+        'TPOS': 'disc',
         'TPE2': 'albumartist', 'TCOM': 'composer',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
