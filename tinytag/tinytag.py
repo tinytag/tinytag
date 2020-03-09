@@ -681,7 +681,7 @@ class ID3(TinyTag):
             if bytestr[:4] == b'eng\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
-            return self._unpad(codecs.decode(bytestr, encoding, errors=errors))
+            return self._unpad(codecs.decode(bytestr, encoding, errors))
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
 
