@@ -32,7 +32,8 @@
 
 from __future__ import print_function
 
-from collections import MutableMapping
+import json
+from collections import MutableMapping, OrderedDict
 import codecs
 from functools import reduce
 import struct
@@ -164,9 +165,7 @@ class TinyTag(object):
             return tag
 
     def __str__(self):
-        return str(dict(
-            (k, v) for k, v in self.__dict__.items() if not k.startswith('_')
-        ))
+        return json.dumps(OrderedDict(sorted(self.as_dict().items())))
 
     def __repr__(self):
         return str(self)
