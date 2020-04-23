@@ -159,7 +159,7 @@ class TinyTag(object):
         try:  # cast pathlib.Path to str
             import pathlib
             if isinstance(filename, pathlib.Path):
-                filename = filename.expanduser().absolute()
+                filename = str(filename.absolute())
         except ImportError:
             pass
         else:
