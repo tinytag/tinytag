@@ -73,6 +73,8 @@ def _bytes_to_int(b):
 
 class TinyTag(object):
     def __init__(self, filehandler, filesize, ignore_errors=False):
+        if isinstance(filehandler, str):
+            raise Exception('Please use `TinyTag.get(filepath)` instead of `TinyTag(filepath)` to pass a filepath')
         self._filehandler = filehandler
         self.filesize = filesize
         self.album = None

@@ -253,6 +253,9 @@ def test_detect_magic_headers(testfile, expected):
         parser = TinyTag.get_parser_class(filename, fh)
     assert parser == expected
 
+@pytest.mark.xfail(raises=Exception)
+def test_show_hint_for_wrong_usage():
+    TinyTag('filename.mp3', 0)
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/empty.ogg'))
