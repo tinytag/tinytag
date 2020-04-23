@@ -772,7 +772,7 @@ class Ogg(TinyTag):
                 (version, ch, _, sr, _, _) = struct.unpack("<BBHIHB", walker.read(11))
                 if (version & 0xF0) == 0:  # only major version 0 supported
                     self.channels = ch
-                    self.samplerate = sr
+                    self.samplerate = 48000  # internally opus always uses 48khz
             elif packet[0:8] == b'OpusTags':  # parse opus metadata:
                 walker.seek(8, os.SEEK_CUR)  # jump over header name
                 self._parse_vorbis_comment(walker)

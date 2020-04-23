@@ -54,6 +54,7 @@ testfiles = OrderedDict([
 
     # OPUS
     ('samples/test.opus', {'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2, 'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25', 'filesize': 10000, 'artist': 'nomico', 'album': 'Exserens - A selection of Alstroemeria Records', 'comment': 'ARCD0018 - Lovelight'}),
+    ('samples/8khz_5s.opus', {'filesize': 7251, 'channels': 1, 'samplerate': 48000, 'duration': 5.0}),
 
     # WAV
     ('samples/test.wav', {'channels': 2, 'duration': 1.0, 'filesize': 176444, 'bitrate': 1378.125, 'samplerate': 44100, 'audio_offest': 36}),
