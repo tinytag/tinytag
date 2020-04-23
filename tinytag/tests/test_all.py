@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import io
 import os
 import shutil
+import sys
 import tempfile
 
 import pytest
@@ -157,6 +158,7 @@ def test_pathlib_compatibility():
     filename = pathlib.Path(testfolder) / testfile
     tag = TinyTag.get(filename)
 
+@pytest.mark.skipif(sys.platform == "win32", reason='Windows does not support binary paths')
 def test_binary_path_compatibility():
     binary_file_path = os.path.join(os.path.dirname(__file__).encode('utf-8'), b'\x01.mp3')
     testfile = os.path.join(testfolder, next(iter(testfiles.keys())))
