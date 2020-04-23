@@ -39,6 +39,8 @@ import os
 import io
 import sys
 from io import BytesIO
+import re
+
 DEBUG = os.environ.get('DEBUG', False)  # some of the parsers will print some debug info when set to True
 
 
@@ -102,7 +104,7 @@ class TinyTag(object):
         return self._image_data
 
     @classmethod
-    def _get_parser_for_filename(cls, filename, exception=False):
+    def _get_parser_for_filename(cls, filename):
         mapping = {
             ('.mp3',): ID3,
             ('.oga', '.ogg', '.opus'): Ogg,
@@ -111,11 +113,39 @@ class TinyTag(object):
             ('.wma',): Wma,
             ('.m4b', '.m4a', '.mp4'): MP4,
         }
-        for fileextension, tagclass in mapping.items():
-            if filename.lower().endswith(fileextension):
+        for ext, tagclass in mapping.items():
+            if filename.lower().endswith(ext):
                 return tagclass
-        if exception:
-            raise TinyTagException('No tag reader found to support filetype! ')
+
+    @classmethod
+    def _get_parser_for_file_handle(cls, fh):
+        # https://en.wikipedia.org/wiki/List_of_file_signatures
+        magic_bytes_mapping = {
+            b'^ID3': ID3,
+            b'^\xff\xfb': ID3,
+            b'^OggS': Ogg,
+            b'^RIFF....WAVE': Wave,
+            b'^fLaC': Flac,
+            b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,
+            b'....ftypM4A': MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
+        }
+        header = fh.peek(max(len(sig) for sig in magic_bytes_mapping))
+        for magic, parser in magic_bytes_mapping.items():
+            if re.match(magic, header):
+                return parser
+
+    @classmethod
+    def get_parser_class(cls, filename, filehandle):
+        if cls != TinyTag: # if `get` is invoked on TinyTag, find parser by ext
+            return cls  # otherwise use the class on which `get` was invoked
+        parser_class = cls._get_parser_for_filename(filename)
+        if parser_class is not None:
+            return parser_class
+        # try determining the file type by magic byte header
+        parser_class = cls._get_parser_for_file_handle(filehandle)
+        if parser_class is not None:
+            return parser_class
+        raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False):
@@ -123,11 +153,8 @@ class TinyTag(object):
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
-        if cls == TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
-            parser_class = cls._get_parser_for_filename(filename, exception=True)
-        else:  # otherwise use the class on which `get` was invoked
-            parser_class = cls
         with io.open(filename, 'rb') as af:
+            parser_class = cls.get_parser_class(filename, af)
             tag = parser_class(af, size)
             tag.load(tags=tags, duration=duration, image=image)
             return tag

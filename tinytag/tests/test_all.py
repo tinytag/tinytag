@@ -15,6 +15,7 @@ import pytest
 import re
 
 from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
+from tinytag.tinytag import Wma, MP4
 
 try:
     from collections import OrderedDict
@@ -214,6 +215,25 @@ def test_mp4_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 20000 < len(image_data) < 25000, 'Image is %d bytes but should be around 22kb' % len(image_data)
+
+
+@pytest.mark.parametrize("testfile,expected", [
+    pytest.param(testfile, expected) for testfile, expected in [
+        ('samples/detect_mp3_id3.x', ID3),
+        ('samples/detect_mp3_fffb.x', ID3),
+        ('samples/detect_ogg.x', Ogg),
+        ('samples/detect_wav.x', Wave),
+        ('samples/detect_flac.x', Flac),
+        ('samples/detect_wma.x', Wma),
+        ('samples/detect_mp4_m4a.x', MP4),
+    ]
+])
+def test_detect_magic_headers(testfile, expected):
+    filename = os.path.join(testfolder, testfile)
+    with open(filename, 'rb') as fh:
+        parser = TinyTag.get_parser_class(filename, fh)
+    assert parser == expected
+
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/empty.ogg'))
