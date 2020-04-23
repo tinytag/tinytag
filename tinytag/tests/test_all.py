@@ -274,4 +274,4 @@ def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
     assert str(tag)  # since the dict is not ordered we cannot == 'somestring'
     assert repr(tag)  # since the dict is not ordered we cannot == 'somestring'
-    assert str(tag) == '{"album": "Hymns for the Exiled", "albumartist": null, "artist": "Anais Mitchell", "audio_offset": 2225, "bitrate": 160.0, "channels": 2, "comment": "Waterbug Records, www.anaismitchell.com", "composer": null, "disc": null, "disc_total": null, "duration": 0.13836297152858082, "filesize": 5120, "genre": null, "samplerate": 44100, "title": "cosmic american", "track": "3", "track_total": "11", "year": "2004"}'
+    assert str(tag) == '{"album": "Hymns for the Exiled", "albumartist": null, "artist": "Anais Mitchell", "audio_offset": 2225, "bitrate": 160, "channels": 2, "comment": "Waterbug Records, www.anaismitchell.com", "composer": null, "disc": null, "disc_total": null, "duration": 0.13836297152858082, "filesize": 5120, "genre": null, "samplerate": 44100, "title": "cosmic american", "track": "3", "track_total": "11", "year": "2004"}'

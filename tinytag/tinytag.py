@@ -601,7 +601,7 @@ class ID3(TinyTag):
                 est_frame_count = audio_stream_size / (frame_size_accu / float(frames))
                 samples = est_frame_count * ID3.samples_per_frame
                 self.duration = samples / float(self.samplerate)
-                self.bitrate = bitrate_accu / frames
+                self.bitrate = int(bitrate_accu / frames)
                 return
 
             if frame_length > 1:  # jump over current frame body
