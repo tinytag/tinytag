@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
+
 # tinytag - an audio meta info reader
 # Copyright (c) 2014-2018 Tom Wallroth
 #
@@ -43,7 +42,7 @@ import sys
 from io import BytesIO
 import re
 
-DEBUG = os.environ.get('DEBUG', False)  # some of the parsers will print some debug info when set to True
+DEBUG = os.environ.get('DEBUG', False)  # some of the parsers can print debug info
 
 
 class TinyTagException(LookupError):  # inherit LookupError for backwards compat
@@ -74,7 +73,7 @@ def _bytes_to_int(b):
 class TinyTag(object):
     def __init__(self, filehandler, filesize, ignore_errors=False):
         if isinstance(filehandler, str):
-            raise Exception('Please use `TinyTag.get(filepath)` instead of `TinyTag(filepath)` to pass a filepath')
+            raise Exception('Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`')
         self._filehandler = filehandler
         self.filesize = filesize
         self.album = None
@@ -141,7 +140,7 @@ class TinyTag(object):
 
     @classmethod
     def get_parser_class(cls, filename, filehandle):
-        if cls != TinyTag: # if `get` is invoked on TinyTag, find parser by ext
+        if cls != TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
             return cls  # otherwise use the class on which `get` was invoked
         parser_class = cls._get_parser_for_filename(filename)
         if parser_class is not None:
@@ -605,8 +604,8 @@ class ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        has_all_tags = all((self.track, self.track_total, self.title,
-            self.artist, self.album, self.albumartist, self.year, self.genre))
+        attrs = ['track', 'track_total', 'title', 'artist', 'album', 'albumartist', 'year', 'genre']
+        has_all_tags = all(getattr(self, attr) for attr in attrs)
         if not has_all_tags and self.filesize > 128:
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
@@ -948,7 +947,7 @@ class Flac(TinyTag):
                 #    | <5>   (bits per sample)-1.
                 #    | <36>  Total samples in stream.
                 # 16s| <128> MD5 signature
-                min_blk, max_blk, min_frm, max_frm = header[0:4]
+                # min_blk, max_blk, min_frm, max_frm = header[0:4]
                 # min_frm = _bytes_to_int(struct.unpack('3B', min_frm))
                 # max_frm = _bytes_to_int(struct.unpack('3B', max_frm))
                 #                 channels--.  bits      total samples
