@@ -30,18 +30,16 @@
 # SOFTWARE.
 
 
-from __future__ import print_function
-
 import json
 from collections import MutableMapping, OrderedDict
 import codecs
 from functools import reduce
 import struct
 import os
-import io
 import sys
 from io import BytesIO
 import re
+import pathlib
 
 DEBUG = os.environ.get('DEBUG', False)  # some of the parsers can print debug info
 
@@ -119,7 +117,7 @@ class TinyTag(object):
             (b'.m4b', b'.m4a', b'.mp4'): MP4,
         }
         if not isinstance(filename, bytes):  # convert filename to binary
-            filename = filename.encode('ASCII', errors='ignore').lower()
+            filename = str(filename).encode('ASCII', errors='ignore').lower()
         for ext, tagclass in mapping.items():
             if filename.endswith(ext):
                 return tagclass
@@ -156,18 +154,16 @@ class TinyTag(object):
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
-        try:  # cast pathlib.Path to str
-            import pathlib
-            if isinstance(filename, pathlib.Path):
-                filename = str(filename.absolute())
-        except ImportError:
-            pass
+        if isinstance(filename, pathlib.Path):
+            if hasattr(filename, 'expanduser'): # new in python 3.5
+                filename = filename.expanduser()
+            filename = filename.absolute()
         else:
             filename = os.path.expanduser(filename)
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
-        with io.open(filename, 'rb') as af:
+        with open(filename, 'rb') as af:
             parser_class = cls.get_parser_class(filename, af)
             tag = parser_class(af, size, ignore_errors=ignore_errors)
             tag.load(tags=tags, duration=duration, image=image)
