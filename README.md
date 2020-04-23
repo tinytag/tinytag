@@ -72,6 +72,12 @@ supported python versions:
 and possibly more.
 
 Changelog:
+ * 1.4.0  (2020-04-23):
+   - detecting file types based on their magic header bytes, #85
+   - fixed opus duration being wrong for files with lower sample rate #81
+   - implemented support for binary paths #72
+   - always cast mp3 bitrates to int, so that CBR and VBR output behaves the sam
+   - made __str__ deterministic and use json as output format
  * 1.3.0  (2020-03-09):
    - added option to ignore encoding errors `ignore_errors` #73
    - Improved text decoding for many malformed files
