@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 
+import io
 import os
 import pytest
 import re
@@ -248,7 +249,7 @@ def test_mp4_image_loading():
 ])
 def test_detect_magic_headers(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    with open(filename, 'rb') as fh:
+    with io.open(filename, 'rb') as fh:
         parser = TinyTag.get_parser_class(filename, fh)
     assert parser == expected
 
