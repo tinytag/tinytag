@@ -111,15 +111,17 @@ class TinyTag(object):
     @classmethod
     def _get_parser_for_filename(cls, filename):
         mapping = {
-            ('.mp3',): ID3,
-            ('.oga', '.ogg', '.opus'): Ogg,
-            ('.wav',): Wave,
-            ('.flac',): Flac,
-            ('.wma',): Wma,
-            ('.m4b', '.m4a', '.mp4'): MP4,
+            (b'.mp3',): ID3,
+            (b'.oga', b'.ogg', b'.opus'): Ogg,
+            (b'.wav',): Wave,
+            (b'.flac',): Flac,
+            (b'.wma',): Wma,
+            (b'.m4b', b'.m4a', b'.mp4'): MP4,
         }
+        if not isinstance(filename, bytes):  # convert filename to binary
+            filename = filename.encode('ASCII', errors='ignore').lower()
         for ext, tagclass in mapping.items():
-            if filename.lower().endswith(ext):
+            if filename.endswith(ext):
                 return tagclass
 
     @classmethod
@@ -154,7 +156,13 @@ class TinyTag(object):
 
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
-        filename = os.path.expanduser(str(filename))  # cast pathlib.Path to str
+        try:  # cast pathlib.Path to str
+            import pathlib
+            if isinstance(filename, pathlib.Path):
+                filename = filename.absolute()
+        except ImportError:
+            pass
+        filename = os.path.expanduser(filename)
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)

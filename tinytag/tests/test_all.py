@@ -12,6 +12,9 @@ from __future__ import unicode_literals
 
 import io
 import os
+import shutil
+import tempfile
+
 import pytest
 import re
 
@@ -153,6 +156,16 @@ def test_pathlib_compatibility():
     testfile = next(iter(testfiles.keys()))
     filename = pathlib.Path(testfolder) / testfile
     tag = TinyTag.get(filename)
+
+def test_binary_path_compatibility():
+    binary_file_path = os.path.join(os.path.dirname(__file__).encode('utf-8'), b'\x01.mp3')
+    testfile = os.path.join(testfolder, next(iter(testfiles.keys())))
+    shutil.copy(testfile, binary_file_path)
+    assert os.path.exists(binary_file_path)
+    TinyTag.get(binary_file_path)
+    os.unlink(binary_file_path)
+    assert not os.path.exists(binary_file_path)
+
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_unsupported_extension():
