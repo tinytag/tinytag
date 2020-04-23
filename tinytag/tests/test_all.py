@@ -14,6 +14,8 @@ import os
 import pytest
 import re
 
+from pytest import raises
+
 from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
 from tinytag.tinytag import Wma, MP4
 
@@ -26,20 +28,21 @@ except ImportError:
 testfiles = OrderedDict([
     # MP3
     ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\uff00þ\uff00勾椀瀀瀀攀搀\u2000戀礀\u2000吀䠀匀䰀䤀嘀䔀', 'composer': ''}),
-    ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'XXX'}),
+    ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'Ripped by THSLIVE'}),
     # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
     ('samples/vbr_xing_header.mp3', {'bitrate': 186.04383278145696, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367, 'filesize': 91731, 'audio_offset': 441}),
-    ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3', 'filesize': 5120, 'audio_offset': 2225, 'bitrate': 160.0, 'comment': 'TunNORM'}),
+    ('samples/id3v22-test.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': '11', 'duration': 0.138, 'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american', 'artist': 'Anais Mitchell', 'track': '3', 'filesize': 5120, 'audio_offset': 2225, 'bitrate': 160.0, 'comment': 'Waterbug Records, www.anaismitchell.com'}),
     ('samples/silence-44-s-v1.mp3', {'channels': 2, 'samplerate': 44100, 'genre': 'Darkwave', 'track_total': None, 'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004', 'title': 'Silence', 'artist': 'piman', 'track': '2', 'filesize': 15070, 'audio_offset': 0, 'bitrate': 32.0, 'comment': ''}),
     ('samples/id3v1-latin1.mp3', {'channels': None, 'samplerate': 44100, 'genre': 'Rock', 'samplerate': None, 'album': 'The Young Americans', 'title': 'Play Dead', 'filesize': 256, 'track': '12', 'artist': 'Björk', 'track_total': None, 'year': '1993', 'comment': '                            '}),
-    ('samples/UTF16.mp3', {'channels': None, 'samplerate': None, 'track_total': '11', 'track': '07', 'artist': 'The National', 'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld', 'filesize': 20480, 'genre': 'Indie', 'comment': ''}),
+    ('samples/UTF16.mp3', {'channels': None, 'samplerate': None, 'track_total': '11', 'track': '07', 'artist': 'The National', 'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld', 'filesize': 20480, 'genre': 'Indie', 'comment': 'Track 7'}),
     ('samples/utf-8-id3v2.mp3', {'channels': None, 'samplerate': 44100, 'genre': 'Acustico', 'track_total': '21', 'track': '01', 'filesize': 2119, 'title': 'Gran día', 'artist': 'Paso a paso', 'album': 'S/T', 'year': None, 'samplerate': None, 'disc': '', 'disc_total': '0'}),
     ('samples/empty_file.mp3', {'channels': None, 'samplerate': None, 'track_total': None, 'album': None, 'year': None, 'title': None, 'track': None, 'artist': None, 'filesize': 0}),
     ('samples/silence-44khz-56k-mono-1s.mp3', {'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'samplerate': 44100, 'filesize': 7280, 'audio_offset': 0, 'bitrate': 56.0}),
     ('samples/silence-22khz-mono-1s.mp3', {'channels': 1, 'samplerate': 22050, 'filesize': 4284, 'audio_offset': 0, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v24-long-title.mp3', {'track': '1', 'disc_total': '1', 'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000, 'channels': None, 'track_total': '12', 'genre': 'AlternRock', 'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett', 'albumartist': 'Courtney Barnett', 'samplerate': None, 'year': None, 'disc': '1', 'comment': 'Amazon.com Song ID: 240853806', 'composer': 'Courtney Barnett'}),
-    ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': '(17)', 'albumartist': None, 'disc': None, 'channels': None}),
-    ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None}),
+    ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': 'Rock', 'albumartist': None, 'disc': None, 'channels': None}),
+    ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None, 'genre': '.'}),
+    ('samples/id3v22.TCO.genre.mp3', {'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa', 'comment': 'engiTunPGAP0', 'genre': 'Pop', 'title': 'Applause'}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),
@@ -189,6 +192,11 @@ def test_invalid_ogg_file():
 def test_invalid_wave_file():
     tag = Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
+def test_unpad():
+    # make sure that unpad only removes trailing 0-bytes
+    assert TinyTag._unpad('foo\x00') == 'foo'
+    assert TinyTag._unpad('foo\x00bar\x00') == 'foobar'
+
 def test_mp3_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/cover_img.mp3'), image=True)
     image_data = tag.get_image()
@@ -209,6 +217,15 @@ def test_mp3_image_loading_without_description():
     assert image_data is not None
     assert 28600 < len(image_data) < 28700, 'Image is %d bytes but should be around 28.6kb' % len(image_data)
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
+
+def test_mp3_utf_8_invalid_string_raises_exception():
+    with raises(TinyTagException):
+        tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
+
+def test_mp3_utf_8_invalid_string_can_be_ignored():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'), ignore_errors=True)
+    # the title used to be Gran dia, but I replaced the first byte with 0xFF, which should be ignored here
+    assert tag.title == 'ran día'
 
 def test_mp4_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)

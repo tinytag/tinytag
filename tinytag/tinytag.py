@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # tinytag - an audio meta info reader
@@ -31,6 +32,8 @@
 
 
 from __future__ import print_function
+
+import re
 from collections import MutableMapping
 import codecs
 from functools import reduce
@@ -70,7 +73,7 @@ def _bytes_to_int(b):
 
 
 class TinyTag(object):
-    def __init__(self, filehandler, filesize):
+    def __init__(self, filehandler, filesize, ignore_errors=False):
         self._filehandler = filehandler
         self.filesize = filesize
         self.album = None
@@ -92,6 +95,7 @@ class TinyTag(object):
         self.year = None
         self._load_image = False
         self._image_data = None
+        self._ignore_errors = ignore_errors
 
     def as_dict(self):
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
@@ -148,14 +152,14 @@ class TinyTag(object):
         raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
-    def get(cls, filename, tags=True, duration=True, image=False):
+    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
         filename = os.path.expanduser(str(filename))  # cast pathlib.Path to str
         size = os.path.getsize(filename)
         if not size > 0:
             return TinyTag(None, 0)
         with io.open(filename, 'rb') as af:
             parser_class = cls.get_parser_class(filename, af)
-            tag = parser_class(af, size)
+            tag = parser_class(af, size, ignore_errors=ignore_errors)
             tag.load(tags=tags, duration=duration, image=image)
             return tag
 
@@ -184,9 +188,14 @@ class TinyTag(object):
         value = bytestring if transfunc is None else transfunc(bytestring)
         if DEBUG:
             stderr('Setting field "%s" to "%s"' % (fieldname, value))
-        if fieldname == 'genre' and value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
-            # funky: id3v1 genre hidden in a id3v2 field
-            value = ID3.ID3V1_GENRES[int(value)]
+        if fieldname == 'genre':
+            if value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
+                # funky: id3v1 genre hidden in a id3v2 field
+                value = ID3.ID3V1_GENRES[int(value)]
+            else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
+                genre_in_parens = re.match('^\\((\\d+)\\)$', value)
+                if genre_in_parens:
+                    value = ID3.ID3V1_GENRES[int(genre_in_parens.group(1))]
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
                 current, total = value.split('/')[:2]
@@ -214,7 +223,7 @@ class TinyTag(object):
     @staticmethod
     def _unpad(s):
         # strings in mp3 and asf *may* be terminated with a zero byte at the end
-        return s[:s.index('\x00')] if '\x00' in s else s
+        return s.replace('\x00', '')
 
 
 class MP4(TinyTag):
@@ -408,7 +417,8 @@ class ID3(TinyTag):
         'TALB': 'album',  'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title',  'TT2': 'title',
-        'TCON': 'genre',  'TPOS': 'disc',
+        'TCON': 'genre',  'TCO': 'genre',
+        'TPOS': 'disc',
         'TPE2': 'albumartist', 'TCOM': 'composer',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
@@ -462,8 +472,8 @@ class ID3(TinyTag):
         'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     ]
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         # save position after the ID3 tag for duration mesurement speedup
         self._bytepos_after_id3v2 = 0
 
@@ -668,8 +678,7 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                transfunc = self._decode_comment if fieldname == 'comment' else self._decode_string
-                self._set_field(fieldname, content, transfunc)
+                self._set_field(fieldname, content, self._decode_string)
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 if frame_id == 'PIC':  # ID3 v2.2:
@@ -684,28 +693,31 @@ class ID3(TinyTag):
             return frame_size
         return 0
 
-    def _decode_comment(self, b):
-        comment = self._decode_string(b)
-        return comment[4:] if comment[:3] == 'eng' else comment   # remove language
-
     def _decode_string(self, b):
         try:  # it's not my fault, this is the spec.
             first_byte = b[:1]
             if first_byte == b'\x00':  # ISO-8859-1
-                return self._unpad(codecs.decode(b[1:], 'ISO-8859-1'))
+                bytestr = b[1:]
+                encoding = 'ISO-8859-1'
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 # read byte order mark to determine endianess
                 encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom and optional null bytes
                 bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
-                return self._unpad(codecs.decode(bytestr, encoding))
             elif first_byte == b'\x02':  # UTF-16LE
                 # strip optional null byte, if byte count uneven
                 bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
-                return self._unpad(codecs.decode(bytestr, 'UTF-16le'))
+                encoding = 'UTF-16le'
             elif first_byte == b'\x03':  # UTF-8
-                return codecs.decode(b[1:], 'UTF-8')
-            return self._unpad(codecs.decode(b, 'ISO-8859-1'))  # wild guess
+                bytestr = b[1:]
+                encoding = 'UTF-8'
+            else:
+                bytestr = b
+                encoding = 'ISO-8859-1'  # wild guess
+            if bytestr[:4] == b'eng\x00':
+                bytestr = bytestr[4:]  # remove language
+            errors = 'ignore' if self._ignore_errors else 'strict'
+            return self._unpad(codecs.decode(bytestr, encoding, errors))
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
 
@@ -715,8 +727,8 @@ class ID3(TinyTag):
 
 
 class Ogg(TinyTag):
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
         self._max_samplenum = 0  # maximum sample position ever read
 
@@ -842,8 +854,8 @@ class Wave(TinyTag):
         # riff format is lacking the composer field.
     }
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._duration_parsed = False
 
     def _determine_duration(self, fh):
@@ -977,8 +989,8 @@ class Wma(TinyTag):
     # and (japanese, but none the less helpful)
     # http://uguisu.skr.jp/Windows/format_asf.html
 
-    def __init__(self, filehandler, filesize):
-        TinyTag.__init__(self, filehandler, filesize)
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self.__tag_parsed = False
 
     def _determine_duration(self, fh):

@@ -40,3 +40,4 @@ test-results/
 # Jetbrains
 .idea/
 .venv
+venv
