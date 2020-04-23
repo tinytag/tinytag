@@ -19,6 +19,9 @@ install:
   - "pip install pytest"
   - "pip install pytest-cov"
 
+env:
+  - DEBUG=1
+
 # command to run tests
 script:
   pytest --cov=tinytag --cov-branch --cov-report xml:test-results/coverage.xml --junitxml test-results/junit.xml
