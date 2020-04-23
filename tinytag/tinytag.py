@@ -322,7 +322,7 @@ class MP4(TinyTag):
                 walker.seek(16, os.SEEK_CUR)  # jump over create & mod times
                 time_scale = struct.unpack('>I', walker.read(4))[0]
                 duration = struct.unpack('>q', walker.read(8))[0]
-            return {'duration': float(duration) / time_scale}
+            return {'duration': duration / time_scale}
 
         @classmethod
         def debug_atom(cls, data):
@@ -572,7 +572,7 @@ class ID3(TinyTag):
                     fh.seek(xing_header_offset, os.SEEK_CUR)
                     xframes, byte_count, toc, vbr_scale = ID3._parse_xing_header(fh)
                     if xframes and xframes != 0 and byte_count:
-                        self.duration = xframes * ID3.samples_per_frame / float(self.samplerate)
+                        self.duration = xframes * ID3.samples_per_frame / self.samplerate
                         self.bitrate = int(byte_count * 8 / self.duration / 1000)
                         self.audio_offset = fh.tell()
                         return
@@ -595,16 +595,16 @@ class ID3(TinyTag):
                 # try to estimate duration
                 fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
                 audio_stream_size = fh.tell() - self.audio_offset
-                est_frame_count = audio_stream_size / (frame_size_accu / float(frames))
+                est_frame_count = audio_stream_size / (frame_size_accu / frames)
                 samples = est_frame_count * ID3.samples_per_frame
-                self.duration = samples / float(self.samplerate)
+                self.duration = samples / self.samplerate
                 self.bitrate = int(bitrate_accu / frames)
                 return
 
             if frame_length > 1:  # jump over current frame body
                 fh.seek(frame_length - header_bytes, os.SEEK_CUR)
         if self.samplerate:
-            self.duration = frames * ID3.samples_per_frame / float(self.samplerate)
+            self.duration = frames * ID3.samples_per_frame / self.samplerate
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
@@ -750,7 +750,7 @@ class Ogg(TinyTag):
             if b[:4] == b'OggS':  # look for an ogg header
                 for _ in self._parse_pages(fh):
                     pass  # parse all remaining pages
-                self.duration = self._max_samplenum / float(self.samplerate)
+                self.duration = self._max_samplenum / self.samplerate
             else:
                 idx = b.find(b'OggS')  # try to find header in peeked data
                 seekpos = idx if idx != -1 else len(b) - 3
@@ -877,7 +877,7 @@ class Wave(TinyTag):
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
                 self.bitrate = self.samplerate * self.channels * bitdepth / 1024.0
             elif subchunkid == b'data':
-                self.duration = float(subchunksize)/self.channels/self.samplerate/(bitdepth/8)
+                self.duration = subchunksize/self.channels/self.samplerate/(bitdepth/8)
                 self.audio_offest = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'LIST':
@@ -964,7 +964,7 @@ class Flac(TinyTag):
                 # bit_depth = (bit_depth + 1)
                 total_sample_bytes = [(header[7] & 0x0F)] + list(header[8:12])
                 total_samples = _bytes_to_int(total_sample_bytes)
-                self.duration = float(total_samples) / self.samplerate
+                self.duration = total_samples / self.samplerate
                 if self.duration > 0:
                     self.bitrate = self.filesize / self.duration * 8 / 1024
             elif block_type == Flac.METADATA_VORBIS_COMMENT and not skip_tags:
@@ -1101,7 +1101,7 @@ class Wma(TinyTag):
                     ('maximum_data_packet_size', 4, True),
                     ('maximum_bitrate', 4, False),
                 ])
-                self.duration = blocks.get('play_duration') / float(10000000)
+                self.duration = blocks.get('play_duration') / 10000000
             elif object_id == Wma.ASF_STREAM_PROPERTIES_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('stream_type', 16, False),
@@ -1123,7 +1123,7 @@ class Wma(TinyTag):
                         ('bits_per_sample', 2, True),
                     ])
                     self.samplerate = stream_info['samples_per_second']
-                    self.bitrate = stream_info['avg_bytes_per_second'] * 8 / float(1000)
+                    self.bitrate = stream_info['avg_bytes_per_second'] * 8 / 1000
                     already_read = 16
                 fh.seek(blocks['type_specific_data_length'] - already_read, os.SEEK_CUR)
                 fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
