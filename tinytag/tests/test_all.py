@@ -49,6 +49,7 @@ testfiles = OrderedDict([
     ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None, 'genre': '.'}),
     ('samples/id3v22.TCO.genre.mp3', {'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa', 'comment': 'engiTunPGAP0', 'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3', {'filesize': 19980, 'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails', 'comment': '', 'disc': '1', 'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36', 'year': '2008', 'comment': '3/4 time'}),
+    ('samples/id3_comment_utf_16_double_bom.mp3', {'filesize': 512, 'album': 'The Embrace', 'artist': 'Johannes Heil & D.Diggler', 'comment': 'Unclear', 'title': 'The Embrace (Romano Alfieri Remix)', 'track': '04-johannes_heil_and_d.diggler-the_embrace_(romano_alfieri_remix)', 'year': '2012'}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),

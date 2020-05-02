@@ -701,14 +701,18 @@ class ID3(TinyTag):
             return frame_size
         return 0
 
-    def _decode_string(self, b):
+    def _decode_string(self, bytestr):
         try:  # it's not my fault, this is the spec.
-            first_byte = b[:1]
+            first_byte = bytestr[:1]
             if first_byte == b'\x00':  # ISO-8859-1
-                bytestr = b[1:]
+                bytestr = bytestr[1:]
                 encoding = 'ISO-8859-1'
             elif first_byte == b'\x01':  # UTF-16 with BOM
-                bytestr = b[1:]
+                bytestr = bytestr[1:]
+                if bytestr[:5] == b'eng\xff\xfe':
+                    bytestr = bytestr[3:]  # remove language (but leave BOM)
+                if bytestr[:5] == b'eng\xfe\xff':
+                    bytestr = bytestr[3:]  # remove language (but leave BOM)
                 if bytestr[:4] == b'eng\x00':
                     bytestr = bytestr[4:]  # remove language
                 if bytestr[:1] == b'\x00':
@@ -717,15 +721,18 @@ class ID3(TinyTag):
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom and optional null bytes
                 bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
+                # remove ADDITIONAL EXTRA BOM :facepalm:
+                if bytestr[:4] == b'\x00\x00\xff\xfe':
+                    bytestr = bytestr[4:]
             elif first_byte == b'\x02':  # UTF-16LE
                 # strip optional null byte, if byte count uneven
-                bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
+                bytestr = bytestr[1:-1] if len(bytestr) % 2 == 0 else bytestr[1:]
                 encoding = 'UTF-16le'
             elif first_byte == b'\x03':  # UTF-8
-                bytestr = b[1:]
+                bytestr = bytestr[1:]
                 encoding = 'UTF-8'
             else:
-                bytestr = b
+                bytestr = bytestr
                 encoding = 'ISO-8859-1'  # wild guess
             if bytestr[:4] == b'eng\x00':
                 bytestr = bytestr[4:]  # remove language
