@@ -197,13 +197,15 @@ class TinyTag(object):
         if DEBUG:
             stderr('Setting field "%s" to "%s"' % (fieldname, value))
         if fieldname == 'genre':
-            if value.isdigit() and int(value) < len(ID3.ID3V1_GENRES):
-                # funky: id3v1 genre hidden in a id3v2 field
-                value = ID3.ID3V1_GENRES[int(value)]
+            genre_id = 255
+            if value.isdigit():  # funky: id3v1 genre hidden in a id3v2 field
+                genre_id = int(value)
             else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
                 genre_in_parens = re.match('^\\((\\d+)\\)$', value)
                 if genre_in_parens:
-                    value = ID3.ID3V1_GENRES[int(genre_in_parens.group(1))]
+                    genre_id = int(genre_in_parens.group(1))
+            if 0 <= genre_id < len(ID3.ID3V1_GENRES):
+                value = ID3.ID3V1_GENRES[genre_id]
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
                 current, total = value.split('/')[:2]
