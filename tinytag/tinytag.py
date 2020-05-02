@@ -891,7 +891,7 @@ class Wave(TinyTag):
                 else:
                     sub_fh = BytesIO(fh.read(subchunksize - 4))
                     field = sub_fh.read(4)
-                    while len(field):
+                    while len(field) == 4:
                         data_length = struct.unpack('I', sub_fh.read(4))[0]
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         data = codecs.decode(data, 'utf-8')
