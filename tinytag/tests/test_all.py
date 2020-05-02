@@ -107,6 +107,8 @@ pattern_field_name_type = [
 for filename in os.listdir(custom_samples_folder):
     if filename == 'instructions.txt':
         continue
+    if os.path.isdir(os.path.join(custom_samples_folder, filename)):
+        continue
     expected_values = {}
     for pattern, fieldname, _type in pattern_field_name_type:
         match = re.findall(pattern, filename)
