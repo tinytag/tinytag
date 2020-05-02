@@ -32,7 +32,7 @@ except ImportError:
 
 testfiles = OrderedDict([
     # MP3
-    ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\uff00þ\uff00勾椀瀀瀀攀搀\u2000戀礀\u2000吀䠀匀䰀䤀嘀䔀', 'composer': ''}),
+    ('samples/vbri.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\ufeff\ufeffRipped by THSLIVE', 'composer': ''}),
     ('samples/cbr.mp3', {'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'Ripped by THSLIVE'}),
     # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
     ('samples/vbr_xing_header.mp3', {'bitrate': 186, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367, 'filesize': 91731, 'audio_offset': 441}),
@@ -48,6 +48,7 @@ testfiles = OrderedDict([
     ('samples/utf16be.mp3', {'title': '52-girls', 'filesize': 2048, 'track': '6', 'album': 'party mix', 'artist': 'The B52s', 'genre': 'Rock', 'albumartist': None, 'disc': None, 'channels': None}),
     ('samples/id3v22_image.mp3', {'title': 'Kids (MGMT Cover) ', 'filesize': 35924, 'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008', 'channels': None, 'genre': '.'}),
     ('samples/id3v22.TCO.genre.mp3', {'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa', 'comment': 'engiTunPGAP0', 'genre': 'Pop', 'title': 'Applause'}),
+    ('samples/id3_comment_utf_16_with_bom.mp3', {'filesize': 19980, 'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails', 'comment': '', 'disc': '1', 'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36', 'year': '2008', 'comment': '3/4 time'}),
 
     # OGG
     ('samples/empty.ogg', {'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),

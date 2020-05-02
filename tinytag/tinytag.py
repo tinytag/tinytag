@@ -708,10 +708,15 @@ class ID3(TinyTag):
                 bytestr = b[1:]
                 encoding = 'ISO-8859-1'
             elif first_byte == b'\x01':  # UTF-16 with BOM
+                bytestr = b[1:]
+                if bytestr[:4] == b'eng\x00':
+                    bytestr = bytestr[4:]  # remove language
+                if bytestr[:1] == b'\x00':
+                    bytestr = bytestr[1:]  # strip optional additional null byte
                 # read byte order mark to determine endianess
-                encoding = 'UTF-16be' if b[1:3] == b'\xfe\xff' else 'UTF-16le'
+                encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom and optional null bytes
-                bytestr = b[3:-1] if len(b) % 2 == 0 else b[3:]
+                bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
             elif first_byte == b'\x02':  # UTF-16LE
                 # strip optional null byte, if byte count uneven
                 bytestr = b[1:-1] if len(b) % 2 == 0 else b[1:]
