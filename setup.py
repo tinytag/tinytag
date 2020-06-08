@@ -9,4 +9,7 @@ def get_version():
         return version_line.split("=")[1].strip().strip("\"'")
 
 
-setup(version=get_version())
+setup(
+        name="tinytag",
+        version=get_version()
+        )
