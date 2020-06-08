@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from os.path import join
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def get_version():
@@ -9,4 +9,8 @@ def get_version():
         return version_line.split("=")[1].strip().strip("\"'")
 
 
-setup(version=get_version())
+setup(
+        name="tinytag",
+        version=get_version(),
+        packages=find_packages(),
+        )
