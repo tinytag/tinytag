@@ -94,6 +94,7 @@ class TinyTag(object):
         self.track = None
         self.track_total = None
         self.year = None
+        self.lyrics = None
         self._load_image = False
         self._image_data = None
         self._ignore_errors = ignore_errors
@@ -429,6 +430,7 @@ class ID3(TinyTag):
         'TIT2': 'title',  'TT2': 'title',
         'TCON': 'genre',  'TCO': 'genre',
         'TPOS': 'disc',
+        'USLT': 'lyrics',
         'TPE2': 'albumartist', 'TCOM': 'composer',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
@@ -709,8 +711,12 @@ class ID3(TinyTag):
             if first_byte == b'\x00':  # ISO-8859-1
                 bytestr = bytestr[1:]
                 encoding = 'ISO-8859-1'
+                if bytestr[:4] == b'XXX\x00':
+                    bytestr = bytestr[4:] # remove unspecified language
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
+                if bytestr[:5] == b'XXX\xff\xfe':
+                    bytestr = bytestr[3:] # remove unspecified (leaving BOM)
                 if bytestr[:5] == b'eng\xff\xfe':
                     bytestr = bytestr[3:]  # remove language (but leave BOM)
                 if bytestr[:5] == b'eng\xfe\xff':
