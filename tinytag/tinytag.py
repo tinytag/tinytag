@@ -211,8 +211,12 @@ class TinyTag(object):
                 current, total = value.split('/')[:2]
                 setattr(self, "%s_total" % fieldname, total)
             else:
-                current = value
+                # Converting 'track', 'disk' to string for type consistency.
+                current = str(value) if isinstance(value, int) else value
             setattr(self, fieldname, current)
+        elif fieldname in ("track_total", "disc_total") and isinstance(value, int):
+            # Converting to string 'track_total', 'disc_total' for type consistency.
+            setattr(self, fieldname, str(value))
         else:
             setattr(self, fieldname, value)
 
