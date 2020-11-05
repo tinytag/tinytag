@@ -22,6 +22,8 @@ install:
 
 env:
   - DEBUG=1
+# workaround for pypy not working anymore in travis
+  - CRYPTOGRAPHY_ALLOW_OPENSSL_102=1
 
 # command to run tests
 script:
