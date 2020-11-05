@@ -73,7 +73,7 @@ and possibly more.
 
 Changelog:
  * 1.5.0  (2020-11-05):
-   - fixed minor data type to always return str for disc, disc_total, track, track_total #97 (thanks to kostalski)
+   - fixed data type to always return str for disc, disc_total, track, track_total #97 (thanks to kostalski)
    - fixed package install being reported as UNKNOWN for some python/pip variations #90 (thanks to russpoutine)
    - Added automatic detection for certain MP4 file headers
  * 1.4.0  (2020-04-23):
