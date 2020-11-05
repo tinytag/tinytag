@@ -20,10 +20,9 @@ install:
   - "pip install pytest"
   - "pip install pytest-cov"
 
-env:
-  - DEBUG=1
 # workaround for pypy not working anymore in travis
-  - CRYPTOGRAPHY_ALLOW_OPENSSL_102=1
+env:
+  - DEBUG=1 CRYPTOGRAPHY_ALLOW_OPENSSL_102=1
 
 # command to run tests
 script:
