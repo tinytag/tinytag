@@ -26,8 +26,8 @@ Features:
     * WMA
     * MP4/M4A/M4B
   * pure python
-  * supports python 2.6+ and 3.2+
-  * is tested 
+  * supports python 2.7 and 3.4 or higher
+  * high test coverage
   * Just a few hundred lines of code (just include it in your project!) 
 
 tinytag only provides the minimum needed for _reading_ MP3, OGG, OPUS, MP4, M4A, FLAC, WMA and Wave meta-data.
@@ -72,6 +72,10 @@ supported python versions:
 and possibly more.
 
 Changelog:
+ * 1.5.0  (2020-11-05):
+   - fixed minor data type to always return str for disc, disc_total, track, track_total #97 (thanks to kostalski)
+   - fixed package install being reported as UNKNOWN for some python/pip variations #90 (thanks to russpoutine)
+   - Added automatic detection for certain MP4 file headers
  * 1.4.0  (2020-04-23):
    - detecting file types based on their magic header bytes, #85
    - fixed opus duration being wrong for files with lower sample rate #81
