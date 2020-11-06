@@ -804,6 +804,8 @@ class Ogg(TinyTag):
                 walker.seek(8, os.SEEK_CUR)  # jump over header name
                 self._parse_vorbis_comment(walker)
             else:
+                if DEBUG:
+                    stderr('Unsupported Ogg page type: ', packet[:16])
                 break
             page_start_pos = fh.tell()
 
@@ -818,7 +820,9 @@ class Ogg(TinyTag):
             'artist': 'artist',
             'date': 'year',
             'tracknumber': 'track',
+            'totaltracks': 'track_total',
             'discnumber': 'disc',
+            'totaldiscs': 'disc_total',
             'genre': 'genre',
             'description': 'comment',
             'composer': 'composer',
@@ -834,6 +838,8 @@ class Ogg(TinyTag):
                 continue
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
+                if DEBUG:
+                    stderr('Found Vorbis Comment', key, value[:64])
                 fieldname = comment_type_to_attr_mapping.get(key.lower())
                 if fieldname:
                     self._set_field(fieldname, value)
@@ -844,6 +850,7 @@ class Ogg(TinyTag):
         header_data = fh.read(27)  # read ogg page header
         while len(header_data) != 0:
             header = struct.unpack('<4sBBqIIiB', header_data)
+            # https://xiph.org/ogg/doc/framing.html
             oggs, version, flags, pos, serial, pageseq, crc, segments = header
             self._max_samplenum = max(self._max_samplenum, pos)
             if oggs != b'OggS' or version != 0:
