@@ -58,7 +58,7 @@ def _read(fh, nbytes):  # helper function to check if we haven't reached EOF
 
 
 def stderr(*args):
-    sys.stderr.write('%s\n' % ' '.join(args))
+    sys.stderr.write('%s\n' % ' '.join(str(arg) for arg in args))
     sys.stderr.flush()
 
 
