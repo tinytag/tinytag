@@ -84,6 +84,7 @@ testfiles = OrderedDict([
     ('samples/with_id3_header.flac', {'filesize': 64837, 'album': '   ', 'artist': '群星', 'disc': '0', 'title': 'A 梦 哆啦 机器猫 短信铃声', 'track': '0', 'bitrate': 1116.9186328125, 'channels': 1, 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'year': '2018'}),
     ('samples/with_padded_id3_header.flac', {'filesize': 16070, 'album': 'album', 'albumartist': None, 'artist': 'artist', 'audio_offset': None, 'bitrate': 276.830859375, 'channels': 1, 'comment': None, 'disc': None, 'disc_total': None, 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'title': 'title', 'track': '1', 'track_total': None, 'year': '2018'}),
     ('samples/with_padded_id3_header2.flac', {'filesize': 19522, 'album': 'Unbekannter Titel', 'albumartist': None, 'artist': 'Unbekannter Künstler', 'audio_offset': None, 'bitrate': 336.29695312499996, 'channels': 1, 'comment': None, 'disc': '1', 'disc_total': '1', 'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'title': 'Track01', 'track': '01', 'track_total': '05', 'year': '2018'}),
+    ('samples/flac_with_image.flac', {'filesize': 80000, 'album': 'smilin´ in circles', 'artist': 'Andreas Kümmert', 'bitrate': 7.479655337482049, 'channels': 2, 'disc': '1', 'disc_total': '1', 'duration': 83.56, 'genre': 'Blues', 'samplerate': 44100, 'title': 'intro', 'track': '01', 'track_total': '8'}),
 
     # WMA
     ('samples/test2.wma', {'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': '1', 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': '', 'composer': 'Foo Fighters'}),
@@ -254,6 +255,12 @@ def test_mp4_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 20000 < len(image_data) < 25000, 'Image is %d bytes but should be around 22kb' % len(image_data)
+
+def test_flac_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/flac_with_image.flac'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 70000 < len(image_data) < 80000, 'Image is %d bytes but should be around 75kb' % len(image_data)
 
 
 @pytest.mark.parametrize("testfile,expected", [

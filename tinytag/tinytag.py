@@ -941,9 +941,15 @@ class Wave(TinyTag):
 
 class Flac(TinyTag):
     METADATA_STREAMINFO = 0
+    METADATA_PADDING = 1
+    METADATA_APPLICATION = 2
+    METADATA_SEEKTABLE = 3
     METADATA_VORBIS_COMMENT = 4
+    METADATA_CUESHEET = 5
+    METADATA_PICTURE = 6
 
     def load(self, tags, duration, image=False):
+        self._load_image = image
         header = self._filehandler.peek(4)
         if header[:3] == b'ID3':  # parse ID3 header if it exists
             id3 = ID3(self._filehandler, 0)
@@ -1001,9 +1007,19 @@ class Flac(TinyTag):
                 oggtag = Ogg(fh, 0)
                 oggtag._parse_vorbis_comment(fh)
                 self.update(oggtag)
+            elif block_type == Flac.METADATA_PICTURE and self._load_image:
+                # https://xiph.org/flac/format.html#metadata_block_picture
+                pic_type, mime_len = struct.unpack('>2I', fh.read(8))
+                mime = fh.read(mime_len)
+                description_len = struct.unpack('>I', fh.read(4))[0]
+                description = fh.read(description_len)
+                width, height, depth, colors, pic_len = struct.unpack('>5I', fh.read(20))
+                self._image_data = fh.read(pic_len)
             elif block_type >= 127:
                 return  # invalid block type
             else:
+                if DEBUG:
+                    stderr('Unknown FLAC block type', block_type)
                 fh.seek(size, 1)  # seek over this block
 
             if is_last_block:
