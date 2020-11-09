@@ -1,10 +1,26 @@
 import os
 import json
 import sys
+from os.path import splitext
+
 from tinytag import TinyTag, TinyTagException
 
 def usage():
-    print('usage: tinytag <filename> [--save-image <image-path>] [--format json|csv|tsv]')
+    print('''tinytag [options] <filename...>
+    
+    -h, --help
+        Display help
+    
+    -i, --save-image <image-path>
+        Save the cover art to a file
+    
+    -f, --format json|csv|tsv|tabularcsv
+        Specify how the output should be formatted
+    
+    -s, --skip-unsupported
+        Skip files that do not have a file extension supported by tinytag 
+    
+    ''')
     sys.exit(1)
 
 def pop_param(name, _default):
@@ -15,24 +31,48 @@ def pop_param(name, _default):
     return _default
 
 try:
-    save_image_path = pop_param('--save-image', None)
-    formatting = pop_param('--format', 'json')
-    filename = sys.argv[1]
-except:
+    display_help = pop_param('--help', False) or pop_param('-h', False)
+    if display_help:
+        usage()
+        sys.exit(0)
+    save_image_path = pop_param('--save-image', None) or pop_param('-i', None)
+    formatting = (pop_param('--format', None) or pop_param('-f', None)) or 'json'
+    skip_unsupported = pop_param('--skip-unsupported', False) or pop_param('-s', False)
+    filenames = sys.argv[1:]
+except Exception as exc:
+    print(exc)
     usage()
 
-try:
-    tag = TinyTag.get(filename, image=save_image_path is not None)
-    if save_image_path:
-        image = tag.get_image()
-        if image:
-            with open(save_image_path, 'wb') as fh:
-                fh.write(image)
-    if formatting == 'json':
-        print(json.dumps(tag.as_dict()))
-    elif formatting == 'csv':
-        print('\n'.join('%s,%s' % (k, v) for k, v in tag.as_dict().items()))
-    elif formatting == 'tsv':
-        print('\n'.join('%s\t%s' % (k, v) for k, v in tag.as_dict().items()))
-except TinyTagException as e:
-    sys.stderr.write(str(e))
+header_printed = False
+
+for i, filename in enumerate(filenames):
+    try:
+        if skip_unsupported:
+            if not TinyTag.is_supported(filename) or os.path.isdir(filename):
+                continue
+        tag = TinyTag.get(filename, image=save_image_path is not None)
+        if save_image_path:
+            # allow for saving the image of multiple files
+            actual_save_image_path = save_image_path
+            if len(filenames) > 1:
+                actual_save_image_path, ext = splitext(actual_save_image_path)
+                actual_save_image_path += '%05d' % i + ext
+            image = tag.get_image()
+            if image:
+                with open(actual_save_image_path, 'wb') as fh:
+                    fh.write(image)
+        data = {'filename': filename}
+        data.update(tag.as_dict())
+        if formatting == 'json':
+            print(json.dumps(data))
+        elif formatting == 'csv':
+            print('\n'.join('%s,%s' % (k, v) for k, v in data.items()))
+        elif formatting == 'tsv':
+            print('\n'.join('%s\t%s' % (k, v) for k, v in data.items()))
+        elif formatting == 'tabularcsv':
+            if not header_printed:
+                print(','.join(k for k, v in data.items()))
+                header_printed = True
+            print(','.join('"%s"' % v for k, v in data.items()))
+    except TinyTagException as e:
+        sys.stderr.write('%s: %s' % (filename, str(e)))
