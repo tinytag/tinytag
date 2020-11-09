@@ -30,6 +30,13 @@ def pop_param(name, _default):
         return sys.argv.pop(idx)
     return _default
 
+def pop_switch(name, _default):
+    if name in sys.argv:
+        idx = sys.argv.index(name)
+        sys.argv.pop(idx)
+        return True
+    return False
+
 try:
     display_help = pop_param('--help', False) or pop_param('-h', False)
     if display_help:
@@ -37,7 +44,7 @@ try:
         sys.exit(0)
     save_image_path = pop_param('--save-image', None) or pop_param('-i', None)
     formatting = (pop_param('--format', None) or pop_param('-f', None)) or 'json'
-    skip_unsupported = pop_param('--skip-unsupported', False) or pop_param('-s', False)
+    skip_unsupported = pop_switch('--skip-unsupported', False) or pop_switch('-s', False)
     filenames = sys.argv[1:]
 except Exception as exc:
     print(exc)
@@ -49,6 +56,7 @@ for i, filename in enumerate(filenames):
     try:
         if skip_unsupported:
             if not TinyTag.is_supported(filename) or os.path.isdir(filename):
+                sys.stderr.write('%s: skipping unsupported file' % filename)
                 continue
         tag = TinyTag.get(filename, image=save_image_path is not None)
         if save_image_path:
