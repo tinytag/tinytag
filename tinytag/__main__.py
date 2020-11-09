@@ -83,4 +83,4 @@ for i, filename in enumerate(filenames):
                 header_printed = True
             print(','.join('"%s"' % v for k, v in data.items()))
     except TinyTagException as e:
-        sys.stderr.write('%s: %s' % (filename, str(e)))
+        sys.stderr.write('%s: %s\n' % (filename, str(e)))
