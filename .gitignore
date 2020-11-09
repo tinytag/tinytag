@@ -41,3 +41,6 @@ test-results/
 .idea/
 .venv
 venv
+
+# custom test samples
+tinytag/tests/custom_samples
