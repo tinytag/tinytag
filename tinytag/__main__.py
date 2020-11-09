@@ -55,8 +55,10 @@ header_printed = False
 for i, filename in enumerate(filenames):
     try:
         if skip_unsupported:
-            if not TinyTag.is_supported(filename) or os.path.isdir(filename):
-                sys.stderr.write('%s: skipping unsupported file\n' % filename)
+            if os.path.isdir(filename):
+                continue
+            if not TinyTag.is_supported(filename):
+                # sys.stderr.write('%s: skipping unsupported file\n' % filename)
                 continue
         tag = TinyTag.get(filename, image=save_image_path is not None)
         if save_image_path:
