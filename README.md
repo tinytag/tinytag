@@ -37,6 +37,13 @@ It can determine track number, total tracks, title, artist, album, year, duratio
     tag = TinyTag.get('/some/music.mp3')
     print('This track is by %s.' % tag.artist)
     print('It is %f seconds long.' % tag.duration)
+    
+Alternatively you can use tinytag directly on the command line:
+
+    $ python -m tinytag --format csv /some/music.mp3
+    > {"filename": "/some/music.mp3", "filesize": 30212227, "album": "Album", "albumartist": "Artist", "artist": "Artist", "audio_offset": null, "bitrate": 256, "channels": 2, "comment": null, "composer": null, "disc": "1", "disc_total": null, "duration": 10, "genre": null, "samplerate": 44100, "title": "Title", "track": "5", "track_total": null, "year": "2012"}
+
+Check `python -m tinytag --help` for all CLI options, for example other output formats`
 
 List of possible attributes you can get with TinyTag:
 
