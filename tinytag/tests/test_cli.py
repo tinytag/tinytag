@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
@@ -35,6 +36,7 @@ def test_print_help():
     assert 'tinytag [options] <filename' in run_cli('--help')
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="NamedTemporaryFile cant be reopened on windows")
 def test_save_image_long_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
@@ -46,6 +48,7 @@ def test_save_image_long_opt():
         assert b'JFIF' in image_data
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="NamedTemporaryFile cant be reopened on windows")
 def test_save_image_short_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
@@ -53,6 +56,7 @@ def test_save_image_short_opt():
     assert file_size(temp_file.name) > 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="NamedTemporaryFile cant be reopened on windows")
 def test_save_image_bulk():
     temp_file = NamedTemporaryFile(suffix='.jpg')
     temp_file_no_ext = temp_file.name[:-4]
