@@ -16,7 +16,7 @@ Install
 Features:
 ---------
 
-  * Read tags, length and IDv3 cover images of music files
+  * Read tags, length and cover images of audio files
   * supported formats
     * MP3 (ID3 v1, v1.1, v2.2, v2.3+)
     * Wave/RIFF
@@ -25,7 +25,7 @@ Features:
     * FLAC
     * WMA
     * MP4/M4A/M4B
-  * pure python
+  * pure python, no dependencies
   * supports python 2.7 and 3.4 or higher
   * high test coverage
   * Just a few hundred lines of code (just include it in your project!) 
@@ -69,14 +69,6 @@ Additionally you can also get cover images from ID3 tags:
 
     tag = TinyTag.get('/some/music.mp3', image=True)
     image_data = tag.get_image()
-
-supported python versions:
-
- * 2.7+
- * 3.4+
- * pypy
-
-and possibly more.
 
 Changelog:
  * 1.5.0  (2020-11-05):
