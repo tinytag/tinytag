@@ -84,7 +84,7 @@ def test_meta_data_output_format_json():
 
 def test_meta_data_output_format_csv():
     output = run_cli('-f csv ' + mp3_with_image)
-    lines = [line for line in output.split('\n') if line]
+    lines = [line for line in output.split(os.linesep) if line]
     assert all(',' in line for line in lines)
     attributes = set(line.split(',')[0] for line in lines)
     assert set(attributes) == tinytag_attributes
@@ -92,7 +92,7 @@ def test_meta_data_output_format_csv():
 
 def test_meta_data_output_format_tsv():
     output = run_cli('-f tsv ' + mp3_with_image)
-    lines = [line for line in output.split('\n') if line]
+    lines = [line for line in output.split(os.linesep) if line]
     assert all('\t' in line for line in lines)
     attributes = set(line.split('\t')[0] for line in lines)
     assert set(attributes) == tinytag_attributes
@@ -100,7 +100,7 @@ def test_meta_data_output_format_tsv():
 
 def test_meta_data_output_format_tabularcsv():
     output = run_cli('-f tabularcsv ' + mp3_with_image)
-    header, line, rest = output.split('\n')
+    header, line, rest = output.split(os.linesep)
     assert set(header.split(',')) == tinytag_attributes
 
 
