@@ -21,7 +21,6 @@ def usage():
         Skip files that do not have a file extension supported by tinytag 
     
     ''')
-    sys.exit(1)
 
 def pop_param(name, _default):
     if name in sys.argv:
@@ -38,7 +37,7 @@ def pop_switch(name, _default):
     return False
 
 try:
-    display_help = pop_param('--help', False) or pop_param('-h', False)
+    display_help = pop_switch('--help', False) or pop_switch('-h', False)
     if display_help:
         usage()
         sys.exit(0)
@@ -49,6 +48,7 @@ try:
 except Exception as exc:
     print(exc)
     usage()
+    sys.exit(1)
 
 header_printed = False
 
@@ -58,7 +58,6 @@ for i, filename in enumerate(filenames):
             if os.path.isdir(filename):
                 continue
             if not TinyTag.is_supported(filename):
-                # sys.stderr.write('%s: skipping unsupported file\n' % filename)
                 continue
         tag = TinyTag.get(filename, image=save_image_path is not None)
         if save_image_path:
@@ -86,3 +85,4 @@ for i, filename in enumerate(filenames):
             print(','.join('"%s"' % v for k, v in data.items()))
     except TinyTagException as e:
         sys.stderr.write('%s: %s\n' % (filename, str(e)))
+        sys.exit(1)
