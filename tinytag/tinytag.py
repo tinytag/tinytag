@@ -94,6 +94,8 @@ class TinyTag(object):
         self.track = None
         self.track_total = None
         self.year = None
+        self.series = None
+        self.series_number = None
         self._load_image = False
         self._image_data = None
         self._ignore_errors = ignore_errors
@@ -272,6 +274,17 @@ class MP4(TinyTag):
         }
 
         @classmethod
+        def make_series_number_parser(cls, fieldname):
+          def parse_num_atom(data_atom):
+            number_data = struct.unpack('>I', data_atom[:4])[0]
+            conversion = cls.ATOM_DECODER_BY_TYPE.get(number_data)
+            if conversion is None:
+                stderr('Cannot convert data type: %s' % number_data)
+                return {}  # don't know how to convert data atom
+            return {fieldname: conversion(data_atom[9:10])}
+          return parse_num_atom
+        
+        @classmethod
         def make_data_atom_parser(cls, fieldname):
             def parse_data_atom(data_atom):
                 data_type = struct.unpack('>I', data_atom[:4])[0]
@@ -357,6 +370,8 @@ class MP4(TinyTag):
         b'gnre':    {b'data': Parser.parse_id3v1_genre},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
         b'trkn':    {b'data': Parser.make_number_parser('track', 'track_total')},
+        b'\xa9mvn': {b'data': Parser.make_data_atom_parser('series')},
+        b'\xa9mvi': {b'data': Parser.make_series_number_parser('series_number')},
     }}}}}
 
     # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
