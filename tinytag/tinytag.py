@@ -450,6 +450,7 @@ class ID3(TinyTag):
         'WXXX': 'extra.url',
         'TXXX': 'extra.text',
         'TKEY': 'extra.initial_key',
+        'USLT': 'extra.lyrics',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
