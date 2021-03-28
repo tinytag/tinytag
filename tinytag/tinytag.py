@@ -33,7 +33,8 @@
 from __future__ import print_function
 
 import json
-from collections import MutableMapping, OrderedDict
+import operator
+from collections import MutableMapping, OrderedDict, defaultdict
 import codecs
 from functools import reduce
 import struct
@@ -88,6 +89,7 @@ class TinyTag(object):
         self.disc = None
         self.disc_total = None
         self.duration = None
+        self.extra = defaultdict(lambda: None)
         self.genre = None
         self.samplerate = None
         self.title = None
@@ -172,6 +174,7 @@ class TinyTag(object):
             parser_class = cls.get_parser_class(filename, af)
             tag = parser_class(af, size, ignore_errors=ignore_errors)
             tag.load(tags=tags, duration=duration, image=image)
+            tag.extra = dict(tag.extra)  # turn default dict into dict so that it can throw KeyError
             return tag
 
     def __str__(self):
@@ -192,7 +195,16 @@ class TinyTag(object):
     def _set_field(self, fieldname, bytestring, transfunc=None):
         """convienience function to set fields of the tinytag by name.
         the payload (bytestring) can be changed using the transfunc"""
-        if getattr(self, fieldname):  # do not overwrite existing data
+        write_dest = self  # write into the TinyTag by default
+        get_func = getattr
+        set_func = setattr
+        is_extra = fieldname.startswith('extra.')  # but if it's marked as extra field
+        if is_extra:
+            fieldname = fieldname[6:]
+            write_dest = self.extra  # write into the extra field instead
+            get_func = operator.getitem
+            set_func = operator.setitem
+        if get_func(write_dest, fieldname):  # do not overwrite existing data
             return
         value = bytestring if transfunc is None else transfunc(bytestring)
         if DEBUG:
@@ -210,16 +222,16 @@ class TinyTag(object):
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
                 current, total = value.split('/')[:2]
-                setattr(self, "%s_total" % fieldname, total)
+                set_func(write_dest, "%s_total" % fieldname, total)
             else:
                 # Converting 'track', 'disk' to string for type consistency.
                 current = str(value) if isinstance(value, int) else value
-            setattr(self, fieldname, current)
+            set_func(write_dest, fieldname, current)
         elif fieldname in ("track_total", "disc_total") and isinstance(value, int):
             # Converting to string 'track_total', 'disc_total' for type consistency.
-            setattr(self, fieldname, str(value))
+            set_func(write_dest, fieldname, str(value))
         else:
-            setattr(self, fieldname, value)
+            set_func(write_dest, fieldname, value)
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -435,6 +447,8 @@ class ID3(TinyTag):
         'TCON': 'genre',  'TCO': 'genre',
         'TPOS': 'disc',
         'TPE2': 'albumartist', 'TCOM': 'composer',
+        'WXXX': 'extra.url',
+        'TXXX': 'extra.text',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)

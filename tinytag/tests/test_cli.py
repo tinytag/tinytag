@@ -13,7 +13,7 @@ bogus_file = os.path.join(sample_folder, 'there_is_no_such_ext.bogus')
 assert os.path.exists(mp3_with_image)
 
 tinytag_attributes = {'album', 'albumartist', 'artist', 'audio_offset', 'bitrate', 'channels',
-                      'comment', 'composer', 'disc', 'disc_total', 'duration', 'filesize',
+                      'comment', 'composer', 'disc', 'disc_total', 'duration', 'extra', 'filesize',
                       'filename', 'genre', 'samplerate', 'title', 'track', 'track_total', 'year'}
 
 
