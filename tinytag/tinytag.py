@@ -449,6 +449,7 @@ class ID3(TinyTag):
         'TPE2': 'albumartist', 'TCOM': 'composer',
         'WXXX': 'extra.url',
         'TXXX': 'extra.text',
+        'TKEY': 'extra.initial_key',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
