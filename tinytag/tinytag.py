@@ -34,7 +34,8 @@ from __future__ import print_function
 
 import json
 import operator
-from collections import MutableMapping, OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict
+from collections.abc import MutableMapping
 import codecs
 from functools import reduce
 import struct
