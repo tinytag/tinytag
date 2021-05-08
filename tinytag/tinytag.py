@@ -78,7 +78,11 @@ def _bytes_to_int(b):
 
 class TinyTag(object):
     def __init__(self, filehandler, filesize, ignore_errors=False):
-        if isinstance(filehandler, str):
+        # This is required for compatibility between python2 and python3
+        # in python2 there is a difference between `str` and `unicode`
+        # whereas in python3 everything every string is `unicode` by default and
+        # the type `unicode` is deprecated
+        if type(filehandler).__name__ in ('str', 'unicode'):
             raise Exception('Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`')
         self._filehandler = filehandler
         self.filesize = filesize

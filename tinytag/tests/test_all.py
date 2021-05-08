@@ -281,9 +281,12 @@ def test_detect_magic_headers(testfile, expected):
         parser = TinyTag.get_parser_class(filename, fh)
     assert parser == expected
 
-@pytest.mark.xfail(raises=Exception)
 def test_show_hint_for_wrong_usage():
-    TinyTag('filename.mp3', 0)
+    with pytest.raises(Exception) as exc_info:
+        TinyTag('filename.mp3', 0)
+    assert exc_info.type == Exception
+    assert exc_info.value.args[0] == 'Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`'
+    
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
