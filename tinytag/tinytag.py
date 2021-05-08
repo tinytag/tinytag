@@ -35,7 +35,10 @@ from __future__ import print_function
 import json
 import operator
 from collections import OrderedDict, defaultdict
-from collections.abc import MutableMapping
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 import codecs
 from functools import reduce
 import struct
