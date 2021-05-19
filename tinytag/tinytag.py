@@ -32,8 +32,10 @@
 
 from __future__ import print_function
 
+import aifc
 import json
 import operator
+from chunk import Chunk
 from collections import OrderedDict, defaultdict
 try:
     from collections.abc import MutableMapping
@@ -127,6 +129,7 @@ class TinyTag(object):
             (b'.flac',): Flac,
             (b'.wma',): Wma,
             (b'.m4b', b'.m4a', b'.mp4'): MP4,
+            (b'.aiff', b'.aifc', b'.aif'): Aiff,
         }
         if not isinstance(filename, bytes):  # convert filename to binary
             filename = filename.encode('ASCII', errors='ignore').lower()
@@ -146,6 +149,8 @@ class TinyTag(object):
             b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,
             b'....ftypM4A': MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
             b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
+            b'^FORM....AIFF': Aiff,
+            b'^FORM....AIFC': Aiff,
         }
         header = fh.peek(max(len(sig) for sig in magic_bytes_mapping))
         for magic, parser in magic_bytes_mapping.items():
@@ -1199,3 +1204,89 @@ class Wma(TinyTag):
                 fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
             else:
                 fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
+
+class Aiff(ID3):
+    #
+    # AIFF is part of the IFF family of file formats.  That means it has _wide_
+    # variety of things that can appear in it.  However... Python natively
+    # supports reading/writing the most common AIFF formats! But it does not
+    # support pulling tags out of them.  Therefore, Python is going to do the
+    # heavy lifting and this code just handles the metadata chunks.
+    #
+    # https://en.wikipedia.org/wiki/Audio_Interchange_File_Format#Data_format
+    # https://web.archive.org/web/20171118222232/http://www-mmsp.ece.mcgill.ca/documents/audioformats/aiff/aiff.html
+    # https://web.archive.org/web/20071219035740/http://www.cnpbagwell.com/aiff-c.txt
+    #
+    # A few things about the spec:
+    #
+    # * It recommended '.afc' as the extension for AIFF-C files.  That didn't really happen.
+    # * IFF strings are not supposed to be null terminated.  They sometimes are.
+    # * The spec is a bit contradictory in terms of strings being ASCII or not. The assumption
+    #   here is that they are.
+    # * Some tools might throw more metadata into the ANNO chunk but it is
+    #   wildly unreliable to count on it. In fact, the official spec recommends against
+    #   using it. That said... this code throws the ANNO field into comment and hopes
+    #   for the best.
+    #
+    # The key thing here is that AIFF metadata is usually in a handful of fields
+    # and the rest is an ID3 or XMP field.  XMP is too complicated and only Adobe-related
+    # products support it. The vast majority use ID3. As such, this code inherits from
+    # ID3 rather than TinyTag since it does everything that needs to be done here.
+    #
+    #
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        ID3.__init__(self, filehandler, filesize, *args, **kwargs)
+        self.__tag_parsed = False
+
+    def _determine_duration(self, fh):
+        fh.seek(0, 0)
+        aiffobj = aifc.open(fh, 'r')
+        self.channels = aiffobj.getnchannels()
+        self.samplerate = aiffobj.getframerate()
+        self.duration = aiffobj.getnframes() / self.samplerate
+        self.bitrate = self.samplerate * self.channels * 16 / 1024.0
+
+    def _parse_tag(self, fh):
+        fh.seek(0, 0)
+        self.__tag_parsed = True
+        chunk = Chunk(fh)
+        if chunk.getname() != b'FORM':
+            raise TinyTagException('not an aiff file!')
+
+        formdata = chunk.read(4)
+        if formdata not in (b'AIFC', b'AIFF'):
+            raise TinyTagException('not an aiff file!')
+
+        while True:
+            try:
+                chunk = Chunk(fh)
+            except EOFError:
+                break
+
+            chunkname = chunk.getname()
+            if chunkname == b'NAME':
+                # "Name Chunk text contains the name of the sampled sound."
+                self.title = self._unpad(chunk.read().decode('ascii'))
+            elif chunkname == b'AUTH':
+                # "Author Chunk text contains one or more author names.  An author in
+                # this case is the creator of a sampled sound."
+                self.artist = self._unpad(chunk.read().decode('ascii'))
+            elif chunkname == b'ANNO':
+                # "Annotation Chunk text contains a comment.  Use of this chunk is
+                # discouraged within FORM AIFC." Some tools: "hold my beer"
+                self._set_field('comment', self._unpad(chunk.read().decode('ascii')))
+            elif chunkname == b'(c) ':
+                # "The Copyright Chunk contains a copyright notice for the sound.  text
+                #  contains a date followed by the copyright owner.  The chunk ID '[c] '
+                # serves as the copyright character. " Some tools: "hold my beer"
+                field = chunk.read().decode('utf-8')
+                self._set_field('extra.copyright', field)
+            elif chunkname == b'ID3 ':
+                super()._parse_tag(fh)
+            elif chunkname == b'SSND':
+                # probably the closest equivalent, but this isn't particular viable
+                # for AIFF
+                self.audio_offset = fh.tell()
+                chunk.skip()
+            else:
+                chunk.skip()
