@@ -22,7 +22,7 @@ import re
 from pytest import raises
 
 from tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
-from tinytag.tinytag import Wma, MP4
+from tinytag.tinytag import Wma, MP4, Aiff
 
 try:
     from collections import OrderedDict
@@ -94,6 +94,11 @@ testfiles = OrderedDict([
     ('samples/test.m4a', {'extra': {}, 'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': '11', 'track': '11', 'artist': 'Marian', 'filesize': 61432}),
     ('samples/test2.m4a', {'extra': {}, 'bitrate': 256.0, 'track': '1', 'albumartist': "Millie Jackson - Get It Out 'cha System - 1978", 'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978', 'artist': 'Millie Jackson', 'track_total': '9', 'disc_total': '1', 'genre': 'R&B/Soul', 'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': '1', 'title': 'Go Out and Get Some', 'comment': "Millie Jackson - Get It Out 'cha System - 1978", 'composer': "Millie Jackson - Get It Out 'cha System - 1978"}),
     ('samples/iso8859_with_image.m4a', {'extra': {}, 'artist': 'Major Lazer', 'filesize': 57017, 'title': 'Cold Water (feat. Justin Bieber & M�)', 'album': 'Cold Water (feat. Justin Bieber & M�) - Single', 'year': '2016', 'samplerate': 44100, 'duration': 188.545, 'genre': 'Electronic;Music', 'albumartist': 'Major Lazer', 'channels': 2, 'bitrate': 303040.001, 'comment': '? 2016 Mad Decent'}),
+
+    # AIFF
+    ('samples/test-tagged.aiff', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 177620, 'artist': 'theartist', 'bitrate': 1378.125, 'genre': 'Acid', 'samplerate': 44100, 'track': '1', 'title': 'thetitle', 'album': 'thealbum', 'audio_offset': 76, 'comment': 'hello', 'year': '2014', }),
+    ('samples/test.aiff', {'extra': {'copyright': '℗ 1992 Ace Records'}, 'channels': 2, 'duration': 0.0, 'filesize': 164, 'artist': None, 'bitrate': 1378.125, 'genre': None, 'samplerate': 44100, 'track': None, 'title': 'Go Out and Get Some', 'album': None, 'audio_offset': 156, 'comment': 'Millie Jackson - Get It Out \'cha System - 1978', }),
+    ('samples/pluck-pcm8.aiff', {'extra': {}, 'channels': 2, 'duration': 0.2999546485260771, 'filesize': 6892, 'artist': 'Serhiy Storchaka', 'title': 'Pluck', 'album': 'Python Test Suite', 'bitrate': 344.53125, 'samplerate': 11025, 'audio_offset': 116, 'comment': 'Audacity Pluck + Wahwah', }),
 
 ])
 
@@ -194,7 +199,7 @@ def test_unsubclassed_tinytag_parse_tag():
 def test_mp3_length_estimation():
     ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
-    assert 3.5 < tag.duration < 4.0 
+    assert 3.5 < tag.duration < 4.0
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_unexpected_eof():
@@ -215,6 +220,10 @@ def test_invalid_ogg_file():
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_wave_file():
     tag = Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
+
+@pytest.mark.xfail(raises=TinyTagException)
+def test_invalid_aiff_file():
+    tag = Aiff.get(os.path.join(testfolder, 'samples/ilbm.aiff'))
 
 def test_unpad():
     # make sure that unpad only removes trailing 0-bytes
@@ -263,6 +272,11 @@ def test_flac_image_loading():
     assert image_data is not None
     assert 70000 < len(image_data) < 80000, 'Image is %d bytes but should be around 75kb' % len(image_data)
 
+def test_aiff_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/test_with_image.aiff'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 15000 < len(image_data) < 25000, 'Image is %d bytes but should be around 20kb' % len(image_data)
 
 @pytest.mark.parametrize("testfile,expected", [
     pytest.param(testfile, expected) for testfile, expected in [
@@ -273,6 +287,7 @@ def test_flac_image_loading():
         ('samples/detect_flac.x', Flac),
         ('samples/detect_wma.x', Wma),
         ('samples/detect_mp4_m4a.x', MP4),
+        ('samples/detect_aiff.x', Aiff),
     ]
 ])
 def test_detect_magic_headers(testfile, expected):
@@ -286,7 +301,7 @@ def test_show_hint_for_wrong_usage():
         TinyTag('filename.mp3', 0)
     assert exc_info.type == Exception
     assert exc_info.value.args[0] == 'Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`'
-    
+
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
