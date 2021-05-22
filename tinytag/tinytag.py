@@ -129,7 +129,7 @@ class TinyTag(object):
             (b'.flac',): Flac,
             (b'.wma',): Wma,
             (b'.m4b', b'.m4a', b'.mp4'): MP4,
-            (b'.aiff', b'.aifc', b'.aif'): Aiff,
+            (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
         }
         if not isinstance(filename, bytes):  # convert filename to binary
             filename = filename.encode('ASCII', errors='ignore').lower()
@@ -1207,7 +1207,7 @@ class Wma(TinyTag):
 
 class Aiff(ID3):
     #
-    # AIFF is part of the IFF family of file formats.  That means it has _wide_
+    # AIFF is part of the IFF family of file formats.  That means it has a _wide_
     # variety of things that can appear in it.  However... Python natively
     # supports reading/writing the most common AIFF formats! But it does not
     # support pulling tags out of them.  Therefore, Python is going to do the
@@ -1219,7 +1219,6 @@ class Aiff(ID3):
     #
     # A few things about the spec:
     #
-    # * It recommended '.afc' as the extension for AIFF-C files.  That didn't really happen.
     # * IFF strings are not supposed to be null terminated.  They sometimes are.
     # * The spec is a bit contradictory in terms of strings being ASCII or not. The assumption
     #   here is that they are.
@@ -1228,6 +1227,12 @@ class Aiff(ID3):
     #   using it. That said... this code throws the ANNO field into comment and hopes
     #   for the best.
     #
+    # Additionally:
+    #
+    # * Python allegedly supports ALAW/alaw, G722, and ULAW/ulaw AIFF-C compression.
+    #   However it does seem to have implementation bugs.
+    #   Anything it doesn't understand (e.g., 'sowt') will throw an exception.
+    #
     # The key thing here is that AIFF metadata is usually in a handful of fields
     # and the rest is an ID3 or XMP field.  XMP is too complicated and only Adobe-related
     # products support it. The vast majority use ID3. As such, this code inherits from
@@ -1235,16 +1240,18 @@ class Aiff(ID3):
     #
     #
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        ID3.__init__(self, filehandler, filesize, *args, **kwargs)
+        super(Aiff, self).__init__(filehandler, filesize, *args, **kwargs)
         self.__tag_parsed = False
 
     def _determine_duration(self, fh):
         fh.seek(0, 0)
-        aiffobj = aifc.open(fh, 'r')
+        # NOTE: aifc will throw an exception if a compression
+        # type is not supported, such as 'sowt'
+        aiffobj = aifc.open(fh, 'rb')
         self.channels = aiffobj.getnchannels()
         self.samplerate = aiffobj.getframerate()
-        self.duration = aiffobj.getnframes() / self.samplerate
-        self.bitrate = self.samplerate * self.channels * 16 / 1024.0
+        self.duration = float(aiffobj.getnframes()) / float(self.samplerate)
+        self.bitrate = self.samplerate * self.channels * 16.0 / 1024.0
 
     def _parse_tag(self, fh):
         fh.seek(0, 0)
@@ -1282,7 +1289,7 @@ class Aiff(ID3):
                 field = chunk.read().decode('utf-8')
                 self._set_field('extra.copyright', field)
             elif chunkname == b'ID3 ':
-                super()._parse_tag(fh)
+                super(Aiff, self)._parse_tag(fh)
             elif chunkname == b'SSND':
                 # probably the closest equivalent, but this isn't particular viable
                 # for AIFF
