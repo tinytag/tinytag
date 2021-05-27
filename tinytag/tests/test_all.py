@@ -52,6 +52,8 @@ testfiles = OrderedDict([
     ('samples/id3_comment_utf_16_with_bom.mp3', {'extra': {}, 'filesize': 19980, 'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails', 'comment': '', 'disc': '1', 'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36', 'year': '2008', 'comment': '3/4 time'}),
     ('samples/id3_comment_utf_16_double_bom.mp3', {'extra': {'text': 'LABEL\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace', 'artist': 'Johannes Heil & D.Diggler', 'comment': 'Unclear', 'title': 'The Embrace (Romano Alfieri Remix)', 'track': '04-johannes_heil_and_d.diggler-the_embrace_(romano_alfieri_remix)', 'year': '2012'}),
     ('samples/id3_genre_id_out_of_bounds.mp3', {'extra': {}, 'filesize': 512, 'album': 'MECHANICAL ANIMALS', 'artist': 'Manson', 'comment': '', 'genre': '(255)', 'title': '01 GREAT BIG WHITE WORLD', 'track': 'Marilyn', 'year': '0'}),
+    ('samples/image-text-encoding.mp3', {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 11104, 'title': 'image-encoding', 'audio_offset': 6820, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
+
 
     # OGG
     ('samples/empty.ogg', {'extra': {}, 'track_total': None, 'duration': 3.684716553287982, 'album': None, '_max_samplenum': 162496, 'year': None, 'title': None, 'artist': None, 'track': None, '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 109.375, 'samplerate': 44100}),
@@ -250,6 +252,13 @@ def test_mp3_image_loading_without_description():
     image_data = tag.get_image()
     assert image_data is not None
     assert 28600 < len(image_data) < 28700, 'Image is %d bytes but should be around 28.6kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
+
+def test_mp3_image_loading_with_utf8_description():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/image-text-encoding.mp3'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 5700 < len(image_data) < 6000, 'Image is %d bytes but should be around 6kb' % len(image_data)
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 def test_mp3_utf_8_invalid_string_raises_exception():
