@@ -278,6 +278,7 @@ def test_aiff_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 15000 < len(image_data) < 25000, 'Image is %d bytes but should be around 20kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 @pytest.mark.parametrize("testfile,expected", [
     pytest.param(testfile, expected) for testfile, expected in [

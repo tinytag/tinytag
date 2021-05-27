@@ -728,11 +728,15 @@ class ID3(TinyTag):
                 if frame_id == 'PIC':  # ID3 v2.2:
                     desc_end_pos = content.index(b'\x00', 1) + 1
                 else:  # ID3 v2.3+
+                    textencoding = content[0]
                     mimetype_end_pos = content.index(b'\x00', 1) + 1
                     desc_start_pos = mimetype_end_pos + 1  # jump over picture type
-                    desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
+                    if textencoding == 0:
+                        desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
+                    else:
+                        desc_end_pos = content.index(b'\x00\x00', desc_start_pos) + 2
                 if content[desc_end_pos:desc_end_pos+1] == b'\x00':
-                    desc_end_pos += 1  # the description ends with 1 or 2 null bytes
+                    desc_end_pos += 1  # the description ends with 1 null byte
                 self._image_data = content[desc_end_pos:]
             return frame_size
         return 0
