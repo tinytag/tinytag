@@ -16,7 +16,7 @@ python:
 
 # command to install dependencies
 install:
-  - "pip install coveralls"
+  - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then pip install coveralls; fi
   - "pip install pytest"
   - "pip install pytest-cov"
 
@@ -29,4 +29,4 @@ script:
   pytest --cov=tinytag --cov-branch --cov-report xml:test-results/coverage.xml --junitxml test-results/junit.xml
 
 after_success:
-  coveralls
+  - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then coveralls; fi
