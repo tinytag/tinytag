@@ -25,6 +25,7 @@ Features:
     * FLAC
     * WMA
     * MP4/M4A/M4B
+    * AIFF/AIFF-C
   * pure python, no dependencies
   * supports python 2.7 and 3.4 or higher
   * high test coverage
@@ -65,12 +66,24 @@ List of possible attributes you can get with TinyTag:
     tag.track_total   # total number of tracks as string
     tag.year          # year or data as string
 
+    # For non-common fields and fields specific to single file formats use extra
+    tag.extra         # a dict of additional data
+
 Additionally you can also get cover images from ID3 tags:
 
     tag = TinyTag.get('/some/music.mp3', image=True)
     image_data = tag.get_image()
 
 Changelog:
+ * 1.6.0  (2021-28-08) [aw-edition]:
+   - fixed handling of non-latin encoding types for images (thanks to aw-was-here)
+   - added support for ISRC data, available in `extra['isrc']` field (thanks to aw-was-here)
+   - added support for AIFF/AIFF-C (thanks to aw-was-here)
+   - fixed import deprecation warnings (thanks to idotobi)
+   - fixed exception for TinyTag misuse being different in different python versions (thanks to idotobi)
+   - added support for ID3 initial key tonality hint, available in `extra['initial_key']`
+   - added support for ID3 unsynchronized lyrics, available in `extra['lyrics']`
+   - added `extra` field, which may contain additional metadata not available in all file formats
  * 1.5.0  (2020-11-05):
    - fixed data type to always return str for disc, disc_total, track, track_total #97 (thanks to kostalski)
    - fixed package install being reported as UNKNOWN for some python/pip variations #90 (thanks to russpoutine)
