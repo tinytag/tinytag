@@ -101,7 +101,6 @@ class TinyTag(object):
         self.duration = None
         self.extra = defaultdict(lambda: None)
         self.genre = None
-        self.isrc = None
         self.samplerate = None
         self.title = None
         self.track = None
@@ -462,7 +461,7 @@ class ID3(TinyTag):
         'TPOS': 'disc',
         'TPE2': 'albumartist', 'TCOM': 'composer',
         'WXXX': 'extra.url',
-        'TSRC': 'isrc',
+        'TSRC': 'extra.isrc',
         'TXXX': 'extra.text',
         'TKEY': 'extra.initial_key',
         'USLT': 'extra.lyrics',
@@ -916,7 +915,7 @@ class Wave(TinyTag):
         b'ICMT': 'comment',
         b'ICRD': 'year',
         b'IGNR': 'genre',
-        b'ISRC': 'isrc',
+        b'ISRC': 'extra.isrc',
         b'TRCK': 'track',
         b'PRT1': 'track',
         b'PRT2': 'track_number',
