@@ -520,7 +520,7 @@ class ID3(TinyTag):
     def __init__(self, filehandler, filesize, *args, **kwargs):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         # save position after the ID3 tag for duration mesurement speedup
-        self._bytepos_after_id3v2 = 0
+        self._bytepos_after_id3v2 = None
 
     @classmethod
     def set_estimation_precision(cls, estimation_in_seconds):
@@ -571,6 +571,13 @@ class ID3(TinyTag):
         return frames, byte_count, toc, vbr_scale
 
     def _determine_duration(self, fh):
+        if self._bytepos_after_id3v2 is None:
+            # tag reading was disabled, figure out the correct file position here
+            header = self._get_id3v2_header(fh)
+            if header:
+                self._bytepos_after_id3v2 = self._calc_size(header[4:8], 7)
+            else:
+                self._bytepos_after_id3v2 = 0
         max_estimation_frames = (ID3._MAX_ESTIMATION_SEC * 44100) // ID3.samples_per_frame
         frame_size_accu = 0
         header_bytes = 4
@@ -655,12 +662,18 @@ class ID3(TinyTag):
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 
-    def _parse_id3v2(self, fh):
-        # for info on the specs, see: http://id3.org/Developer%20Information
+    def _get_id3v2_header(self, fh):
         header = struct.unpack('3sBBB4B', _read(fh, 10))
         tag = codecs.decode(header[0], 'ISO-8859-1')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
+            return header
+        return None
+
+    def _parse_id3v2(self, fh):
+        # for info on the specs, see: http://id3.org/Developer%20Information
+        header = self._get_id3v2_header(fh)
+        if header:
             major, rev = header[1:3]
             if DEBUG:
                 stderr('Found id3 v2.%s' % major)
@@ -700,6 +713,8 @@ class ID3(TinyTag):
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
                 self.genre = ID3.ID3V1_GENRES[genre_id]
+            if self._bytepos_after_id3v2 is None:
+                self._bytepos_after_id3v2 = 0
 
     def _parse_frame(self, fh, id3version=False):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
