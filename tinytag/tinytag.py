@@ -205,7 +205,7 @@ class TinyTag(object):
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname, bytestring, transfunc=None):
+    def _set_field(self, fieldname, bytestring, transfunc=None, overwrite=True):
         """convienience function to set fields of the tinytag by name.
         the payload (bytestring) can be changed using the transfunc"""
         write_dest = self  # write into the TinyTag by default
@@ -232,19 +232,17 @@ class TinyTag(object):
                     genre_id = int(genre_in_parens.group(1))
             if 0 <= genre_id < len(ID3.ID3V1_GENRES):
                 value = ID3.ID3V1_GENRES[genre_id]
+        if fieldname in ("track", "disc", "track_total", "disc_total"):
+            # Converting to string for type consistency
+            value = str(value)
+        mapping = [(fieldname, value)]
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
-                current, total = value.split('/')[:2]
-                set_func(write_dest, "%s_total" % fieldname, total)
-            else:
-                # Converting 'track', 'disk' to string for type consistency.
-                current = str(value) if isinstance(value, int) else value
-            set_func(write_dest, fieldname, current)
-        elif fieldname in ("track_total", "disc_total") and isinstance(value, int):
-            # Converting to string 'track_total', 'disc_total' for type consistency.
-            set_func(write_dest, fieldname, str(value))
-        else:
-            set_func(write_dest, fieldname, value)
+                value, total = value.split('/')[:2]
+                mapping = [(fieldname, str(value)), ("%s_total" % fieldname, str(total))]
+        for k, v in mapping:
+            if overwrite or not get_func(write_dest, k):
+                set_func(write_dest, k, v)
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -688,18 +686,18 @@ class ID3(TinyTag):
             def asciidecode(x):
                 return self._unpad(codecs.decode(x, 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
-            self._set_field('title', fields[:30], transfunc=asciidecode)
-            self._set_field('artist', fields[30:60], transfunc=asciidecode)
-            self._set_field('album', fields[60:90], transfunc=asciidecode)
-            self._set_field('year', fields[90:94], transfunc=asciidecode)
+            self._set_field('title', fields[:30], transfunc=asciidecode, overwrite=False)
+            self._set_field('artist', fields[30:60], transfunc=asciidecode, overwrite=False)
+            self._set_field('album', fields[60:90], transfunc=asciidecode, overwrite=False)
+            self._set_field('year', fields[90:94], transfunc=asciidecode, overwrite=False)
             comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
-                self._set_field('track', str(ord(comment[-1:])))
+                self._set_field('track', str(ord(comment[-1:])), overwrite=False)
                 comment = comment[:-2]
-            self._set_field('comment', comment, transfunc=asciidecode)
+            self._set_field('comment', comment, transfunc=asciidecode, overwrite=False)
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
-                self._set_field('genre', ID3.ID3V1_GENRES[genre_id])
+                self._set_field('genre', ID3.ID3V1_GENRES[genre_id], overwrite=False)
 
     def _parse_frame(self, fh, id3version=False):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00

@@ -53,6 +53,7 @@ testfiles = OrderedDict([
     ('samples/id3_comment_utf_16_double_bom.mp3', {'extra': {'text': 'LABEL\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace', 'artist': 'Johannes Heil & D.Diggler', 'comment': 'Unclear', 'title': 'The Embrace (Romano Alfieri Remix)', 'track': '04-johannes_heil_and_d.diggler-the_embrace_(romano_alfieri_remix)', 'year': '2012'}),
     ('samples/id3_genre_id_out_of_bounds.mp3', {'extra': {}, 'filesize': 512, 'album': 'MECHANICAL ANIMALS', 'artist': 'Manson', 'comment': '', 'genre': '(255)', 'title': '01 GREAT BIG WHITE WORLD', 'track': 'Marilyn', 'year': '0'}),
     ('samples/image-text-encoding.mp3', {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 11104, 'title': 'image-encoding', 'audio_offset': 6820, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
+    ('samples/id3v1_does_not_overwrite_id3v2.mp3', {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian', 'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATINGL'}, 'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': '01', 'year': '1992'}),
 
 
     # OGG
@@ -129,7 +130,7 @@ for filename in os.listdir(custom_samples_folder):
         if match:
             expected_values[fieldname] = _type(match[0])
     if expected_values:
-        expected_values['_do_not_require_all_values'] = True
+        expected_values['__do_not_require_all_values'] = True
         testfiles[os.path.join('custom_samples', filename)] = expected_values
     else:
         # if there are no expected values, just try parsing the file
@@ -143,6 +144,8 @@ def test_file_reading(testfile, expected):
     tag = TinyTag.get(filename)
 
     for key, expected_val in expected.items():
+        if key.startswith('__'):
+            continue
         result = getattr(tag, key)
         fmt_string = 'field "%s": got %s (%s) expected %s (%s)!'
         fmt_values = (key, repr(result), type(result), repr(expected_val), type(expected_val))
