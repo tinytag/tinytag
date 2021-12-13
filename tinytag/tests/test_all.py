@@ -116,6 +116,7 @@ pattern_field_name_type = [
     (r'd=(\d+.?\d*)', 'duration', float),
     (r'b=(\d+)', 'bitrate', int),
     (r'c=(\d)', 'channels', int),
+    (r'genre="([^"]+)"', 'genre', str),
 ]
 for filename in os.listdir(custom_samples_folder):
     if filename == 'instructions.txt':
@@ -128,6 +129,7 @@ for filename in os.listdir(custom_samples_folder):
         if match:
             expected_values[fieldname] = _type(match[0])
     if expected_values:
+        expected_values['_do_not_require_all_values'] = True
         testfiles[os.path.join('custom_samples', filename)] = expected_values
     else:
         # if there are no expected values, just try parsing the file
@@ -138,7 +140,6 @@ for filename in os.listdir(custom_samples_folder):
 ])
 def test_file_reading(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    # print(filename)
     tag = TinyTag.get(filename)
 
     for key, expected_val in expected.items():
@@ -151,6 +152,9 @@ def test_file_reading(testfile, expected):
                 if expected_val and min(result, expected_val) / max(result, expected_val) > 0.99:
                     continue
         assert result == expected_val, fmt_string % fmt_values
+    # for custom samples, allow not specifying all values
+    if expected.get('_do_not_require_all_values'):
+        return
     undefined_in_fixture = {}
     for key, val in tag.__dict__.items():
         if key.startswith('_') or val is None:

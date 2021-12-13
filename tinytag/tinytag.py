@@ -699,7 +699,7 @@ class ID3(TinyTag):
             self._set_field('comment', comment, transfunc=asciidecode)
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
-                self.genre = ID3.ID3V1_GENRES[genre_id]
+                self._set_field('genre', ID3.ID3V1_GENRES[genre_id])
 
     def _parse_frame(self, fh, id3version=False):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
