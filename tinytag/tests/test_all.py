@@ -32,7 +32,7 @@ except ImportError:
 
 testfiles = OrderedDict([
     # MP3
-    ('samples/vbri.mp3', {'extra': {'url': ''}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\ufeff\ufeffRipped by THSLIVE', 'composer': ''}),
+    ('samples/vbri.mp3', {'extra': {'url': ''}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\ufeff\ufeffRipped by THSLIVE', 'composer': '', 'bitrate': 125}),
     ('samples/cbr.mp3', {'extra': {}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'Ripped by THSLIVE'}),
     # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
     ('samples/vbr_xing_header.mp3', {'extra': {}, 'bitrate': 186, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367, 'filesize': 91731, 'audio_offset': 441}),
@@ -54,6 +54,7 @@ testfiles = OrderedDict([
     ('samples/id3_genre_id_out_of_bounds.mp3', {'extra': {}, 'filesize': 512, 'album': 'MECHANICAL ANIMALS', 'artist': 'Manson', 'comment': '', 'genre': '(255)', 'title': '01 GREAT BIG WHITE WORLD', 'track': 'Marilyn', 'year': '0'}),
     ('samples/image-text-encoding.mp3', {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 11104, 'title': 'image-encoding', 'audio_offset': 6820, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v1_does_not_overwrite_id3v2.mp3', {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian', 'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATINGL'}, 'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': '01', 'year': '1992'}),
+    ('samples/nicotinetestdata.mp3', {'filesize': 80919, 'audio_offset': 45, 'channels': 2, 'duration': 5.067755102040817, 'extra': {}, 'samplerate': 44100, 'bitrate': 127}),
 
 
     # OGG
