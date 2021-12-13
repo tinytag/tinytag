@@ -699,6 +699,13 @@ class ID3(TinyTag):
             if genre_id < len(ID3.ID3V1_GENRES):
                 self._set_field('genre', ID3.ID3V1_GENRES[genre_id], overwrite=False)
 
+    @staticmethod
+    def index_utf16(s, search):
+        for i in range(0, len(s), len(search)):
+            if s[i:i+len(search)] == search:
+                return i
+        return -1
+
     def _parse_frame(self, fh, id3version=False):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
         frame_header_size = 6 if id3version == 2 else 10
@@ -725,18 +732,17 @@ class ID3(TinyTag):
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 if frame_id == 'PIC':  # ID3 v2.2:
-                    desc_end_pos = content.index(b'\x00', 1) + 1
+                    encoding, content = content[0], content[1:]
+                    imgformat, content = content[:3], content[3:]
                 else:  # ID3 v2.3+
-                    textencoding = content[0]
+                    encoding, content = content[0], content[1:]
                     mimetype_end_pos = content.index(b'\x00', 1) + 1
-                    desc_start_pos = mimetype_end_pos + 1  # jump over picture type
-                    if textencoding == 0:
-                        desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
-                    else:
-                        desc_end_pos = content.index(b'\x00\x00', desc_start_pos) + 2
-                if content[desc_end_pos:desc_end_pos+1] == b'\x00':
-                    desc_end_pos += 1  # the description ends with 1 null byte
-                self._image_data = content[desc_end_pos:]
+                    mimetype, content = content[:mimetype_end_pos], content[mimetype_end_pos:]
+                pictype, content = content[0], content[1:]
+                termination = b'\x00' if encoding in (0, 3) else b'\x00\x00'  # latin1 and utf-8 are 1 byte
+                desc_end_pos = ID3.index_utf16(content, termination) + len(termination)
+                description, content = content[:desc_end_pos], content[desc_end_pos:]
+                self._image_data = content
             return frame_size
         return 0
 
