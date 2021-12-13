@@ -1215,6 +1215,7 @@ class Wma(TinyTag):
             else:
                 fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
 
+
 class Aiff(ID3):
     #
     # AIFF is part of the IFF family of file formats.  That means it has a _wide_
@@ -1283,15 +1284,15 @@ class Aiff(ID3):
             chunkname = chunk.getname()
             if chunkname == b'NAME':
                 # "Name Chunk text contains the name of the sampled sound."
-                self.title = self._unpad(chunk.read().decode('ascii'))
+                self.title = self._unpad(chunk.read().decode('utf-8'))
             elif chunkname == b'AUTH':
                 # "Author Chunk text contains one or more author names.  An author in
                 # this case is the creator of a sampled sound."
-                self.artist = self._unpad(chunk.read().decode('ascii'))
+                self.artist = self._unpad(chunk.read().decode('utf-8'))
             elif chunkname == b'ANNO':
                 # "Annotation Chunk text contains a comment.  Use of this chunk is
                 # discouraged within FORM AIFC." Some tools: "hold my beer"
-                self._set_field('comment', self._unpad(chunk.read().decode('ascii')))
+                self._set_field('comment', self._unpad(chunk.read().decode('utf-8')))
             elif chunkname == b'(c) ':
                 # "The Copyright Chunk contains a copyright notice for the sound.  text
                 #  contains a date followed by the copyright owner.  The chunk ID '[c] '
