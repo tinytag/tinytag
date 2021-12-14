@@ -55,6 +55,7 @@ testfiles = OrderedDict([
     ('samples/image-text-encoding.mp3', {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 11104, 'title': 'image-encoding', 'audio_offset': 6820, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v1_does_not_overwrite_id3v2.mp3', {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian', 'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATINGL'}, 'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': '01', 'year': '1992'}),
     ('samples/nicotinetestdata.mp3', {'filesize': 80919, 'audio_offset': 45, 'channels': 2, 'duration': 5.067755102040817, 'extra': {}, 'samplerate': 44100, 'bitrate': 127}),
+    ('samples/chinese_id3.mp3', {'filesize': 1000, 'album': '½ÇÂäÖ®¸è', 'albumartist': 'ËÕÔÆ', 'artist': 'ËÕÔÆ', 'audio_offset': 512, 'bitrate': 128, 'channels': 2, 'duration': 0.052244897959183675, 'extra': {}, 'genre': 'ÐÝÏÐÒôÀÖ', 'samplerate': 44100, 'title': '½ÇÂäÖ®¸è', 'track': '1'}),
 
 
     # OGG
@@ -196,6 +197,12 @@ def test_binary_path_compatibility():
 def test_unsupported_extension():
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
     TinyTag.get(bogus_file)
+
+def test_override_encoding():
+    chinese_id3 = os.path.join(testfolder, 'samples/chinese_id3.mp3')
+    tag = TinyTag.get(chinese_id3, encoding='gbk')
+    assert tag.artist == '苏云'
+    assert tag.album == '角落之歌'
 
 @pytest.mark.xfail(raises=NotImplementedError)
 def test_unsubclassed_tinytag_duration():

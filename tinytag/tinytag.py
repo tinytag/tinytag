@@ -87,6 +87,8 @@ class TinyTag(object):
         if type(filehandler).__name__ in ('str', 'unicode'):
             raise Exception('Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`')
         self._filehandler = filehandler
+        self._filename = None  # for debugging purposes
+        self._default_encoding = None  # allow override for some file formats
         self.filesize = filesize
         self.album = None
         self.albumartist = None
@@ -171,7 +173,7 @@ class TinyTag(object):
         raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
-    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
+    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False, encoding=None):
         try:  # cast pathlib.Path to str
             import pathlib
             if isinstance(filename, pathlib.Path):
@@ -186,6 +188,8 @@ class TinyTag(object):
         with io.open(filename, 'rb') as af:
             parser_class = cls.get_parser_class(filename, af)
             tag = parser_class(af, size, ignore_errors=ignore_errors)
+            tag._filename = filename
+            tag._default_encoding = encoding
             tag.load(tags=tags, duration=duration, image=image)
             tag.extra = dict(tag.extra)  # turn default dict into dict so that it can throw KeyError
             return tag
@@ -749,11 +753,14 @@ class ID3(TinyTag):
         return 0
 
     def _decode_string(self, bytestr):
+        default_encoding = 'ISO-8859-1'
+        if self._default_encoding:
+            default_encoding = self._default_encoding
         try:  # it's not my fault, this is the spec.
             first_byte = bytestr[:1]
             if first_byte == b'\x00':  # ISO-8859-1
                 bytestr = bytestr[1:]
-                encoding = 'ISO-8859-1'
+                encoding = default_encoding
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
                 if bytestr[:5] == b'eng\xff\xfe':
@@ -780,7 +787,7 @@ class ID3(TinyTag):
                 encoding = 'UTF-8'
             else:
                 bytestr = bytestr
-                encoding = 'ISO-8859-1'  # wild guess
+                encoding = default_encoding  # wild guess
             if bytestr[:4] == b'eng\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
