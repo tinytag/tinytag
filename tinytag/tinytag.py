@@ -763,18 +763,18 @@ class ID3(TinyTag):
                 encoding = default_encoding
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
-                if bytestr[:5] == b'eng\xff\xfe':
-                    bytestr = bytestr[3:]  # remove language (but leave BOM)
-                if bytestr[:5] == b'eng\xfe\xff':
-                    bytestr = bytestr[3:]  # remove language (but leave BOM)
+                # remove language (but leave BOM)
+                if re.match(b'...(\xff\xfe|\xfe\xff)', bytestr):
+                    bytestr = bytestr[3:]
                 if bytestr[:4] == b'eng\x00':
                     bytestr = bytestr[4:]  # remove language
                 if bytestr[:1] == b'\x00':
                     bytestr = bytestr[1:]  # strip optional additional null byte
                 # read byte order mark to determine endianess
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
-                # strip the bom and optional null bytes
-                bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
+                # strip the bom if it exists
+                if bytestr[:2] in (b'\xfe\xff', b'\xff\xfe'):
+                    bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
                 # remove ADDITIONAL EXTRA BOM :facepalm:
                 if bytestr[:4] == b'\x00\x00\xff\xfe':
                     bytestr = bytestr[4:]
