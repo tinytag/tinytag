@@ -1221,19 +1221,6 @@ class Wma(TinyTag):
                 # see: http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))
                 for _ in range(descriptor_count):
-                    data_blocks = ByteMuncher.read(
-                        fh,
-                        '<H(name_len)'
-                        '$name_len$s'
-                        '<H(copyright_length)'
-                        '<H(description_length)'
-                        '<H(rating_length)'
-                        '$title_length$s(title)'
-                        '$author_length$s(artist)'
-                        '$copyright_length$s(_)'
-                        '$description_length$s(comment)'
-                        '$rating_length$s(_)'
-                    )
                     name_len = _bytes_to_int_le(fh.read(2))
                     name = self.__decode_string(fh.read(name_len))
                     value_type = _bytes_to_int_le(fh.read(2))
