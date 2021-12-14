@@ -6,6 +6,7 @@ tinytag is a library for reading music meta data of MP3, OGG, OPUS, MP4, M4A, FL
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 [![Build status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.png)](https://coveralls.io/r/devsnd/tinytag)
+[![PyPI version](https://badge.fury.io/py/tinytag.svg)](https://pypi.org/project/tinytag/)
 
 Install
 -------
@@ -66,16 +67,34 @@ List of possible attributes you can get with TinyTag:
     tag.track_total   # total number of tracks as string
     tag.year          # year or data as string
 
-    # For non-common fields and fields specific to single file formats use extra
+For non-common fields and fields specific to single file formats use extra
+
     tag.extra         # a dict of additional data
 
-Additionally you can also get cover images from ID3 tags:
+The `extra` dict currently *may* contain the following data:
+   `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
+
+Aditionally you can also get cover images from ID3 tags:
 
     tag = TinyTag.get('/some/music.mp3', image=True)
     image_data = tag.get_image()
 
+To open files using a specific encoding, you can use the `encoding` parameter.
+This parameter is however only used for formats where the encoding isn't explicitly
+specified.
+
+    TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
+
 Changelog:
- * 1.6.0  (2021-28-08) [aw-edition]:
+ * 1.7.0. (2021-12-14)
+   - fixed rare occasion of ID3v2 tags missing their first character, #106
+   - allow overriding the default encoding of ID3 tags (e.g. `TinyTag.get(..., encoding='gbk'))`)
+   - fixed calculation of bitrate for very short mp3 files, #99
+   - utf-8 support for AIFF files, #123
+   - fixed image parsing for id3v2 with images containing utf-16LE descriptions, #117
+   - fixed ID3v1 tags overwriting ID3v2 tags, #121
+   - Set correct file position if tag reading is disabled for ID3 (thanks to mathiascode)
+ * 1.6.0  (2021-08-28) [aw-edition]:
    - fixed handling of non-latin encoding types for images (thanks to aw-was-here)
    - added support for ISRC data, available in `extra['isrc']` field (thanks to aw-was-here)
    - added support for AIFF/AIFF-C (thanks to aw-was-here)
