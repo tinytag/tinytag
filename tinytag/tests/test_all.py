@@ -94,7 +94,7 @@ testfiles = OrderedDict([
     ('samples/flac_with_image.flac', {'extra': {}, 'filesize': 80000, 'album': 'smilin´ in circles', 'artist': 'Andreas Kümmert', 'bitrate': 7.479655337482049, 'channels': 2, 'disc': '1', 'disc_total': '1', 'duration': 83.56, 'genre': 'Blues', 'samplerate': 44100, 'title': 'intro', 'track': '01', 'track_total': '8'}),
 
     # WMA
-    ('samples/test2.wma', {'extra': {}, 'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': '1', 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': '', 'composer': 'Foo Fighters'}),
+    ('samples/test2.wma', {'extra': {}, 'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll', 'bitrate': 64.04, 'filesize': 5800, 'track': '1', 'albumartist': 'Foo Fighters', 'artist': 'Foo Fighters', 'duration': 86.406, 'track_total': None, 'year': '1997', 'genre': 'Alternative', 'comment': None, 'composer': 'Foo Fighters'}),
 
     # M4A/MP4
     ('samples/test.m4a', {'extra': {}, 'samplerate': 44100, 'duration': 314.97,  'bitrate': 256.0, 'channels': 2, 'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose', 'track_total': '11', 'track': '11', 'artist': 'Marian', 'filesize': 61432}),

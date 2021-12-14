@@ -1075,6 +1075,57 @@ class Flac(TinyTag):
             header_data = fh.read(4)
 
 
+class ByteMuncher:
+    mapping = {
+        'c': (1, str), #  'char	bytes of length 1	1
+        'b': (1, int), #  'signed char	integer	1
+        'B': (1, int), #  'unsigned char	integer	1
+        '?': (1, bool), #  '_Bool	bool	1
+        'h': (2, int), #  'short	integer	2
+        'H': (2, int), #  'unsigned short	integer	2
+        'i': (4, int), #  'int	integer	4
+        'I': (4, int), #  'unsigned int	integer	4
+        'l': (4, int), #  'long	integer	4
+        'L': (4, int), #  'unsigned long	integer	4
+        'q': (8, int), #  'long long	integer	8
+        'Q': (8, int), #  'unsigned long long	integer	8
+        'e': (2, float), #  '(6)	float	2
+        'f': (4, float), #  'float	float	4
+        'd': (8, float), #  'double	float	8
+        's': (1, bytes), #  'char[]	bytes
+        'p': (1, bytes), #  'char[]	bytes
+        'P': (1, int), #  'void*	integer
+    }
+    regex = re.compile(
+        f'(\\d+|\\$\w+\\$)?(<|>)?(c|b|B|\\?|h|H|i|I|l|L|q|Q|e|f|d|s|p|P)(?:\\((\\w+)\\))?',
+        re.MULTILINE
+    )
+
+    @classmethod
+    def read(cls, fh, format):
+        format = format.replace(' ', '').replace('\n', '')
+        retval = {}
+        parsed = [m.groups() for m in cls.regex.finditer(format)]
+        for repeat, endianness, bytetype, variable in parsed:
+            if repeat is not None:
+                if repeat.isdigit():
+                    repeat = int(repeat)
+                else:  # it's a reference
+                    repeat = retval[repeat[1:-1]]
+            type_byte_count, cast_type = ByteMuncher.mapping[bytetype]
+            total_byte_count = repeat * type_byte_count if repeat is not None else type_byte_count
+            if total_byte_count:
+                raw_data = fh.read(total_byte_count)
+                struct_fmt = f'{repeat if repeat is not None else ""}{endianness if endianness else ""}{bytetype}'
+                parsed = struct.unpack(struct_fmt, raw_data)[0]
+                if variable:
+                    retval[variable] = parsed
+        return retval
+
+
+
+
+
 class Wma(TinyTag):
     ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
     ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT = b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00\xa0\xc9^\xa8P'
@@ -1095,14 +1146,13 @@ class Wma(TinyTag):
         if not self.__tag_parsed:
             self._parse_tag(fh)
 
-    def read_blocks(self, fh, blocks):
-        # blocks are a list(tuple('fieldname', byte_count, cast_int), ...)
+    def read_blocks(self, fh, block_specs):
         decoded = {}
-        for block in blocks:
-            val = fh.read(block[1])
-            if block[2]:
+        for fieldname, length, cast_to_int in block_specs:
+            val = fh.read(length)
+            if cast_to_int:
                 val = _bytes_to_int_le(val)
-            decoded[block[0]] = val
+            decoded[fieldname] = val
         return decoded
 
     def __bytes_to_guid(self, obj_id_bytes):
@@ -1142,22 +1192,21 @@ class Wma(TinyTag):
             if object_size == 0 or object_size > self.filesize:
                 break  # invalid object, stop parsing.
             if object_id == Wma.ASF_CONTENT_DESCRIPTION_OBJECT:
-                len_blocks = self.read_blocks(fh, [
-                    ('title_length', 2, True),
-                    ('author_length', 2, True),
-                    ('copyright_length', 2, True),
-                    ('description_length', 2, True),
-                    ('rating_length', 2, True),
-                ])
-                data_blocks = self.read_blocks(fh, [
-                    ('title', len_blocks['title_length'], False),
-                    ('artist', len_blocks['author_length'], False),
-                    ('', len_blocks['copyright_length'], True),
-                    ('comment', len_blocks['description_length'], False),
-                    ('', len_blocks['rating_length'], True),
-                ])
+                data_blocks = ByteMuncher.read(
+                    fh,
+                    '<H(title_length)'
+                    '<H(author_length)'
+                    '<H(copyright_length)'
+                    '<H(description_length)'
+                    '<H(rating_length)'
+                    '$title_length$s(title)'
+                    '$author_length$s(artist)'
+                    '$copyright_length$s(_)'
+                    '$description_length$s(comment)'
+                    '$rating_length$s(_)'
+                )
                 for field_name, bytestring in data_blocks.items():
-                    if field_name:
+                    if field_name in ['title', 'artist', 'comment']:
                         self._set_field(field_name, bytestring, self.__decode_string)
             elif object_id == Wma.ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT:
                 mapping = {
@@ -1172,6 +1221,19 @@ class Wma(TinyTag):
                 # see: http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))
                 for _ in range(descriptor_count):
+                    data_blocks = ByteMuncher.read(
+                        fh,
+                        '<H(name_len)'
+                        '$name_len$s'
+                        '<H(copyright_length)'
+                        '<H(description_length)'
+                        '<H(rating_length)'
+                        '$title_length$s(title)'
+                        '$author_length$s(artist)'
+                        '$copyright_length$s(_)'
+                        '$description_length$s(comment)'
+                        '$rating_length$s(_)'
+                    )
                     name_len = _bytes_to_int_le(fh.read(2))
                     name = self.__decode_string(fh.read(name_len))
                     value_type = _bytes_to_int_le(fh.read(2))
