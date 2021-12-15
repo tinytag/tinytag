@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # tinytag - an audio meta info reader
-# Copyright (c) 2014-2018 Tom Wallroth
+# Copyright (c) 2014-2021 Tom Wallroth
 #
 # Sources on github:
 # http://github.com/devsnd/tinytag/
 
 # MIT License
 
-# Copyright (c) 2014-2019 Tom Wallroth
+# Copyright (c) 2014-2021 Tom Wallroth
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -87,6 +87,8 @@ class TinyTag(object):
         if type(filehandler).__name__ in ('str', 'unicode'):
             raise Exception('Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`')
         self._filehandler = filehandler
+        self._filename = None  # for debugging purposes
+        self._default_encoding = None  # allow override for some file formats
         self.filesize = filesize
         self.album = None
         self.albumartist = None
@@ -171,7 +173,7 @@ class TinyTag(object):
         raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
-    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False):
+    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False, encoding=None):
         try:  # cast pathlib.Path to str
             import pathlib
             if isinstance(filename, pathlib.Path):
@@ -186,6 +188,8 @@ class TinyTag(object):
         with io.open(filename, 'rb') as af:
             parser_class = cls.get_parser_class(filename, af)
             tag = parser_class(af, size, ignore_errors=ignore_errors)
+            tag._filename = filename
+            tag._default_encoding = encoding
             tag.load(tags=tags, duration=duration, image=image)
             tag.extra = dict(tag.extra)  # turn default dict into dict so that it can throw KeyError
             return tag
@@ -205,7 +209,7 @@ class TinyTag(object):
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname, bytestring, transfunc=None):
+    def _set_field(self, fieldname, bytestring, transfunc=None, overwrite=True):
         """convienience function to set fields of the tinytag by name.
         the payload (bytestring) can be changed using the transfunc"""
         write_dest = self  # write into the TinyTag by default
@@ -232,19 +236,17 @@ class TinyTag(object):
                     genre_id = int(genre_in_parens.group(1))
             if 0 <= genre_id < len(ID3.ID3V1_GENRES):
                 value = ID3.ID3V1_GENRES[genre_id]
+        if fieldname in ("track", "disc", "track_total", "disc_total"):
+            # Converting to string for type consistency
+            value = str(value)
+        mapping = [(fieldname, value)]
         if fieldname in ("track", "disc"):
             if type(value).__name__ in ('str', 'unicode') and '/' in value:
-                current, total = value.split('/')[:2]
-                set_func(write_dest, "%s_total" % fieldname, total)
-            else:
-                # Converting 'track', 'disk' to string for type consistency.
-                current = str(value) if isinstance(value, int) else value
-            set_func(write_dest, fieldname, current)
-        elif fieldname in ("track_total", "disc_total") and isinstance(value, int):
-            # Converting to string 'track_total', 'disc_total' for type consistency.
-            set_func(write_dest, fieldname, str(value))
-        else:
-            set_func(write_dest, fieldname, value)
+                value, total = value.split('/')[:2]
+                mapping = [(fieldname, str(value)), ("%s_total" % fieldname, str(total))]
+        for k, v in mapping:
+            if overwrite or not get_func(write_dest, k):
+                set_func(write_dest, k, v)
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -590,6 +592,8 @@ class ID3(TinyTag):
             # reading through garbage until 11 '1' sync-bits are found
             b = fh.peek(4)
             if len(b) < 4:
+                if frames:
+                    self.bitrate = int(bitrate_accu / frames)
                 break  # EOF
             sync, conf, bitrate_freq, rest = struct.unpack('BBBB', b[0:4])
             br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
@@ -699,22 +703,29 @@ class ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
             def asciidecode(x):
-                return self._unpad(codecs.decode(x, 'latin1'))
+                return self._unpad(codecs.decode(x, self._default_encoding or 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
-            self._set_field('title', fields[:30], transfunc=asciidecode)
-            self._set_field('artist', fields[30:60], transfunc=asciidecode)
-            self._set_field('album', fields[60:90], transfunc=asciidecode)
-            self._set_field('year', fields[90:94], transfunc=asciidecode)
+            self._set_field('title', fields[:30], transfunc=asciidecode, overwrite=False)
+            self._set_field('artist', fields[30:60], transfunc=asciidecode, overwrite=False)
+            self._set_field('album', fields[60:90], transfunc=asciidecode, overwrite=False)
+            self._set_field('year', fields[90:94], transfunc=asciidecode, overwrite=False)
             comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
-                self._set_field('track', str(ord(comment[-1:])))
+                self._set_field('track', str(ord(comment[-1:])), overwrite=False)
                 comment = comment[:-2]
-            self._set_field('comment', comment, transfunc=asciidecode)
+            self._set_field('comment', comment, transfunc=asciidecode, overwrite=False)
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
-                self.genre = ID3.ID3V1_GENRES[genre_id]
+                self._set_field('genre', ID3.ID3V1_GENRES[genre_id], overwrite=False)
             if self._bytepos_after_id3v2 is None:
                 self._bytepos_after_id3v2 = 0
+
+    @staticmethod
+    def index_utf16(s, search):
+        for i in range(0, len(s), len(search)):
+            if s[i:i+len(search)] == search:
+                return i
+        return -1
 
     def _parse_frame(self, fh, id3version=False):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
@@ -742,41 +753,43 @@ class ID3(TinyTag):
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 if frame_id == 'PIC':  # ID3 v2.2:
-                    desc_end_pos = content.index(b'\x00', 1) + 1
+                    encoding, content = content[0], content[1:]
+                    imgformat, content = content[:3], content[3:]
                 else:  # ID3 v2.3+
-                    textencoding = content[0]
+                    encoding, content = content[0], content[1:]
                     mimetype_end_pos = content.index(b'\x00', 1) + 1
-                    desc_start_pos = mimetype_end_pos + 1  # jump over picture type
-                    if textencoding == 0:
-                        desc_end_pos = content.index(b'\x00', desc_start_pos) + 1
-                    else:
-                        desc_end_pos = content.index(b'\x00\x00', desc_start_pos) + 2
-                if content[desc_end_pos:desc_end_pos+1] == b'\x00':
-                    desc_end_pos += 1  # the description ends with 1 null byte
-                self._image_data = content[desc_end_pos:]
+                    mimetype, content = content[:mimetype_end_pos], content[mimetype_end_pos:]
+                pictype, content = content[0], content[1:]
+                termination = b'\x00' if encoding in (0, 3) else b'\x00\x00'  # latin1 and utf-8 are 1 byte
+                desc_end_pos = ID3.index_utf16(content, termination) + len(termination)
+                description, content = content[:desc_end_pos], content[desc_end_pos:]
+                self._image_data = content
             return frame_size
         return 0
 
     def _decode_string(self, bytestr):
+        default_encoding = 'ISO-8859-1'
+        if self._default_encoding:
+            default_encoding = self._default_encoding
         try:  # it's not my fault, this is the spec.
             first_byte = bytestr[:1]
             if first_byte == b'\x00':  # ISO-8859-1
                 bytestr = bytestr[1:]
-                encoding = 'ISO-8859-1'
+                encoding = default_encoding
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
-                if bytestr[:5] == b'eng\xff\xfe':
-                    bytestr = bytestr[3:]  # remove language (but leave BOM)
-                if bytestr[:5] == b'eng\xfe\xff':
-                    bytestr = bytestr[3:]  # remove language (but leave BOM)
+                # remove language (but leave BOM)
+                if re.match(b'...(\xff\xfe|\xfe\xff)', bytestr):
+                    bytestr = bytestr[3:]
                 if bytestr[:4] == b'eng\x00':
                     bytestr = bytestr[4:]  # remove language
                 if bytestr[:1] == b'\x00':
                     bytestr = bytestr[1:]  # strip optional additional null byte
                 # read byte order mark to determine endianess
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
-                # strip the bom and optional null bytes
-                bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
+                # strip the bom if it exists
+                if bytestr[:2] in (b'\xfe\xff', b'\xff\xfe'):
+                    bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
                 # remove ADDITIONAL EXTRA BOM :facepalm:
                 if bytestr[:4] == b'\x00\x00\xff\xfe':
                     bytestr = bytestr[4:]
@@ -789,7 +802,7 @@ class ID3(TinyTag):
                 encoding = 'UTF-8'
             else:
                 bytestr = bytestr
-                encoding = 'ISO-8859-1'  # wild guess
+                encoding = default_encoding  # wild guess
             if bytestr[:4] == b'eng\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
@@ -1226,6 +1239,7 @@ class Wma(TinyTag):
             else:
                 fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
 
+
 class Aiff(ID3):
     #
     # AIFF is part of the IFF family of file formats.  That means it has a _wide_
@@ -1294,15 +1308,15 @@ class Aiff(ID3):
             chunkname = chunk.getname()
             if chunkname == b'NAME':
                 # "Name Chunk text contains the name of the sampled sound."
-                self.title = self._unpad(chunk.read().decode('ascii'))
+                self.title = self._unpad(chunk.read().decode('utf-8'))
             elif chunkname == b'AUTH':
                 # "Author Chunk text contains one or more author names.  An author in
                 # this case is the creator of a sampled sound."
-                self.artist = self._unpad(chunk.read().decode('ascii'))
+                self.artist = self._unpad(chunk.read().decode('utf-8'))
             elif chunkname == b'ANNO':
                 # "Annotation Chunk text contains a comment.  Use of this chunk is
                 # discouraged within FORM AIFC." Some tools: "hold my beer"
-                self._set_field('comment', self._unpad(chunk.read().decode('ascii')))
+                self._set_field('comment', self._unpad(chunk.read().decode('utf-8')))
             elif chunkname == b'(c) ':
                 # "The Copyright Chunk contains a copyright notice for the sound.  text
                 #  contains a date followed by the copyright owner.  The chunk ID '[c] '

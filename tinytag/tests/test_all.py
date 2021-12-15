@@ -32,7 +32,7 @@ except ImportError:
 
 testfiles = OrderedDict([
     # MP3
-    ('samples/vbri.mp3', {'extra': {'url': ''}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': '\ufeff\ufeffRipped by THSLIVE', 'composer': ''}),
+    ('samples/vbri.mp3', {'extra': {'url': ''}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance', 'comment': 'Ripped by THSLIVE', 'composer': '', 'bitrate': 125}),
     ('samples/cbr.mp3', {'extra': {}, 'channels': 2, 'samplerate': 44100, 'track_total': None, 'duration': 0.49, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007', 'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01', 'filesize': 8186, 'audio_offset': 246, 'bitrate': 128.0, 'genre': 'Dance', 'comment': 'Ripped by THSLIVE'}),
     # the output of the lame encoder was 185.4 bitrate, but this is good enough for now
     ('samples/vbr_xing_header.mp3', {'extra': {}, 'bitrate': 186, 'channels': 1, 'samplerate': 44100, 'duration': 3.944489795918367, 'filesize': 91731, 'audio_offset': 441}),
@@ -53,6 +53,10 @@ testfiles = OrderedDict([
     ('samples/id3_comment_utf_16_double_bom.mp3', {'extra': {'text': 'LABEL\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace', 'artist': 'Johannes Heil & D.Diggler', 'comment': 'Unclear', 'title': 'The Embrace (Romano Alfieri Remix)', 'track': '04-johannes_heil_and_d.diggler-the_embrace_(romano_alfieri_remix)', 'year': '2012'}),
     ('samples/id3_genre_id_out_of_bounds.mp3', {'extra': {}, 'filesize': 512, 'album': 'MECHANICAL ANIMALS', 'artist': 'Manson', 'comment': '', 'genre': '(255)', 'title': '01 GREAT BIG WHITE WORLD', 'track': 'Marilyn', 'year': '0'}),
     ('samples/image-text-encoding.mp3', {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 11104, 'title': 'image-encoding', 'audio_offset': 6820, 'bitrate': 32.0, 'duration': 1.0438932496075353}),
+    ('samples/id3v1_does_not_overwrite_id3v2.mp3', {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian', 'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATINGL'}, 'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': '01', 'year': '1992'}),
+    ('samples/nicotinetestdata.mp3', {'filesize': 80919, 'audio_offset': 45, 'channels': 2, 'duration': 5.067755102040817, 'extra': {}, 'samplerate': 44100, 'bitrate': 127}),
+    ('samples/chinese_id3.mp3', {'filesize': 1000, 'album': '½ÇÂäÖ®¸è', 'albumartist': 'ËÕÔÆ', 'artist': 'ËÕÔÆ', 'audio_offset': 512, 'bitrate': 128, 'channels': 2, 'duration': 0.052244897959183675, 'extra': {}, 'genre': 'ÐÝÏÐÒôÀÖ', 'samplerate': 44100, 'title': '½ÇÂäÖ®¸è', 'track': '1'}),
+    ('samples/cut_off_titles.mp3', {'filesize': 1000, 'album': 'ERB', 'artist': 'Epic Rap Battles Of History', 'audio_offset': 194, 'bitrate': 192, 'channels': 2, 'duration': 0.052244897959183675, 'extra': {}, 'samplerate': 44100, 'title': 'Tony Hawk VS Wayne Gretzky'}),
 
 
     # OGG
@@ -116,6 +120,7 @@ pattern_field_name_type = [
     (r'd=(\d+.?\d*)', 'duration', float),
     (r'b=(\d+)', 'bitrate', int),
     (r'c=(\d)', 'channels', int),
+    (r'genre="([^"]+)"', 'genre', str),
 ]
 for filename in os.listdir(custom_samples_folder):
     if filename == 'instructions.txt':
@@ -128,6 +133,7 @@ for filename in os.listdir(custom_samples_folder):
         if match:
             expected_values[fieldname] = _type(match[0])
     if expected_values:
+        expected_values['__do_not_require_all_values'] = True
         testfiles[os.path.join('custom_samples', filename)] = expected_values
     else:
         # if there are no expected values, just try parsing the file
@@ -138,10 +144,11 @@ for filename in os.listdir(custom_samples_folder):
 ])
 def test_file_reading(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    # print(filename)
     tag = TinyTag.get(filename)
 
     for key, expected_val in expected.items():
+        if key.startswith('__'):
+            continue
         result = getattr(tag, key)
         fmt_string = 'field "%s": got %s (%s) expected %s (%s)!'
         fmt_values = (key, repr(result), type(result), repr(expected_val), type(expected_val))
@@ -151,6 +158,9 @@ def test_file_reading(testfile, expected):
                 if expected_val and min(result, expected_val) / max(result, expected_val) > 0.99:
                     continue
         assert result == expected_val, fmt_string % fmt_values
+    # for custom samples, allow not specifying all values
+    if expected.get('_do_not_require_all_values'):
+        return
     undefined_in_fixture = {}
     for key, val in tag.__dict__.items():
         if key.startswith('_') or val is None:
@@ -188,6 +198,12 @@ def test_binary_path_compatibility():
 def test_unsupported_extension():
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
     TinyTag.get(bogus_file)
+
+def test_override_encoding():
+    chinese_id3 = os.path.join(testfolder, 'samples/chinese_id3.mp3')
+    tag = TinyTag.get(chinese_id3, encoding='gbk')
+    assert tag.artist == '苏云'
+    assert tag.album == '角落之歌'
 
 @pytest.mark.xfail(raises=NotImplementedError)
 def test_unsubclassed_tinytag_duration():
@@ -261,6 +277,13 @@ def test_mp3_image_loading_with_utf8_description():
     assert 5700 < len(image_data) < 6000, 'Image is %d bytes but should be around 6kb' % len(image_data)
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
+def test_mp3_image_loading2():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/12oz.mp3'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 2000 < len(image_data) < 2500, 'Image is %d bytes but should be around 145kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
+
 def test_mp3_utf_8_invalid_string_raises_exception():
     with raises(TinyTagException):
         tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
@@ -275,12 +298,14 @@ def test_mp4_image_loading():
     image_data = tag.get_image()
     assert image_data is not None
     assert 20000 < len(image_data) < 25000, 'Image is %d bytes but should be around 22kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 def test_flac_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/flac_with_image.flac'), image=True)
     image_data = tag.get_image()
     assert image_data is not None
     assert 70000 < len(image_data) < 80000, 'Image is %d bytes but should be around 75kb' % len(image_data)
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), 'The image data must start with a jpeg header'
 
 def test_aiff_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/test_with_image.aiff'), image=True)
