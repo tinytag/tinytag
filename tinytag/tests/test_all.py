@@ -107,7 +107,7 @@ testfiles = OrderedDict([
     # AIFF
     ('samples/test-tagged.aiff', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 177620, 'artist': 'theartist', 'bitrate': 1411.2, 'genre': 'Acid', 'samplerate': 44100, 'track': '1', 'title': 'thetitle', 'album': 'thealbum', 'audio_offset': 76, 'comment': 'hello', 'year': '2014', }),
     ('samples/test.aiff', {'extra': {'copyright': '℗ 1992 Ace Records'}, 'channels': 2, 'duration': 0.0, 'filesize': 164, 'artist': None, 'bitrate': 1411.2, 'genre': None, 'samplerate': 44100, 'track': None, 'title': 'Go Out and Get Some', 'album': None, 'audio_offset': 156, 'comment': 'Millie Jackson - Get It Out \'cha System - 1978', }),
-    ('samples/pluck-pcm8.aiff', {'extra': {}, 'channels': 2, 'duration': 0.2999546485260771, 'filesize': 6892, 'artist': 'Serhiy Storchaka', 'title': 'Pluck', 'album': 'Python Test Suite', 'bitrate': 352.8, 'samplerate': 11025, 'audio_offset': 116, 'comment': 'Audacity Pluck + Wahwah', }),
+    ('samples/pluck-pcm8.aiff', {'extra': {}, 'channels': 2, 'duration': 0.2999546485260771, 'filesize': 6892, 'artist': 'Serhiy Storchaka', 'title': 'Pluck', 'album': 'Python Test Suite', 'bitrate': 176.4, 'samplerate': 11025, 'audio_offset': 116, 'comment': 'Audacity Pluck + Wahwah', }),
     ('samples/M1F1-mulawC-AFsp.afc', {'extra': {}, 'channels': 2, 'duration':  2.936625, 'filesize': 47148, 'artist': None, 'title': None, 'album': None, 'bitrate': 256.0, 'samplerate': 8000, 'audio_offset': 154, 'comment': 'AFspdate: 2003-01-30 03:28:34 UTCuser: kabal@CAPELLAprogram: CopyAudio', }),
 
 ])
