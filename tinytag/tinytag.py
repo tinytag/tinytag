@@ -363,6 +363,18 @@ class MP4(TinyTag):
             return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
 
         @classmethod
+        def parse_audio_sample_entry_alac(cls, data):
+            # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
+            alac_atom_size = struct.unpack('>I', data[28:32])[0]
+            alac_atom = BytesIO(data[36:36 + alac_atom_size])
+            alac_atom.seek(13, os.SEEK_CUR)
+            channels = struct.unpack('b', alac_atom.read(1))[0]
+            alac_atom.seek(6, os.SEEK_CUR)
+            avg_br = struct.unpack('>I', alac_atom.read(4))[0] / 1000.0  # kbit/s
+            sr = struct.unpack('>I', alac_atom.read(4))[0]
+            return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
+
+        @classmethod
         def parse_mvhd(cls, data):
             # http://stackoverflow.com/a/3639993/1191373
             walker = BytesIO(data)
@@ -406,8 +418,9 @@ class MP4(TinyTag):
     AUDIO_DATA_TREE = {
         b'moov': {
             b'mvhd': Parser.parse_mvhd,
-            b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {b'mp4a':
-                Parser.parse_audio_sample_entry
+            b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {
+                b'mp4a': Parser.parse_audio_sample_entry_mp4a,
+                b'alac': Parser.parse_audio_sample_entry_alac
             }}}}}
         }
     }
