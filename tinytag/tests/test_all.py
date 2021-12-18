@@ -72,12 +72,13 @@ testfiles = OrderedDict([
     ('samples/8khz_5s.opus', {'extra': {}, 'filesize': 7251, 'channels': 1, 'samplerate': 48000, 'duration': 5.0}),
 
     # WAV
-    ('samples/test.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176444, 'bitrate': 1411.2, 'samplerate': 44100, 'audio_offest': 36}),
-    ('samples/test3sMono.wav', {'extra': {}, 'channels': 1, 'duration': 3.0, 'filesize': 264644, 'bitrate': 705.6, 'duration': 3.0, 'samplerate': 44100, 'audio_offest': 36}),
-    ('samples/test-tagged.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176688, 'album': 'thealbum', 'artist': 'theartisst', 'bitrate': 1411.2, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': '66', 'audio_offest': 36, 'comment': 'hello', 'year': '2014'}),
-    ('samples/test-riff-tags.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176540, 'album': None, 'artist': 'theartisst', 'bitrate': 1411.2, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': None, 'audio_offest': 36, 'comment': 'hello', 'year': '2014'}),
-    ('samples/silence-22khz-mono-1s.wav', {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 48160, 'bitrate': 352.8, 'samplerate': 22050, 'audio_offest': 4088}),
-    ('samples/id3_header_with_a_zero_byte.wav', {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 44280, 'bitrate': 352.8, 'samplerate': 22050, 'audio_offest': 122, 'artist': 'Purpley', 'title': 'Test000', 'track': '17'}),
+    ('samples/test.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176444, 'bitrate': 1411.2, 'samplerate': 44100, 'audio_offset': 36}),
+    ('samples/test3sMono.wav', {'extra': {}, 'channels': 1, 'duration': 3.0, 'filesize': 264644, 'bitrate': 705.6, 'duration': 3.0, 'samplerate': 44100, 'audio_offset': 36}),
+    ('samples/test-tagged.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176688, 'album': 'thealbum', 'artist': 'theartisst', 'bitrate': 1411.2, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': '66', 'audio_offset': 36, 'comment': 'hello', 'year': '2014'}),
+    ('samples/test-riff-tags.wav', {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 176540, 'album': None, 'artist': 'theartisst', 'bitrate': 1411.2, 'genre': 'Acid', 'samplerate': 44100, 'title': 'thetitle', 'track': None, 'audio_offset': 36, 'comment': 'hello', 'year': '2014'}),
+    ('samples/silence-22khz-mono-1s.wav', {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 48160, 'bitrate': 352.8, 'samplerate': 22050, 'audio_offset': 4088}),
+    ('samples/id3_header_with_a_zero_byte.wav', {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 44280, 'bitrate': 352.8, 'samplerate': 22050, 'audio_offset': 122, 'artist': 'Purpley', 'title': 'Test000', 'track': '17'}),
+    ('samples/adpcm.wav', {'extra': {}, 'channels': 1, 'duration': 12.167256235827665, 'filesize': 268686, 'bitrate': 176.4, 'samplerate': 44100, 'audio_offset': 82, 'artist': 'test artist', 'title': 'test title', 'track': '1', 'album': 'test album', 'comment': 'test comment', 'genre': 'test genre', 'year': '1990'}),
 
     # FLAC
     ('samples/flac1sMono.flac', {'extra': {}, 'genre': 'Avantgarde', 'track_total': None, 'album': 'alb', 'year': '2014', 'duration': 1.0, 'title': 'track', 'track': '23', 'artist': 'art', 'channels': 1, 'filesize': 26632, 'bitrate': 213.056, 'samplerate': 44100}),
