@@ -231,9 +231,8 @@ class TinyTag(object):
             if value.isdigit():  # funky: id3v1 genre hidden in a id3v2 field
                 genre_id = int(value)
             else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
-                genre_in_parens = re.match('^\\((\\d+)\\)$', value)
-                if genre_in_parens:
-                    genre_id = int(genre_in_parens.group(1))
+                if value[:1] == '(' and value[-1:] == ')' and value[1:-1].isdigit():
+                    genre_id = int(value[1:-1])
             if 0 <= genre_id < len(ID3.ID3V1_GENRES):
                 value = ID3.ID3V1_GENRES[genre_id]
         if fieldname in ("track", "disc", "track_total", "disc_total"):
