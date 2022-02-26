@@ -57,6 +57,7 @@ testfiles = OrderedDict([
     ('samples/nicotinetestdata.mp3', {'filesize': 80919, 'audio_offset': 45, 'channels': 2, 'duration': 5.067755102040817, 'extra': {}, 'samplerate': 44100, 'bitrate': 127.6701030927835}),
     ('samples/chinese_id3.mp3', {'filesize': 1000, 'album': '½ÇÂäÖ®¸è', 'albumartist': 'ËÕÔÆ', 'artist': 'ËÕÔÆ', 'audio_offset': 512, 'bitrate': 128.0, 'channels': 2, 'duration': 0.052244897959183675, 'extra': {}, 'genre': 'ÐÝÏÐÒôÀÖ', 'samplerate': 44100, 'title': '½ÇÂäÖ®¸è', 'track': '1'}),
     ('samples/cut_off_titles.mp3', {'filesize': 1000, 'album': 'ERB', 'artist': 'Epic Rap Battles Of History', 'audio_offset': 194, 'bitrate': 192.0, 'channels': 2, 'duration': 0.052244897959183675, 'extra': {}, 'samplerate': 44100, 'title': 'Tony Hawk VS Wayne Gretzky'}),
+    ('samples/id3_xxx_lang.mp3', {'filesize': 6943, 'album': 'eMOTIVe', 'albumartist': 'A Perfect Circle', 'artist': 'A Perfect Circle', 'audio_offset': 3647, 'bitrate': 192, 'channels': 2, 'duration': 0.13198711063372717, 'extra': {'isrc': 'USVI20400513', 'lyrics': "Don't fret, precious", 'text': 'SCRIPT\ufeffLatn'}, 'genre': 'Rock', 'samplerate': 44100, 'title': 'Counting Bodies Like Sheep to the Rhythm of the War Drums', 'track': '10', 'comment': '                            ', 'composer': 'Billy Howerdel/Maynard James Keenan', 'disc': '1', 'disc_total': '1', 'track_total': '12', 'year': '2004'}),
 
 
     # OGG
