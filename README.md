@@ -20,20 +20,20 @@ Features:
 
   * Read tags, length and cover images of audio files
   * supported formats
-    * MP3 (ID3 v1, v1.1, v2.2, v2.3+)
+    * MP1/MP2/MP3 (ID3 v1, v1.1, v2.2, v2.3+)
     * Wave/RIFF
     * OGG
     * OPUS
     * FLAC
     * WMA
-    * MP4/M4A/M4B
+    * MP4/M4A/M4B/M4R/ALAC
     * AIFF/AIFF-C
   * pure python, no dependencies
   * supports python 2.7 and 3.4 or higher
   * high test coverage
   * Just a few hundred lines of code (just include it in your project!) 
 
-tinytag only provides the minimum needed for _reading_ MP3, OGG, OPUS, MP4, M4A, FLAC, WMA and Wave meta-data.
+tinytag only provides the minimum needed for _reading_ meta-data.
 It can determine track number, total tracks, title, artist, album, year, duration and more.
 
     from tinytag import TinyTag
