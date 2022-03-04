@@ -765,9 +765,9 @@ class ID3(TinyTag):
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
                 # remove language (but leave BOM)
-                if re.match(b'...(\xff\xfe|\xfe\xff)', bytestr):
+                if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
                     bytestr = bytestr[3:]
-                if bytestr[:4] == b'eng\x00':
+                if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
                     bytestr = bytestr[4:]  # remove language
                 if bytestr[:1] == b'\x00':
                     bytestr = bytestr[1:]  # strip optional additional null byte
@@ -789,7 +789,7 @@ class ID3(TinyTag):
             else:
                 bytestr = bytestr
                 encoding = default_encoding  # wild guess
-            if bytestr[:4] == b'eng\x00':
+            if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
             return self._unpad(codecs.decode(bytestr, encoding, errors))
