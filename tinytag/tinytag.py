@@ -334,6 +334,7 @@ class MP4(TinyTag):
                 if esds_atom.read(1) != b'\x80':
                     break
 
+        @classmethod
         def parse_audio_sample_entry_mp4a(cls, data):
             # this atom also contains the esds atom:
             # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
