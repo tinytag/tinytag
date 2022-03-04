@@ -970,7 +970,7 @@ class Wave(TinyTag):
         self._duration_parsed = False
 
     def _determine_duration(self, fh):
-        # see: https://ccrma.stanford.edu/courses/422/projects/WaveFormat/
+        # see: http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
         # and: https://en.wikipedia.org/wiki/WAV
         riff, size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
@@ -982,10 +982,17 @@ class Wave(TinyTag):
             if subchunkid == b'fmt ':
                 _, self.channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
+                if bitdepth == 0:
+                    # Certain codecs (e.g. GSM 6.10) give us a bit depth of zero.
+                    # Avoid division by zero when calculating duration.
+                    bitdepth = 1
                 self.bitrate = self.samplerate * self.channels * bitdepth / 1000.0
+                remaining_size = subchunksize - 16
+                if remaining_size > 0:
+                    fh.seek(remaining_size, 1)  # skip remaining data in chunk
             elif subchunkid == b'data':
-                self.duration = float(subchunksize)/self.channels/self.samplerate/(bitdepth/8)
-                self.audio_offest = fh.tell() - 8  # rewind to data header
+                self.duration = float(subchunksize) / self.channels / self.samplerate / (bitdepth / 8)
+                self.audio_offset = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'LIST' and self._parse_tags:
                 is_info = fh.read(4)  # check INFO header
