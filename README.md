@@ -1,7 +1,7 @@
 tinytag 
 =======
 
-tinytag is a library for reading music meta data of MP3, OGG, OPUS, MP4, M4A, FLAC, WMA and Wave files with python
+tinytag is a library for reading music meta data of most common audio files in pure python
 
 [![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
 [![Build status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
@@ -20,7 +20,7 @@ Features:
 
   * Read tags, length and cover images of audio files
   * supported formats
-    * MP1/MP2/MP3 (ID3 v1, v1.1, v2.2, v2.3+)
+    * MP3/MP2/MP1 (ID3 v1, v1.1, v2.2, v2.3+)
     * Wave/RIFF
     * OGG
     * OPUS
@@ -34,7 +34,7 @@ Features:
   * Just a few hundred lines of code (just include it in your project!) 
 
 tinytag only provides the minimum needed for _reading_ meta-data.
-It can determine track number, total tracks, title, artist, album, year, duration and more.
+It can determine track number, total tracks, title, artist, album, year, duration and any more.
 
     from tinytag import TinyTag
     tag = TinyTag.get('/some/music.mp3')
@@ -46,7 +46,7 @@ Alternatively you can use tinytag directly on the command line:
     $ python -m tinytag --format csv /some/music.mp3
     > {"filename": "/some/music.mp3", "filesize": 30212227, "album": "Album", "albumartist": "Artist", "artist": "Artist", "audio_offset": null, "bitrate": 256, "channels": 2, "comment": null, "composer": null, "disc": "1", "disc_total": null, "duration": 10, "genre": null, "samplerate": 44100, "title": "Title", "track": "5", "track_total": null, "year": "2012"}
 
-Check `python -m tinytag --help` for all CLI options, for example other output formats`
+Check `python -m tinytag --help` for all CLI options, for example other output formats
 
 List of possible attributes you can get with TinyTag:
 
@@ -87,6 +87,15 @@ specified.
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
 Changelog:
+ * 1.8.0  (2022-03-05) [mathiascode-edition]
+   - Add support for ALAC audio files #130 (thanks to mathiascode)
+   - AIFF: Fixed bitrate calculation for certain files #129 (thanks to mathiascode)
+   - MP3: Do not round MP3 bitrates #131 (thanks to mathiascode)
+   - MP3 ID3: Support any language in COMM and USLT frames #135 (thanks to mathiascode)
+   - Performance: Don't use regex when parsing genre #136 (thanks to mathiascode)
+   - Disable tag parsing for all formats when requested #137 (thanks to mathiascode)
+   - M4A: Fix invalid bitrates in certain files #132 (thanks to mathiascode)
+   - WAV: Fix metadata parsing for certain files #133 (thanks to mathiascode)
  * 1.7.0. (2021-12-14)
    - fixed rare occasion of ID3v2 tags missing their first character, #106
    - allow overriding the default encoding of ID3 tags (e.g. `TinyTag.get(..., encoding='gbk'))`)
