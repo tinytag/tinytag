@@ -9,8 +9,6 @@ def get_version():
         return version_line.split("=")[1].strip().strip("\"'")
 
 
-setup(
-        name="tinytag",
-        version=get_version(),
-        packages=find_packages(),
-        )
+setup(name="tinytag",
+      version=get_version(),
+      packages=find_packages())
