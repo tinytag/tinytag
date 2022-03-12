@@ -87,6 +87,9 @@ specified.
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
 Changelog:
+ * 1.8.1  (2022-03-12) [still mathiascode-edition]
+   - MP3 ID3: Set correct file position if tag reading is disabled #119 (thanks to mathiascode)
+   - MP3: Fix incorrect calculation of duration for VBR encoded MP3s #128 (thanks to mathiascode)
  * 1.8.0  (2022-03-05) [mathiascode-edition]
    - Add support for ALAC audio files #130 (thanks to mathiascode)
    - AIFF: Fixed bitrate calculation for certain files #129 (thanks to mathiascode)

@@ -4,7 +4,7 @@ import sys
 from .tinytag import TinyTag
 
 
-__version__ = '1.8.0'
+__version__ = '1.8.1'
 
 
 if __name__ == '__main__':
