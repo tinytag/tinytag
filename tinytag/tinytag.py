@@ -554,7 +554,7 @@ class ID3(TinyTag):
     def __init__(self, filehandler, filesize, *args, **kwargs):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         # save position after the ID3 tag for duration mesurement speedup
-        self._bytepos_after_id3v2 = 0
+        self._bytepos_after_id3v2 = None
 
     @classmethod
     def set_estimation_precision(cls, estimation_in_seconds):
@@ -605,6 +605,10 @@ class ID3(TinyTag):
         return frames, byte_count, toc, vbr_scale
 
     def _determine_duration(self, fh):
+        # if tag reading was disabled, find start position of audio data
+        if self._bytepos_after_id3v2 is None:
+            self._parse_id3v2_header(fh)
+
         max_estimation_frames = (ID3._MAX_ESTIMATION_SEC * 44100) // ID3.samples_per_frame
         frame_size_accu = 0
         header_bytes = 4
@@ -695,7 +699,8 @@ class ID3(TinyTag):
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 
-    def _parse_id3v2(self, fh):
+    def _parse_id3v2_header(self, fh):
+        size, extended, major = 0, None, None
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = struct.unpack('3sBBB4B', _read(fh, 10))
         tag = codecs.decode(header[0], 'ISO-8859-1')
@@ -709,7 +714,12 @@ class ID3(TinyTag):
             # experimental = (header[3] & 0x20) > 0
             # footer = (header[3] & 0x10) > 0
             size = self._calc_size(header[4:8], 7)
-            self._bytepos_after_id3v2 = size
+        self._bytepos_after_id3v2 = size
+        return size, extended, major
+
+    def _parse_id3v2(self, fh):
+        size, extended, major = self._parse_id3v2_header(fh)
+        if size:
             end_pos = fh.tell() + size
             parsed_size = 0
             if extended:  # just read over the extended header.
