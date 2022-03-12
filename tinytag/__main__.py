@@ -1,26 +1,29 @@
+from __future__ import absolute_import
+from os.path import splitext
 import os
 import json
 import sys
-from os.path import splitext
 
-from tinytag import TinyTag, TinyTagException
+from tinytag.tinytag import TinyTag, TinyTagException
+
 
 def usage():
     print('''tinytag [options] <filename...>
-    
+
     -h, --help
         Display help
-    
+
     -i, --save-image <image-path>
         Save the cover art to a file
-    
+
     -f, --format json|csv|tsv|tabularcsv
         Specify how the output should be formatted
-    
+
     -s, --skip-unsupported
-        Skip files that do not have a file extension supported by tinytag 
-    
-    ''')
+        Skip files that do not have a file extension supported by tinytag
+
+''')
+
 
 def pop_param(name, _default):
     if name in sys.argv:
@@ -29,12 +32,14 @@ def pop_param(name, _default):
         return sys.argv.pop(idx)
     return _default
 
+
 def pop_switch(name, _default):
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
         return True
     return False
+
 
 try:
     display_help = pop_switch('--help', False) or pop_switch('-h', False)
