@@ -270,9 +270,8 @@ class TinyTag(object):
 
 
 class MP4(TinyTag):
-    # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/
-    # Metadata.html
-    # and: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
+    # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
+    # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
 
     class Parser:
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
@@ -1214,8 +1213,7 @@ class Wma(TinyTag):
                     'WM/AlbumTitle': 'album',
                     'WM/Composer': 'composer',
                 }
-                # see: http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/
-                # library/bb643323.aspx#_Toc509555195
+                # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))
                 for _ in range(descriptor_count):
                     name_len = _bytes_to_int_le(fh.read(2))
