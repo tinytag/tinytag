@@ -26,7 +26,7 @@ Features:
     * OPUS
     * FLAC
     * WMA
-    * MP4/M4A/M4B/M4R/ALAC
+    * MP4/M4A/M4B/M4R/M4V/ALAC
     * AIFF/AIFF-C
   * pure python, no dependencies
   * supports python 2.7 and 3.4 or higher
