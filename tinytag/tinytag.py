@@ -969,11 +969,13 @@ class Wave(TinyTag):
     riff_mapping = {
         b'INAM': 'title',
         b'TITL': 'title',
+        b'IPRD': 'album',
         b'IART': 'artist',
         b'ICMT': 'comment',
         b'ICRD': 'year',
         b'IGNR': 'genre',
         b'ISRC': 'extra.isrc',
+        b'ITRK': 'track',
         b'TRCK': 'track',
         b'PRT1': 'track',
         b'PRT2': 'track_number',
@@ -1020,11 +1022,12 @@ class Wave(TinyTag):
                     while len(field) == 4:
                         data_length = struct.unpack('I', sub_fh.read(4))[0]
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
-                        data = codecs.decode(data, 'utf-8')
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
-                            self._set_field(fieldname, data)
+                            self._set_field(fieldname, codecs.decode(data, 'utf-8'))
                         field = sub_fh.read(4)
+                        if field[0:1] == b'\x00':  # sometimes an additional zero-byte is present
+                            field = field[1:] + sub_fh.read(1)
             elif subchunkid in (b'id3 ', b'ID3 ') and self._parse_tags:
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
