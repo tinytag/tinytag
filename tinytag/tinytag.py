@@ -40,6 +40,7 @@ except ImportError:
 from functools import reduce
 from io import BytesIO
 import aifc
+import base64
 import codecs
 import io
 import json
@@ -929,11 +930,18 @@ class Ogg(TinyTag):
                 continue
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
-                if DEBUG:
-                    stderr('Found Vorbis Comment', key, value[:64])
-                fieldname = comment_type_to_attr_mapping.get(key.lower())
-                if fieldname:
-                    self._set_field(fieldname, value)
+
+                if key == "METADATA_BLOCK_PICTURE" and self._load_image:
+                    if DEBUG:
+                        stderr('Found Vorbis Image', key, value[:64])
+
+                    self._image_data = Flac._parse_image(BytesIO(base64.b64decode(value)))
+                else:
+                    if DEBUG:
+                        stderr('Found Vorbis Comment', key, value[:64])
+                    fieldname = comment_type_to_attr_mapping.get(key.lower())
+                    if fieldname:
+                        self._set_field(fieldname, value)
 
     def _parse_pages(self, fh):
         # for the spec, see: https://wiki.xiph.org/Ogg
@@ -1111,13 +1119,7 @@ class Flac(TinyTag):
                 oggtag._parse_vorbis_comment(fh)
                 self.update(oggtag)
             elif block_type == Flac.METADATA_PICTURE and self._load_image:
-                # https://xiph.org/flac/format.html#metadata_block_picture
-                pic_type, mime_len = struct.unpack('>2I', fh.read(8))
-                fh.read(mime_len)
-                description_len = struct.unpack('>I', fh.read(4))[0]
-                fh.read(description_len)
-                width, height, depth, colors, pic_len = struct.unpack('>5I', fh.read(20))
-                self._image_data = fh.read(pic_len)
+                self._image_data = self._parse_image(fh)
             elif block_type >= 127:
                 return  # invalid block type
             else:
@@ -1129,6 +1131,15 @@ class Flac(TinyTag):
                 return
             header_data = fh.read(4)
 
+    @staticmethod
+    def _parse_image(fh):
+        # https://xiph.org/flac/format.html#metadata_block_picture
+        pic_type, mime_len = struct.unpack('>2I', fh.read(8))
+        fh.read(mime_len)
+        description_len = struct.unpack('>I', fh.read(4))[0]
+        fh.read(description_len)
+        width, height, depth, colors, pic_len = struct.unpack('>5I', fh.read(20))
+        return fh.read(pic_len)
 
 class Wma(TinyTag):
     ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
