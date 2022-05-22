@@ -40,7 +40,6 @@ except ImportError:
 from functools import reduce
 from io import BytesIO
 import aifc
-import codecs
 import io
 import json
 import operator
@@ -273,9 +272,9 @@ class MP4(TinyTag):
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
         ATOM_DECODER_BY_TYPE = {
             0: lambda x: x,  # 'reserved',
-            1: lambda x: codecs.decode(x, 'utf-8', 'replace'),   # UTF-8
-            2: lambda x: codecs.decode(x, 'utf-16', 'replace'),  # UTF-16
-            3: lambda x: codecs.decode(x, 's/jis', 'replace'),   # S/JIS
+            1: lambda x: x.decode('utf-8', 'replace'),   # UTF-8
+            2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
+            3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
             # 16: duration in millis
             13: lambda x: x,  # JPEG
             14: lambda x: x,  # PNG
@@ -698,7 +697,7 @@ class ID3(TinyTag):
         size, extended, major = 0, None, None
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = struct.unpack('3sBBB4B', _read(fh, 10))
-        tag = codecs.decode(header[0], 'ISO-8859-1')
+        tag = header[0].decode('ISO-8859-1')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
             major, rev = header[1:3]
@@ -731,7 +730,7 @@ class ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
             def asciidecode(x):
-                return self._unpad(codecs.decode(x, self._default_encoding or 'latin1'))
+                return self._unpad(x.decode(self._default_encoding or 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
             self._set_field('title', fields[:30], transfunc=asciidecode, overwrite=False)
             self._set_field('artist', fields[30:60], transfunc=asciidecode, overwrite=False)
@@ -831,7 +830,7 @@ class ID3(TinyTag):
             if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
-            return self._unpad(codecs.decode(bytestr, encoding, errors))
+            return self._unpad(bytestr.decode(encoding, errors))
         except UnicodeDecodeError:
             raise TinyTagException('Error decoding ID3 Tag!')
 
@@ -920,7 +919,7 @@ class Ogg(TinyTag):
         for i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
             try:
-                keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
+                keyvalpair = fh.read(length).decode('UTF-8')
             except UnicodeDecodeError:
                 continue
             if '=' in keyvalpair:
@@ -1019,7 +1018,7 @@ class Wave(TinyTag):
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
-                            self._set_field(fieldname, codecs.decode(data, 'utf-8'))
+                            self._set_field(fieldname, data.decode('utf-8'))
                         field = sub_fh.read(4)
                         if field[0:1] == b'\x00':  # sometimes an additional zero-byte is present
                             field = field[1:] + sub_fh.read(1)
@@ -1167,7 +1166,7 @@ class Wma(TinyTag):
         ])
 
     def __decode_string(self, bytestring):
-        return self._unpad(codecs.decode(bytestring, 'utf-16'))
+        return self._unpad(bytestring.decode('utf-16'))
 
     def __decode_ext_desc(self, value_type, value):
         """ decode ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
