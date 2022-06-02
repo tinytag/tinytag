@@ -170,12 +170,9 @@ class TinyTag(object):
     @classmethod
     def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False,
             encoding=None):
-        try:  # cast pathlib.Path to str
-            import pathlib
-            if isinstance(filename, pathlib.Path):
-                filename = str(filename.absolute())
-        except ImportError:
-            pass
+        import pathlib
+        if isinstance(filename, pathlib.Path):
+            filename = str(filename.absolute())
         else:
             filename = os.path.expanduser(filename)
         size = os.path.getsize(filename)
