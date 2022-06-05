@@ -189,6 +189,10 @@ testfiles = OrderedDict([
     ('samples/mp3/vbr/vbr48stereo.mp3',
      {'filesize': 36672, 'audio_offset': 456, 'bitrate': 32.33862433862434, 'channels': 2,
       'duration': 9.072, 'extra': {}, 'samplerate': 48000}),
+    ('samples/id3v24_genre_null_byte.mp3',
+        {'extra': {}, 'filesize': 256, 'album': '\u79d8\u5bc6', 'albumartist': 'aiko',
+         'artist': 'aiko', 'disc': '1', 'genre': 'Pop',
+         'title': '\u661f\u306e\u306a\u3044\u4e16\u754c', 'track': '10'}),
 
     # OGG
     ('samples/empty.ogg',
