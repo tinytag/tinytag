@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import sys
-from .tinytag import TinyTag
+from .tinytag import TinyTag, TinyTagException, ID3, Ogg, Wave, Flac  # noqa: F401
 
 
 __version__ = '1.8.1'
