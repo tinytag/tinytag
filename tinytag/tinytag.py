@@ -211,9 +211,8 @@ class TinyTag(object):
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname, bytestring, transfunc=None, overwrite=True):
-        """convenience function to set fields of the tinytag by name.
-        the payload (bytestring) can be changed using the transfunc"""
+    def _set_field(self, fieldname, value, overwrite=True):
+        """convenience function to set fields of the tinytag by name"""
         write_dest = self  # write into the TinyTag by default
         get_func = getattr
         set_func = setattr
@@ -225,7 +224,6 @@ class TinyTag(object):
             set_func = operator.setitem
         if get_func(write_dest, fieldname):  # do not overwrite existing data
             return
-        value = bytestring if transfunc is None else transfunc(bytestring)
         if DEBUG:
             stderr('Setting field "%s" to "%s"' % (fieldname, value))
         if fieldname == 'genre':
@@ -598,7 +596,7 @@ class ID3(TinyTag):
         if header_flags & 2:  # BYTES FLAG
             byte_count = struct.unpack('>i', fh.read(4))[0]
         if header_flags & 4:  # TOC FLAG
-            toc = [struct.unpack('>i', fh.read(4))[0] for _ in range(100)]
+            toc = [struct.unpack('>i', fh.read(4))[0] for _ in range(25)]  # 100 bytes
         if header_flags & 8:  # VBR SCALE FLAG
             vbr_scale = struct.unpack('>i', fh.read(4))[0]
         return frames, byte_count, toc, vbr_scale
@@ -737,15 +735,15 @@ class ID3(TinyTag):
             def asciidecode(x):
                 return self._unpad(codecs.decode(x, self._default_encoding or 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
-            self._set_field('title', fields[:30], transfunc=asciidecode, overwrite=False)
-            self._set_field('artist', fields[30:60], transfunc=asciidecode, overwrite=False)
-            self._set_field('album', fields[60:90], transfunc=asciidecode, overwrite=False)
-            self._set_field('year', fields[90:94], transfunc=asciidecode, overwrite=False)
+            self._set_field('title', asciidecode(fields[:30]), overwrite=False)
+            self._set_field('artist', asciidecode(fields[30:60]), overwrite=False)
+            self._set_field('album', asciidecode(fields[60:90]), overwrite=False)
+            self._set_field('year', asciidecode(fields[90:94]), overwrite=False)
             comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
                 self._set_field('track', str(ord(comment[-1:])), overwrite=False)
                 comment = comment[:-2]
-            self._set_field('comment', comment, transfunc=asciidecode, overwrite=False)
+            self._set_field('comment', asciidecode(comment), overwrite=False)
             genre_id = ord(fields[124:125])
             if genre_id < len(ID3.ID3V1_GENRES):
                 self._set_field('genre', ID3.ID3V1_GENRES[genre_id], overwrite=False)
@@ -780,7 +778,8 @@ class ID3(TinyTag):
             content = fh.read(frame_size)
             fieldname = ID3.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
-                self._set_field(fieldname, content, self._decode_string)
+                language = fieldname in ("comment", "extra.lyrics")
+                self._set_field(fieldname, self._decode_string(content, language))
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 encoding = content[0:1]
@@ -796,7 +795,7 @@ class ID3(TinyTag):
             return frame_size
         return 0
 
-    def _decode_string(self, bytestr):
+    def _decode_string(self, bytestr, language=False):
         default_encoding = 'ISO-8859-1'
         if self._default_encoding:
             default_encoding = self._default_encoding
@@ -808,12 +807,13 @@ class ID3(TinyTag):
             elif first_byte == b'\x01':  # UTF-16 with BOM
                 bytestr = bytestr[1:]
                 # remove language (but leave BOM)
-                if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
-                    bytestr = bytestr[3:]
-                if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
-                    bytestr = bytestr[4:]  # remove language
-                if bytestr[:1] == b'\x00':
-                    bytestr = bytestr[1:]  # strip optional additional null byte
+                if language:
+                    if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
+                        bytestr = bytestr[3:]
+                    if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
+                        bytestr = bytestr[4:]  # remove language
+                    if bytestr[:1] == b'\x00':
+                        bytestr = bytestr[1:]  # strip optional additional null byte
                 # read byte order mark to determine endianness
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom if it exists
@@ -832,7 +832,7 @@ class ID3(TinyTag):
             else:
                 bytestr = bytestr
                 encoding = default_encoding  # wild guess
-            if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
+            if language and bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
             return self._unpad(codecs.decode(bytestr, encoding, errors))
@@ -1215,7 +1215,7 @@ class Wma(TinyTag):
                 ])
                 for field_name, bytestring in data_blocks.items():
                     if field_name:
-                        self._set_field(field_name, bytestring, self.__decode_string)
+                        self._set_field(field_name, self.__decode_string(bytestring))
             elif object_id == Wma.ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
                 mapping = {
                     'WM/TrackNumber': 'track',
