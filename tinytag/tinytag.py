@@ -212,7 +212,7 @@ class TinyTag(object):
             self._determine_duration(self._filehandler)
 
     def _set_field(self, fieldname, value, overwrite=True):
-        """convienience function to set fields of the tinytag by name"""
+        """convenience function to set fields of the tinytag by name"""
         write_dest = self  # write into the TinyTag by default
         get_func = getattr
         set_func = setattr
@@ -814,7 +814,7 @@ class ID3(TinyTag):
                         bytestr = bytestr[4:]  # remove language
                     if bytestr[:1] == b'\x00':
                         bytestr = bytestr[1:]  # strip optional additional null byte
-                # read byte order mark to determine endianess
+                # read byte order mark to determine endianness
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom if it exists
                 if bytestr[:2] in (b'\xfe\xff', b'\xff\xfe'):
@@ -871,7 +871,7 @@ class Ogg(TinyTag):
                 fh.seek(max(seekpos, 1), os.SEEK_CUR)
 
     def _parse_tag(self, fh):
-        page_start_pos = fh.tell()  # set audio_offest later if its audio data
+        page_start_pos = fh.tell()  # set audio_offset later if its audio data
         for packet in self._parse_pages(fh):
             walker = BytesIO(packet)
             if packet[0:7] == b"\x01vorbis":
