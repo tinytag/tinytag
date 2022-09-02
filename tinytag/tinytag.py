@@ -484,7 +484,7 @@ class ID3(TinyTag):
     FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
         'COMM': 'comment', 'COM': 'comment',
         'TRCK': 'track', 'TRK': 'track',
-        'TYER': 'year', 'TYE': 'year',
+        'TYER': 'year', 'TYE': 'year', 'TDRC': 'year',
         'TALB': 'album', 'TAL': 'album',
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title', 'TT2': 'title',
