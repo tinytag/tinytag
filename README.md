@@ -66,7 +66,7 @@ List of possible attributes you can get with TinyTag:
     tag.title         # title of the song
     tag.track         # track number as string
     tag.track_total   # total number of tracks as string
-    tag.year          # year or data as string
+    tag.year          # year or date as string
 
 For non-common fields and fields specific to single file formats use extra
 
