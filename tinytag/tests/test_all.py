@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 
 import io
+import operator
 import os
 import re
 import shutil
@@ -197,21 +198,21 @@ testfiles = OrderedDict([
 
     # OGG
     ('samples/empty.ogg',
-        {'extra': {}, 'duration': 3.684716553287982, '_max_samplenum': 162496,
-         '_tags_parsed': False, 'filesize': 4328, 'audio_offset': 0, 'bitrate': 112.0,
+        {'extra': {}, 'duration': 3.684716553287982,
+         'filesize': 4328, 'audio_offset': 0, 'bitrate': 112.0,
          'samplerate': 44100}),
     ('samples/multipagecomment.ogg',
-        {'extra': {}, 'duration': 3.684716553287982, '_max_samplenum': 162496,
-         '_tags_parsed': False, 'filesize': 135694, 'audio_offset': 0, 'bitrate': 112,
+        {'extra': {}, 'duration': 3.684716553287982,
+         'filesize': 135694, 'audio_offset': 0, 'bitrate': 112,
          'samplerate': 44100}),
     ('samples/multipage-setup.ogg',
         {'extra': {}, 'genre': 'JRock', 'duration': 4.128798185941043,
          'album': 'Timeless', 'year': '2006', 'title': 'Burst', 'artist': 'UVERworld', 'track': '7',
-         '_tags_parsed': False, 'filesize': 76983, 'audio_offset': 0, 'bitrate': 160.0,
+         'filesize': 76983, 'audio_offset': 0, 'bitrate': 160.0,
          'samplerate': 44100}),
     ('samples/test.ogg',
         {'extra': {}, 'duration': 1.0, 'album': 'the boss', 'year': '2006',
-         'title': 'the boss', 'artist': 'james brown', 'track': '1', '_tags_parsed': False,
+         'title': 'the boss', 'artist': 'james brown', 'track': '1',
          'filesize': 7467, 'audio_offset': 0, 'bitrate': 160.0, 'samplerate': 44100,
          'comment': 'hello!'}),
     ('samples/corrupt_metadata.ogg',
@@ -343,7 +344,7 @@ testfiles = OrderedDict([
          'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose',
          'track_total': '11', 'track': '11', 'artist': 'Marian', 'filesize': 61432}),
     ('samples/test2.m4a',
-        {'extra': {}, 'bitrate': 256.0, 'track': '1',
+        {'extra': {'copyright': '℗ 1992 Ace Records'}, 'bitrate': 256.0, 'track': '1',
          'albumartist': "Millie Jackson - Get It Out 'cha System - 1978",
          'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978',
          'artist': 'Millie Jackson', 'track_total': '9', 'disc_total': '1', 'genre': 'R&B/Soul',
@@ -359,7 +360,8 @@ testfiles = OrderedDict([
          'albumartist': 'Major Lazer', 'channels': 2, 'bitrate': 125.584,
          'comment': '? 2016 Mad Decent'}),
     ('samples/alac_file.m4a',
-        {'extra': {}, 'artist': 'Howard Shelley', 'composer': 'Clementi, Muzio (1752-1832)',
+        {'extra': {'copyright': '© Hyperion Records Ltd, London', 'lyrics': 'Album notes:'},
+         'artist': 'Howard Shelley', 'composer': 'Clementi, Muzio (1752-1832)',
          'filesize': 20000,
          'title': 'Clementi: Piano Sonata in D major, Op 25 No 6 - Movement 2: Un poco andante',
          'album': 'Clementi: The Complete Piano Sonatas, Vol. 4', 'year': '2009', 'track': '14',
@@ -414,11 +416,50 @@ for filename in os.listdir(custom_samples_folder):
         if match:
             expected_values[fieldname] = _type(match[0])
     if expected_values:
-        expected_values['__do_not_require_all_values'] = True
+        expected_values['_do_not_require_all_values'] = True
         testfiles[os.path.join('custom_samples', filename)] = expected_values
     else:
         # if there are no expected values, just try parsing the file
         testfiles[os.path.join('custom_samples', filename)] = {}
+
+
+def almost_equal_float(val1, val2):
+    # allow duration to be off by 100 ms and a maximum of 1%
+    if val1 == val2:
+        return True
+    if abs(val1 - val2) < 0.100:
+        if val2 and min(val1, val2) / max(val1, val2) > 0.99:
+            return True
+    return False
+
+
+def startswith(val1, val2):
+    return val1.startswith(val2)
+
+
+def compare(results, expected, filename, prev_path=None):
+    assert isinstance(results, dict)
+    missing_keys = set(expected.keys()) - set(results)
+    assert not missing_keys, 'Missing data in fixture \n%s' % str(missing_keys)
+
+    for key, result_val in results.items():
+        path = prev_path + '.' + key if prev_path else key
+        try:
+            expected_val = expected[key]
+        except KeyError:
+            assert False, 'Missing field "%s" with value "%s" in fixture in "%s"!' % (key, result_val, filename)
+        # recurse if the result and expected values are a dict:
+        if isinstance(result_val, dict) and isinstance(expected_val, dict):
+            compare(result_val, expected_val, filename, prev_path=key)
+        else:
+            fmt_string = 'field "%s": got %s (%s) expected %s (%s) in %s!'
+            fmt_values = (key, repr(result_val), type(result_val), repr(expected_val), type(expected_val), filename)
+            op = operator.eq
+            if path == 'duration':  # allow duration to be off by 100 ms and a maximum of 1%
+                op = almost_equal_float
+            if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
+                op = startswith
+            assert op(result_val, expected_val), fmt_string % fmt_values
 
 
 @pytest.mark.parametrize("testfile,expected", [
@@ -427,29 +468,12 @@ for filename in os.listdir(custom_samples_folder):
 def test_file_reading(testfile, expected):
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename)
+    results = {
+        key: val for key, val in tag.__dict__.items()
+        if not key.startswith('_') and val is not None
+    }
+    compare(results, expected, filename)
 
-    for key, expected_val in expected.items():
-        if key.startswith('__'):
-            continue
-        result = getattr(tag, key)
-        fmt_string = 'field "%s": got %s (%s) expected %s (%s)!'
-        fmt_values = (key, repr(result), type(result), repr(expected_val), type(expected_val))
-        if key == 'duration' and result is not None and expected_val is not None:
-            # allow duration to be off by 100 ms and a maximum of 1%
-            if abs(result - expected_val) < 0.100:
-                if expected_val and min(result, expected_val) / max(result, expected_val) > 0.99:
-                    continue
-        assert result == expected_val, fmt_string % fmt_values
-    # for custom samples, allow not specifying all values
-    if expected.get('_do_not_require_all_values'):
-        return
-    undefined_in_fixture = {}
-    for key, val in tag.__dict__.items():
-        if key.startswith('_') or val is None:
-            continue
-        if key not in expected:
-            undefined_in_fixture[key] = val
-    assert not undefined_in_fixture, 'Missing data in fixture \n%s' % str(undefined_in_fixture)
 #
 # def test_generator():
 #     for testfile, expected in testfiles.items():
