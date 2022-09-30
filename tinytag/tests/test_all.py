@@ -394,6 +394,7 @@ testfiles = OrderedDict([
 
 testfolder = os.path.join(os.path.dirname(__file__))
 
+
 def load_custom_samples():
     retval = {}
     custom_samples_folder = os.path.join(testfolder, 'custom_samples')
