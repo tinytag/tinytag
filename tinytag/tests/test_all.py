@@ -394,33 +394,38 @@ testfiles = OrderedDict([
 
 testfolder = os.path.join(os.path.dirname(__file__))
 
-# load custom samples
-custom_samples_folder = os.path.join(testfolder, 'custom_samples')
-pattern_field_name_type = [
-    (r'sr=(\d+)', 'samplerate', int),
-    (r'dn=(\d+)', 'disc', str),
-    (r'dt=(\d+)', 'disc_total', str),
-    (r'd=(\d+.?\d*)', 'duration', float),
-    (r'b=(\d+)', 'bitrate', int),
-    (r'c=(\d)', 'channels', int),
-    (r'genre="([^"]+)"', 'genre', str),
-]
-for filename in os.listdir(custom_samples_folder):
-    if filename == 'instructions.txt':
-        continue
-    if os.path.isdir(os.path.join(custom_samples_folder, filename)):
-        continue
-    expected_values = {}
-    for pattern, fieldname, _type in pattern_field_name_type:
-        match = re.findall(pattern, filename)
-        if match:
-            expected_values[fieldname] = _type(match[0])
-    if expected_values:
-        expected_values['_do_not_require_all_values'] = True
-        testfiles[os.path.join('custom_samples', filename)] = expected_values
-    else:
-        # if there are no expected values, just try parsing the file
-        testfiles[os.path.join('custom_samples', filename)] = {}
+def load_custom_samples():
+    retval = {}
+    custom_samples_folder = os.path.join(testfolder, 'custom_samples')
+    pattern_field_name_type = [
+        (r'sr=(\d+)', 'samplerate', int),
+        (r'dn=(\d+)', 'disc', str),
+        (r'dt=(\d+)', 'disc_total', str),
+        (r'd=(\d+.?\d*)', 'duration', float),
+        (r'b=(\d+)', 'bitrate', int),
+        (r'c=(\d)', 'channels', int),
+        (r'genre="([^"]+)"', 'genre', str),
+    ]
+    for filename in os.listdir(custom_samples_folder):
+        if filename == 'instructions.txt':
+            continue
+        if os.path.isdir(os.path.join(custom_samples_folder, filename)):
+            continue
+        expected_values = {}
+        for pattern, fieldname, _type in pattern_field_name_type:
+            match = re.findall(pattern, filename)
+            if match:
+                expected_values[fieldname] = _type(match[0])
+        if expected_values:
+            expected_values['_do_not_require_all_values'] = True
+            retval[os.path.join('custom_samples', filename)] = expected_values
+        else:
+            # if there are no expected values, just try parsing the file
+            retval[os.path.join('custom_samples', filename)] = {}
+    return retval
+
+
+testfiles.update(load_custom_samples())
 
 
 def almost_equal_float(val1, val2):
@@ -437,7 +442,11 @@ def startswith(val1, val2):
     return val1.startswith(val2)
 
 
-def compare(results, expected, filename, prev_path=None):
+def error_fmt(value):
+    return '%s (%s)' % (repr(value), type(value))
+
+
+def compare(results, expected, file, prev_path=None):
     assert isinstance(results, dict)
     missing_keys = set(expected.keys()) - set(results)
     assert not missing_keys, 'Missing data in fixture \n%s' % str(missing_keys)
@@ -447,13 +456,14 @@ def compare(results, expected, filename, prev_path=None):
         try:
             expected_val = expected[key]
         except KeyError:
-            assert False, 'Missing field "%s" with value "%s" in fixture in "%s"!' % (key, result_val, filename)
+            assert False, 'Missing field "%s": "%s" in fixture "%s"!' % (
+                key, error_fmt(result_val), file)
         # recurse if the result and expected values are a dict:
         if isinstance(result_val, dict) and isinstance(expected_val, dict):
-            compare(result_val, expected_val, filename, prev_path=key)
+            compare(result_val, expected_val, file, prev_path=key)
         else:
-            fmt_string = 'field "%s": got %s (%s) expected %s (%s) in %s!'
-            fmt_values = (key, repr(result_val), type(result_val), repr(expected_val), type(expected_val), filename)
+            fmt_string = 'field "%s": got %s expected %s in %s!'
+            fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
             op = operator.eq
             if path == 'duration':  # allow duration to be off by 100 ms and a maximum of 1%
                 op = almost_equal_float
@@ -473,11 +483,6 @@ def test_file_reading(testfile, expected):
         if not key.startswith('_') and val is not None
     }
     compare(results, expected, filename)
-
-#
-# def test_generator():
-#     for testfile, expected in testfiles.items():
-#         yield get_info, testfile, expected
 
 
 def test_pathlib_compatibility():
