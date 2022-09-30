@@ -3,7 +3,7 @@ tinytag
 
 tinytag is a library for reading music meta data of most common audio files in pure python
 
-[![Build Status](https://travis-ci.org/devsnd/tinytag.png?branch=master)](https://travis-ci.org/devsnd/tinytag)
+[![Build Status](https://github.com/devsnd/tinytag/actions/workflows/tests.yml/badge.svg)](https://github.com/devsnd/tinytag/actions?query=workflow:%22Tests%22)
 [![Build status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.svg)](https://coveralls.io/r/devsnd/tinytag)
 [![PyPI version](https://badge.fury.io/py/tinytag.svg)](https://pypi.org/project/tinytag/)
