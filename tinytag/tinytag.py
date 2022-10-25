@@ -151,6 +151,8 @@ class TinyTag(object):
             b'^fLaC': Flac,
             b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,
             b'....ftypM4A': MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
+            b'....ftypaaxc': MP4,
+            b'....ftypaax': MP4,
             b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
             b'^FORM....AIFF': Aiff,
             b'^FORM....AIFC': Aiff,
