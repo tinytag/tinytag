@@ -1045,7 +1045,7 @@ class Wave(TinyTag):
                     field = sub_fh.read(4)
                     while len(field) == 4:
                         data_length = struct.unpack('I', sub_fh.read(4))[0]
-                        data_length += data_length % 2  # IFF chunks are padded to an even number of bytes
+                        data_length += data_length % 2  # IFF chunks are padded to an even size
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
