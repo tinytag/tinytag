@@ -1020,6 +1020,7 @@ class Wave(TinyTag):
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
+            subchunksize += subchunksize % 2  # IFF chunks are padded to an even number of bytes
             if subchunkid == b'fmt ':
                 _, self.channels, self.samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, self.bitdepth = struct.unpack('<IHH', fh.read(8))
@@ -1044,13 +1045,12 @@ class Wave(TinyTag):
                     field = sub_fh.read(4)
                     while len(field) == 4:
                         data_length = struct.unpack('I', sub_fh.read(4))[0]
+                        data_length += data_length % 2  # IFF chunks are padded to an even number of bytes
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
                             self._set_field(fieldname, codecs.decode(data, 'utf-8'))
                         field = sub_fh.read(4)
-                        if field[0:1] == b'\x00':  # sometimes an additional zero-byte is present
-                            field = field[1:] + sub_fh.read(1)
             elif subchunkid in (b'id3 ', b'ID3 ') and self._parse_tags:
                 id3 = ID3(fh, 0)
                 id3._parse_id3v2(fh)
