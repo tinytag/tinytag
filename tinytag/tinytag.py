@@ -930,16 +930,16 @@ class Ogg(TinyTag):
                 continue
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
+                key_lowercase = key.lower()
 
-                if key == "METADATA_BLOCK_PICTURE" and self._load_image:
+                if key_lowercase == "metadata_block_picture" and self._load_image:
                     if DEBUG:
                         stderr('Found Vorbis Image', key, value[:64])
-
                     self._image_data = Flac._parse_image(BytesIO(base64.b64decode(value)))
                 else:
                     if DEBUG:
                         stderr('Found Vorbis Comment', key, value[:64])
-                    fieldname = comment_type_to_attr_mapping.get(key.lower())
+                    fieldname = comment_type_to_attr_mapping.get(key_lowercase)
                     if fieldname:
                         self._set_field(fieldname, value)
 
@@ -1140,6 +1140,7 @@ class Flac(TinyTag):
         fh.read(description_len)
         width, height, depth, colors, pic_len = struct.unpack('>5I', fh.read(20))
         return fh.read(pic_len)
+
 
 class Wma(TinyTag):
     ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
