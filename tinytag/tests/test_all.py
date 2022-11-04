@@ -658,6 +658,16 @@ def test_flac_image_loading():
                                                         'header')
 
 
+def test_ogg_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 1000 < len(image_data) < 2000, ('Image is %d bytes but should be around 1.2kb' %
+                                           len(image_data))
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
+                                                        'header')
+
+
 def test_aiff_image_loading():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/test_with_image.aiff'), image=True)
     image_data = tag.get_image()
