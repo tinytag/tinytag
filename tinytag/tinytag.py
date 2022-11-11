@@ -89,12 +89,14 @@ class TinyTag(object):
         self._filename = None  # for debugging purposes
         self._default_encoding = None  # allow override for some file formats
         self.filesize = filesize
+        self.adrmBlob = None  # aax support
         self.album = None
         self.albumartist = None
         self.artist = None
         self.audio_offset = None
         self.bitrate = None
         self.channels = None
+        self.checksum = None  # aax support
         self.comment = None
         self.composer = None
         self.disc = None
@@ -445,6 +447,7 @@ class MP4(TinyTag):
 
     VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
+    AAVD_DATA_TREE = {b'aavd': {b'adrm'}}  # unique to audible .aax files
 
     def _determine_duration(self, fh):
         self._traverse_atoms(fh, path=self.AUDIO_DATA_TREE)
@@ -487,7 +490,14 @@ class MP4(TinyTag):
                         stderr(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if fieldname:
                         self._set_field(fieldname, value)
-            # if no action was specified using dict or callable, jump over atom
+            # Adrm blob described in mov_read_adrm()
+            # https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c
+            elif atom_type in self.AAVD_DATA_TREE:
+                fh.seek(83, os.SEEK_CUR)  # absolute position 0x251
+                self._set_field('adrmBlob', fh.read(56))
+                fh.seek(16, os.SEEK_CUR)  # absolute position 0x28d
+                self._set_field('checksum', fh.read(20))
+            # if we can't figure out what to do with this atom, just skip it and move on
             else:
                 fh.seek(atom_size, os.SEEK_CUR)
             # check if we have reached the end of this branch:
