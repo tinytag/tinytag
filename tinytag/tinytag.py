@@ -413,7 +413,7 @@ class MP4(TinyTag):
         # b'cpil':   {b'data': Parser.make_data_atom_parser('extra.compilation')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         # need test-data for this
-        # b'\xa9des': {b'data': Parser.make_data_atom_parser('description')},
+        b'\xa9des': {b'data': Parser.make_data_atom_parser('extra.description')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'\xa9lyr': {b'data': Parser.make_data_atom_parser('extra.lyrics')},
         b'\xa9mvn': {b'data': Parser.make_data_atom_parser('movement')},
