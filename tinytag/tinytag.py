@@ -493,9 +493,9 @@ class MP4(TinyTag):
             # Adrm blob described in mov_read_adrm()
             # https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c
             elif atom_type in self.AAVD_DATA_TREE:
-                fh.seek(83, os.SEEK_CUR)  # absolute position 0x251
+                fh.seek(95, os.SEEK_CUR)  # absolute position 0x251
                 self._set_field('adrmBlob', fh.read(56))
-                fh.seek(16, os.SEEK_CUR)  # absolute position 0x28d
+                fh.seek(4, os.SEEK_CUR)  # absolute position 0x28d
                 self._set_field('checksum', fh.read(20))
             # if we can't figure out what to do with this atom, just skip it and move on
             else:
