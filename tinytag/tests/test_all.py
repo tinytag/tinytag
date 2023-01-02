@@ -710,7 +710,7 @@ def test_to_str():
     assert repr(tag)  # since the dict is not ordered we cannot == 'somestring'
     assert str(tag) == (
         '{"adrmBlob": null, "album": "Hymns for the Exiled", "albumartist": null, '
-        '"artist": "Anais Mitchell", "audio_offset": 2225, "bitdepth": null, ' '"bitrate": 160.0, '
+        '"artist": "Anais Mitchell", "audio_offset": 2225, "bitdepth": null, "bitrate": 160.0, '
         '"channels": 2, "checksum": null, "comment": "Waterbug Records, www.anaismitchell.com", '
         '"composer": null, "description": null, "disc": null, "disc_total": null, "duration": '
         '0.13836297152858082, "extra": {}, "filesize": 5120, "genre": null, "samplerate": 44100, '
