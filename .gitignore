@@ -42,5 +42,8 @@ test-results/
 .venv
 venv
 
+# Visual Studio Code
+.vscode
+
 # custom test samples
 tinytag/tests/custom_samples
