@@ -368,7 +368,19 @@ testfiles = OrderedDict([
          'track_total': '27', 'disc': '1', 'disc_total': '1', 'samplerate': 44100,
          'duration': 166.62639455782312, 'genre': 'Classical', 'albumartist': 'Howard Shelley',
          'channels': 2, 'bitrate': 436.743, 'bitdepth': 16}),
-
+    ('samples/mpeg4_desc_cmt.m4a', {
+        'filesize': 32006,
+        'bitrate': 101.038,
+        'channels': 2,
+        'comment': 'test comment',
+        'duration': 2.36,
+        'extra': {'description': 'test description'},
+        'samplerate': 44100}),
+    ('samples/mpeg4_xa9des.m4a', {
+        'filesize': 2639,
+        'comment': 'test comment',
+        'duration': 727.1066666666667,
+        'extra': {'description': 'test description'}}),
     # AIFF
     ('samples/test-tagged.aiff',
         {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 177620, 'artist': 'theartist',

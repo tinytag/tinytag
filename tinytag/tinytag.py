@@ -411,8 +411,7 @@ class MP4(TinyTag):
         # need test-data for this
         # b'cpil':   {b'data': Parser.make_data_atom_parser('extra.compilation')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
-        # need test-data for this
-        # b'\xa9des': {b'data': Parser.make_data_atom_parser('description')},
+        b'\xa9des': {b'data': Parser.make_data_atom_parser('extra.description')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'\xa9lyr': {b'data': Parser.make_data_atom_parser('extra.lyrics')},
         b'\xa9mvn': {b'data': Parser.make_data_atom_parser('movement')},
@@ -420,8 +419,7 @@ class MP4(TinyTag):
         b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'aART': {b'data': Parser.make_data_atom_parser('albumartist')},
         b'cprt': {b'data': Parser.make_data_atom_parser('extra.copyright')},
-        # need test-data for this
-        # b'desc': {b'data': Parser.make_data_atom_parser('extra.description')},
+        b'desc': {b'data': Parser.make_data_atom_parser('extra.description')},
         b'disk': {b'data': Parser.make_number_parser('disc', 'disc_total')},
         b'gnre': {b'data': Parser.parse_id3v1_genre},
         b'trkn': {b'data': Parser.make_number_parser('track', 'track_total')},
