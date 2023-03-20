@@ -401,6 +401,8 @@ testfiles = OrderedDict([
         {'extra': {}, 'channels': 2, 'duration': 2.936625, 'filesize': 47148,
          'bitrate': 256.0, 'samplerate': 8000, 'bitdepth': 16, 'audio_offset': 154,
          'comment': 'AFspdate: 2003-01-30 03:28:34 UTCuser: kabal@CAPELLAprogram: CopyAudio'}),
+    ('samples/invalid_sample_rate.aiff',
+        {'extra': {}, 'channels': 1, 'filesize': 4096, 'bitdepth': 16}),
 
 ])
 
