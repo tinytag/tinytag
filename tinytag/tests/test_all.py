@@ -230,7 +230,7 @@ testfiles = OrderedDict([
          'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25',
          'filesize': 10000, 'artist': 'nomico',
          'album': 'Exserens - A selection of Alstroemeria Records',
-         'comment': 'ARCD0018 - Lovelight'}),
+         'comment': 'ARCD0018 - Lovelight', 'disc_total': '1', 'track_total': '13'}),
     ('samples/8khz_5s.opus',
         {'extra': {}, 'filesize': 7251, 'channels': 1, 'samplerate': 48000, 'duration': 5.0}),
 
