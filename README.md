@@ -88,6 +88,19 @@ specified.
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
 Changelog:
+ * 1.9.0  (unreleased)
+   - Add bitdepth attribute for lossless audio #157
+   - Add recognition of Audible formats #163 (thanks to snowskeleton)
+   - Add .m4v to list of supported file extensions #142
+   - Aiff: Implement replacement for Python's aifc module #164
+   - ID3: Only check for language in COMM and USLT frames #147
+   - ID3: Read the correct number of bytes from Xing header #154
+   - ID3: Add support for ID3v2.4 TDRC frame #156 (thanks to Uninen)
+   - M4A: Add description fields #168 (thanks to snowskeleton)
+   - RIFF: Handle tags containing extra zero-byte #141
+   - Vorbis: Parse OGG cover art #144 (thanks to Pseurae)
+   - Vorbis: Support standard disctotal/tracktotal comments #171
+   - Wave: Add proper support for padded IFF chunks
  * 1.8.1  (2022-03-12) [still mathiascode-edition]
    - MP3 ID3: Set correct file position if tag reading is disabled #119 (thanks to mathiascode)
    - MP3: Fix incorrect calculation of duration for VBR encoded MP3s #128 (thanks to mathiascode)
