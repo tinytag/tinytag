@@ -77,6 +77,14 @@ def _bytes_to_int(b):
 
 
 class TinyTag(object):
+    SUPPORTED_FILE_EXTENSIONS = [
+        '.mp1', '.mp2', '.mp3',
+        '.oga', '.ogg', '.opus',
+        '.wav', '.flac', '.wma',
+        '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
+        '.aiff', '.aifc', '.aif', '.afc'
+    ]
+
     def __init__(self, filehandler, filesize, ignore_errors=False):
         # This is required for compatibility between python2 and python3
         # in python2 there is a difference between `str` and `unicode`
