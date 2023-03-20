@@ -36,12 +36,12 @@ jobs:
           DEBUG: true
 
       - name: Coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.10'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.10'
         run: coverage lcov
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.10'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.10'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.lcov
