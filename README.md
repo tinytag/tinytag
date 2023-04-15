@@ -76,7 +76,7 @@ For non-common fields and fields specific to single file formats use extra
 The `extra` dict currently *may* contain the following data:
    `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
 
-Aditionally you can also get cover images from ID3 tags:
+Additionally you can also get cover images from ID3 tags:
 
     tag = TinyTag.get('/some/music.mp3', image=True)
     image_data = tag.get_image()
