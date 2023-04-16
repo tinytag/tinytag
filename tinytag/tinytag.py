@@ -563,7 +563,7 @@ class ID3(TinyTag):
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
-        # save position after the ID3 tag for duration mesurement speedup
+        # save position after the ID3 tag for duration measurement speedup
         self._bytepos_after_id3v2 = None
 
     @classmethod
@@ -1100,7 +1100,7 @@ class Flac(TinyTag):
                 if len(stream_info_header) < 34:  # invalid streaminfo
                     return
                 header = struct.unpack('HH3s3s8B16s', stream_info_header)
-                # From the ciph documentation:
+                # From the xiph documentation:
                 # py | <bits>
                 # ----------------------------------------------
                 # H  | <16>  The minimum block size (in samples)

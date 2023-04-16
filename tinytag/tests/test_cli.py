@@ -38,7 +38,7 @@ def test_print_help():
 
 
 @pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile cant be reopened on windows")
+                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_long_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
@@ -51,7 +51,7 @@ def test_save_image_long_opt():
 
 
 @pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile cant be reopened on windows")
+                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_short_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
@@ -60,7 +60,7 @@ def test_save_image_short_opt():
 
 
 @pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile cant be reopened on windows")
+                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_bulk():
     temp_file = NamedTemporaryFile(suffix='.jpg')
     temp_file_no_ext = temp_file.name[:-4]
