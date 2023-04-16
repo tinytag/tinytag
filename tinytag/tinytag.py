@@ -1100,7 +1100,7 @@ class Flac(TinyTag):
                 if len(stream_info_header) < 34:  # invalid streaminfo
                     return
                 header = struct.unpack('HH3s3s8B16s', stream_info_header)
-                # From the cipher documentation:
+                # From the xiph documentation:
                 # py | <bits>
                 # ----------------------------------------------
                 # H  | <16>  The minimum block size (in samples)
