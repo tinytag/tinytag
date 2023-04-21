@@ -88,7 +88,7 @@ specified.
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
 Changelog:
- * 1.9.0  (unreleased)
+ * 1.9.0  (2023-04-23)
    - Add bitdepth attribute for lossless audio #157
    - Add recognition of Audible formats #163 (thanks to snowskeleton)
    - Add .m4v to list of supported file extensions #142
