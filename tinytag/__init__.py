@@ -4,7 +4,7 @@ import sys
 from .tinytag import TinyTag, TinyTagException, ID3, Ogg, Wave, Flac  # noqa: F401
 
 
-__version__ = '1.8.1'
+__version__ = '1.9.0'
 
 
 if __name__ == '__main__':
