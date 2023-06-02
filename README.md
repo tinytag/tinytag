@@ -48,6 +48,14 @@ Alternatively you can use tinytag directly on the command line:
 
 Check `python -m tinytag --help` for all CLI options, for example other output formats
 
+To receive a list of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
+
+    TinyTag.SUPPORTED_FILE_EXTENSIONS
+
+Alternatively, check if a file is supported:
+
+    is_supported = TinyTag.is_supported('/some/music.mp3')
+
 List of possible attributes you can get with TinyTag:
 
     tag.album         # album as string
