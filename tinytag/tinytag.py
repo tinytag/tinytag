@@ -170,40 +170,48 @@ class TinyTag(object):
                 return parser
 
     @classmethod
-    def get_parser_class(cls, filename, filehandle):
+    def get_parser_class(cls, filename=None, filehandle=None):
         if cls != TinyTag:  # if `get` is invoked on TinyTag, find parser by ext
             return cls  # otherwise use the class on which `get` was invoked
-        parser_class = cls._get_parser_for_filename(filename)
-        if parser_class is not None:
-            return parser_class
+        if filename:
+            parser_class = cls._get_parser_for_filename(filename)
+            if parser_class is not None:
+                return parser_class
         # try determining the file type by magic byte header
-        parser_class = cls._get_parser_for_file_handle(filehandle)
-        if parser_class is not None:
-            return parser_class
+        if filehandle:
+            parser_class = cls._get_parser_for_file_handle(filehandle)
+            if parser_class is not None:
+                return parser_class
         raise TinyTagException('No tag reader found to support filetype! ')
 
     @classmethod
-    def get(cls, filename, tags=True, duration=True, image=False, ignore_errors=False,
-            encoding=None):
-        try:  # cast pathlib.Path to str
-            import pathlib
-            if isinstance(filename, pathlib.Path):
-                filename = str(filename.absolute())
-        except ImportError:
-            pass
+    def get(cls, filename=None, tags=True, duration=True, image=False,
+            ignore_errors=False, encoding=None, file_obj=None):
+        should_open_file = (file_obj is None)
+        if should_open_file:
+            try:
+                file_obj = io.open(filename, 'rb')
+            except TypeError:
+                file_obj = io.open(str(filename.absolute()), 'rb')  # Python 3.4/3.5 pathlib support
+            filename = file_obj.name
         else:
-            filename = os.path.expanduser(filename)
-        size = os.path.getsize(filename)
-        if not size > 0:
-            return TinyTag(None, 0)
-        with io.open(filename, 'rb') as af:
-            parser_class = cls.get_parser_class(filename, af)
-            tag = parser_class(af, size, ignore_errors=ignore_errors)
+            file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
+        try:
+            file_obj.seek(0, os.SEEK_END)
+            filesize = file_obj.tell()
+            file_obj.seek(0)
+            if filesize <= 0:
+                return TinyTag(None, filesize)
+            parser_class = cls.get_parser_class(filename, file_obj)
+            tag = parser_class(file_obj, filesize, ignore_errors=ignore_errors)
             tag._filename = filename
             tag._default_encoding = encoding
             tag.load(tags=tags, duration=duration, image=image)
             tag.extra = dict(tag.extra)  # turn default dict into dict so that it can throw KeyError
             return tag
+        finally:
+            if should_open_file:
+                file_obj.close()
 
     def __str__(self):
         return json.dumps(OrderedDict(sorted(self.as_dict().items())))

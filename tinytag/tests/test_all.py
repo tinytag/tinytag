@@ -510,6 +510,13 @@ def test_pathlib_compatibility():
     TinyTag.get(filename)
 
 
+def test_bytesio_compatibility():
+    testfile = next(iter(testfiles.keys()))
+    filename = os.path.join(testfolder, testfile)
+    with io.open(filename, 'rb') as file_handle:
+        TinyTag.get(file_obj=io.BytesIO(file_handle.read()))
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason='Windows does not support binary paths')
 def test_binary_path_compatibility():
     binary_file_path = os.path.join(os.path.dirname(__file__).encode('utf-8'), b'\x01.mp3')
