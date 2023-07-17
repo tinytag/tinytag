@@ -142,7 +142,11 @@ class TinyTag(object):
             (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
         }
         if not isinstance(filename, bytes):  # convert filename to binary
-            filename = filename.encode('ASCII', errors='ignore').lower()
+            try:
+                filename = filename.encode('ASCII', errors='ignore')
+            except AttributeError:
+                filename = bytes(filename)  # pathlib
+        filename = filename.lower()
         for ext, tagclass in mapping.items():
             if filename.endswith(ext):
                 return tagclass
@@ -193,7 +197,6 @@ class TinyTag(object):
                 file_obj = io.open(filename, 'rb')
             except TypeError:
                 file_obj = io.open(str(filename.absolute()), 'rb')  # Python 3.4/3.5 pathlib support
-            filename = file_obj.name
         else:
             file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
         try:

@@ -354,8 +354,8 @@ testfiles = OrderedDict([
          'composer': "Millie Jackson - Get It Out 'cha System - 1978"}),
     ('samples/iso8859_with_image.m4a',
         {'extra': {}, 'artist': 'Major Lazer', 'filesize': 57017,
-         'title': 'Cold Water (feat. Justin Bieber & M�)',
-         'album': 'Cold Water (feat. Justin Bieber & M�) - Single', 'year': '2016',
+         'title': 'Cold Water (feat. Justin Bieber & M\uFFFD)',
+         'album': 'Cold Water (feat. Justin Bieber & M\uFFFD) - Single', 'year': '2016',
          'samplerate': 44100, 'duration': 188.545, 'genre': 'Electronic;Music',
          'albumartist': 'Major Lazer', 'channels': 2, 'bitrate': 125.584,
          'comment': '? 2016 Mad Decent'}),
@@ -508,6 +508,7 @@ def test_pathlib_compatibility():
     testfile = next(iter(testfiles.keys()))
     filename = pathlib.Path(testfolder) / testfile
     TinyTag.get(filename)
+    assert TinyTag.is_supported(filename)
 
 
 def test_bytesio_compatibility():
