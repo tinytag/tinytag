@@ -93,13 +93,20 @@ specified.
 
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
+To use a file-like object (e.g. BytesIO) instead of a file path, pass a
+`file_obj` keyword argument:
+
+    TinyTag.get(file_obj=your_file_obj)
+
 
 ## Changelog
 
-### 1.9.1  (unreleased)
+### 1.10.0  (unreleased)
 
 - Fix deprecations related to setuptools #176
 - Add list of supported file extensions #177
+- Add support for file-like objects (BytesIO) #178
+- Fix pathlib support in TinyTag.is_supported()
 
 ### 1.9.0  (2023-04-23)
 
