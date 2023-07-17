@@ -197,7 +197,7 @@ class TinyTag(object):
                 file_obj = io.open(filename, 'rb')
             except TypeError:
                 file_obj = io.open(str(filename.absolute()), 'rb')  # Python 3.4/3.5 pathlib support
-        else:
+        elif isinstance(file_obj, io.BytesIO):
             file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
         try:
             file_obj.seek(0, os.SEEK_END)

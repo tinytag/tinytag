@@ -511,11 +511,14 @@ def test_pathlib_compatibility():
     assert TinyTag.is_supported(filename)
 
 
-def test_bytesio_compatibility():
+def test_file_obj_compatibility():
     testfile = next(iter(testfiles.keys()))
     filename = os.path.join(testfolder, testfile)
     with io.open(filename, 'rb') as file_handle:
-        TinyTag.get(file_obj=io.BytesIO(file_handle.read()))
+        tag = TinyTag.get(file_obj=file_handle)
+        file_handle.seek(0)
+        tag_bytesio = TinyTag.get(file_obj=io.BytesIO(file_handle.read()))
+        assert tag.filesize == tag_bytesio.filesize
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason='Windows does not support binary paths')
