@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # tinytag - an audio meta info reader
-# Copyright (c) 2014-2022 Tom Wallroth
+# Copyright (c) 2014-2023 Tom Wallroth
+# Copyright (c) 2021-2023 Mat (mathiascode)
 #
-# Sources on github:
+# Sources on GitHub:
 # http://github.com/devsnd/tinytag/
 
 # MIT License
 
-# Copyright (c) 2014-2022 Tom Wallroth
+# Copyright (c) 2014-2023 Tom Wallroth, Mat (mathiascode)
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
