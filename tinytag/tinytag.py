@@ -84,6 +84,8 @@ class TinyTag(object):
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
         '.aiff', '.aifc', '.aif', '.afc'
     ]
+    _file_extension_mapping = None
+    _magic_bytes_mapping = None
 
     def __init__(self, filehandler, filesize, ignore_errors=False):
         # This is required for compatibility between python2 and python3
@@ -132,44 +134,46 @@ class TinyTag(object):
 
     @classmethod
     def _get_parser_for_filename(cls, filename):
-        mapping = {
-            (b'.mp1', b'.mp2', b'.mp3'): ID3,
-            (b'.oga', b'.ogg', b'.opus'): Ogg,
-            (b'.wav',): Wave,
-            (b'.flac',): Flac,
-            (b'.wma',): Wma,
-            (b'.m4b', b'.m4a', b'.m4r', b'.m4v', b'.mp4', b'.aax', b'.aaxc'): MP4,
-            (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
-        }
+        if cls._file_extension_mapping is None:
+            cls._file_extension_mapping = {
+                (b'.mp1', b'.mp2', b'.mp3'): ID3,
+                (b'.oga', b'.ogg', b'.opus'): Ogg,
+                (b'.wav',): Wave,
+                (b'.flac',): Flac,
+                (b'.wma',): Wma,
+                (b'.m4b', b'.m4a', b'.m4r', b'.m4v', b'.mp4', b'.aax', b'.aaxc'): MP4,
+                (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
+            }
         if not isinstance(filename, bytes):  # convert filename to binary
             try:
                 filename = filename.encode('ASCII', errors='ignore')
             except AttributeError:
                 filename = bytes(filename)  # pathlib
         filename = filename.lower()
-        for ext, tagclass in mapping.items():
+        for ext, tagclass in cls._file_extension_mapping.items():
             if filename.endswith(ext):
                 return tagclass
 
     @classmethod
     def _get_parser_for_file_handle(cls, fh):
         # https://en.wikipedia.org/wiki/List_of_file_signatures
-        magic_bytes_mapping = {
-            b'^ID3': ID3,
-            b'^\xff\xfb': ID3,
-            b'^OggS': Ogg,
-            b'^RIFF....WAVE': Wave,
-            b'^fLaC': Flac,
-            b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,
-            b'....ftypM4A': MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
-            b'....ftypaax': MP4,  # Audible proprietary M4A container
-            b'....ftypaaxc': MP4,  # Audible proprietary M4A container
-            b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
-            b'^FORM....AIFF': Aiff,
-            b'^FORM....AIFC': Aiff,
-        }
-        header = fh.peek(max(len(sig) for sig in magic_bytes_mapping))
-        for magic, parser in magic_bytes_mapping.items():
+        if cls._magic_bytes_mapping is None:
+            cls._magic_bytes_mapping = {
+                b'^ID3': ID3,
+                b'^\xff\xfb': ID3,
+                b'^OggS': Ogg,
+                b'^RIFF....WAVE': Wave,
+                b'^fLaC': Flac,
+                b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,
+                b'....ftypM4A': MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
+                b'....ftypaax': MP4,  # Audible proprietary M4A container
+                b'....ftypaaxc': MP4,  # Audible proprietary M4A container
+                b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
+                b'^FORM....AIFF': Aiff,
+                b'^FORM....AIFC': Aiff,
+            }
+        header = fh.peek(max(len(sig) for sig in cls._magic_bytes_mapping))
+        for magic, parser in cls._magic_bytes_mapping.items():
             if re.match(magic, header):
                 return parser
 
