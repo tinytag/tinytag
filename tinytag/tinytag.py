@@ -80,7 +80,7 @@ def _bytes_to_int(b):
 class TinyTag(object):
     SUPPORTED_FILE_EXTENSIONS = [
         '.mp1', '.mp2', '.mp3',
-        '.oga', '.ogg', '.opus',
+        '.oga', '.ogg', '.opus', '.spx',
         '.wav', '.flac', '.wma',
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
         '.aiff', '.aifc', '.aif', '.afc'
@@ -139,7 +139,7 @@ class TinyTag(object):
         if cls._file_extension_mapping is None:
             cls._file_extension_mapping = {
                 (b'.mp1', b'.mp2', b'.mp3'): ID3,
-                (b'.oga', b'.ogg', b'.opus'): Ogg,
+                (b'.oga', b'.ogg', b'.opus', b'.spx'): Ogg,
                 (b'.wav',): Wave,
                 (b'.flac',): Flac,
                 (b'.wma',): Wma,
@@ -165,6 +165,7 @@ class TinyTag(object):
                 b'^\xff\xfb': ID3,
                 b'^OggS.........................FLAC': Ogg,
                 b'^OggS........................Opus': Ogg,
+                b'^OggS........................Speex': Ogg,
                 b'^OggS.........................vorbis': Ogg,
                 b'^RIFF....WAVE': Wave,
                 b'^fLaC': Flac,
@@ -920,6 +921,7 @@ class Ogg(TinyTag):
     def _parse_tag(self, fh):
         page_start_pos = fh.tell()  # set audio_offset later if its audio data
         check_flac_second_packet = False
+        check_speex_second_packet = False
         for packet in self._parse_pages(fh):
             walker = BytesIO(packet)
             if packet[0:7] == b"\x01vorbis":
@@ -955,13 +957,27 @@ class Ogg(TinyTag):
                 self.update(flactag, all_fields=True)
                 check_flac_second_packet = True
             elif check_flac_second_packet:
+                # second packet contains FLAC metadata block
                 if self._parse_tags:
-                    # second packet contains FLAC metadata block
                     meta_header = struct.unpack('B3B', walker.read(4))
                     block_type = meta_header[0] & 0x7f
                     if block_type == Flac.METADATA_VORBIS_COMMENT:
                         self._parse_vorbis_comment(walker)
                 check_flac_second_packet = False
+            elif packet[0:8] == b'Speex   ':
+                # https://speex.org/docs/manual/speex-manual/node8.html
+                if self._parse_duration:
+                    walker.seek(36, os.SEEK_CUR)  # jump over header name and irrelevant fields
+                    (self.samplerate, _, _, self.channels,
+                     self.bitrate) = struct.unpack("<5i", walker.read(20))
+                check_speex_second_packet = True
+            elif check_speex_second_packet:
+                if self._parse_tags:
+                    length = struct.unpack('I', walker.read(4))[0]  # starts with a comment string
+                    comment = codecs.decode(walker.read(length), 'UTF-8')
+                    self._set_field('comment', comment)
+                    self._parse_vorbis_comment(walker, contains_vendor=False)  # other tags
+                check_speex_second_packet = False
             else:
                 if DEBUG:
                     stderr('Unsupported Ogg page type: ', packet[:16])
@@ -969,7 +985,7 @@ class Ogg(TinyTag):
             page_start_pos = fh.tell()
         self._tags_parsed = True
 
-    def _parse_vorbis_comment(self, fh):
+    def _parse_vorbis_comment(self, fh, contains_vendor=True):
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         # https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Vorbis.html
@@ -978,6 +994,7 @@ class Ogg(TinyTag):
             'albumartist': 'albumartist',
             'title': 'title',
             'artist': 'artist',
+            'author': 'artist',
             'date': 'year',
             'tracknumber': 'track',
             'tracktotal': 'track_total',
@@ -993,8 +1010,9 @@ class Ogg(TinyTag):
             'isrc': 'extra.isrc',
             'lyrics': 'extra.lyrics',
         }
-        vendor_length = struct.unpack('I', fh.read(4))[0]
-        fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
+        if contains_vendor:
+            vendor_length = struct.unpack('I', fh.read(4))[0]
+            fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
         elements = struct.unpack('I', fh.read(4))[0]
         for i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]

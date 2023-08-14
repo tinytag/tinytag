@@ -223,14 +223,6 @@ testfiles = OrderedDict([
          'audio_offset': 0, 'bitrate': 112.0, 'duration': 3.684716553287982,
          'genre': 'Some Genre', 'samplerate': 44100, 'title': 'A Title', 'track': '2',
          'year': '2007', 'composer': 'some composer', 'comment': 'A Comment'}),
-    ('samples/test_flac.oga',
-        {'extra': {'copyright': 'test3', 'isrc': 'test4', 'lyrics': 'test7'},
-         'filesize': 9273, 'album': 'test2', 'artist': 'test6', 'comment': 'test5',
-         'bitrate': 20.022488249118684, 'duration': 3.705034013605442, 'channels': 2,
-         'genre': 'Acoustic', 'samplerate': 44100, 'bitdepth': 16, 'title': 'test1', 'track': '5',
-         'year': '2023'}),
-
-    # OPUS
     ('samples/test.opus',
         {'extra': {}, 'albumartist': 'Alstroemeria Records', 'samplerate': 48000, 'channels': 2,
          'track': '1', 'disc': '1', 'title': 'Bad Apple!!', 'duration': 2.0, 'year': '2008.05.25',
@@ -239,6 +231,16 @@ testfiles = OrderedDict([
          'comment': 'ARCD0018 - Lovelight', 'disc_total': '1', 'track_total': '13'}),
     ('samples/8khz_5s.opus',
         {'extra': {}, 'filesize': 7251, 'channels': 1, 'samplerate': 48000, 'duration': 5.0}),
+    ('samples/test_flac.oga',
+        {'extra': {'copyright': 'test3', 'isrc': 'test4', 'lyrics': 'test7'},
+         'filesize': 9273, 'album': 'test2', 'artist': 'test6', 'comment': 'test5',
+         'bitrate': 20.022488249118684, 'duration': 3.705034013605442, 'channels': 2,
+         'genre': 'Acoustic', 'samplerate': 44100, 'bitdepth': 16, 'title': 'test1', 'track': '5',
+         'year': '2023'}),
+    ('samples/test.spx',
+        {'extra': {}, 'filesize': 7921, 'channels': 1, 'samplerate': 16000, 'bitrate': -1,
+         'duration': 2.1445625, 'artist': 'test1', 'title': 'test2',
+         'comment': 'Encoded with Speex 1.2.0'}),
 
     # WAV
     ('samples/test.wav',

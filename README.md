@@ -21,7 +21,7 @@ tinytag is a library for reading music meta data of most common audio files in p
     * MP3 / MP2 / MP1 (ID3 v1, v1.1, v2.2, v2.3+)
     * M4A (AAC / ALAC)
     * Wave / RIFF
-    * OGG (FLAC / Opus / Vorbis)
+    * OGG (FLAC / Opus / Speex / Vorbis)
     * FLAC
     * WMA
     * AIFF / AIFF-C
