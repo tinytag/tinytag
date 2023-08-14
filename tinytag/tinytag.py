@@ -985,7 +985,7 @@ class Ogg(TinyTag):
         # for the spec, see: https://wiki.xiph.org/Ogg
         previous_page = b''  # contains data from previous (continuing) pages
         header_data = fh.read(27)  # read ogg page header
-        while len(header_data) != 0:
+        while len(header_data) == 27:
             header = struct.unpack('<4sBBqIIiB', header_data)
             # https://xiph.org/ogg/doc/framing.html
             oggs, version, flags, pos, serial, pageseq, crc, segments = header
@@ -1113,7 +1113,7 @@ class Flac(TinyTag):
     def _determine_duration(self, fh):
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
-        while len(header_data):
+        while len(header_data) == 4:
             meta_header = struct.unpack('B3B', header_data)
             block_type = meta_header[0] & 0x7f
             is_last_block = meta_header[0] & 0x80
