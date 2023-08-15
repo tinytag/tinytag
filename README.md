@@ -74,12 +74,14 @@ List of possible attributes you can get with TinyTag:
     tag.track_total   # total number of tracks as string
     tag.year          # year or date as string
 
-For non-common fields and fields specific to single file formats, use `extra`:
+For non-common fields and fields specific to certain file formats, use `extra`:
 
     tag.extra         # a dict of additional data
 
-The `extra` dict currently *may* contain the following data:
-   `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
+The following standard `extra` field names are used when file formats provide relevant data:
+   `url`, `isrc`, `initial_key`, `lyrics`, `copyright`
+
+Any other `extra` field names are not guaranteed to be consistent across audio formats.
 
 Additionally you can also get cover images from ID3 tags:
 
