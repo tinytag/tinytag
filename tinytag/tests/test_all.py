@@ -693,8 +693,18 @@ def test_ogg_image_loading():
                                                         'header')
 
 
+def test_wav_image_loading():
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/wav_with_image.wav'), image=True)
+    image_data = tag.get_image()
+    assert image_data is not None
+    assert 4000 < len(image_data) < 5000, ('Image is %d bytes but should be around 20kb' %
+                                           len(image_data))
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
+                                                        'header')
+
+
 def test_aiff_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/test_with_image.aiff'), image=True)
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/aiff_with_image.aiff'), image=True)
     image_data = tag.get_image()
     assert image_data is not None
     assert 15000 < len(image_data) < 25000, ('Image is %d bytes but should be around 20kb' %

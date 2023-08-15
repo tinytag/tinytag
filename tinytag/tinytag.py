@@ -1077,7 +1077,7 @@ class Wave(TinyTag):
                         field = sub_fh.read(4)
             elif subchunkid in (b'id3 ', b'ID3 ') and self._parse_tags:
                 id3 = ID3(fh, 0)
-                id3._parse_id3v2(fh)
+                id3.load(tags=True, duration=False, image=self._load_image)
                 self.update(id3)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunksize, 1)
