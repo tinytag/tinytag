@@ -162,7 +162,8 @@ class TinyTag(object):
             cls._magic_bytes_mapping = {
                 b'^ID3': ID3,
                 b'^\xff\xfb': ID3,
-                b'^OggS': Ogg,
+                b'^OggS........................Opus': Ogg,
+                b'^OggS.........................vorbis': Ogg,
                 b'^RIFF....WAVE': Wave,
                 b'^fLaC': Flac,
                 b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': Wma,

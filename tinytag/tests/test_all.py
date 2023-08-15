@@ -707,7 +707,8 @@ def test_aiff_image_loading():
     pytest.param(testfile, expected) for testfile, expected in [
         ('samples/detect_mp3_id3.x', ID3),
         ('samples/detect_mp3_fffb.x', ID3),
-        ('samples/detect_ogg.x', Ogg),
+        ('samples/detect_ogg_opus.x', Ogg),
+        ('samples/detect_ogg_vorbis.x', Ogg),
         ('samples/detect_wav.x', Wave),
         ('samples/detect_flac.x', Flac),
         ('samples/detect_wma.x', Wma),
