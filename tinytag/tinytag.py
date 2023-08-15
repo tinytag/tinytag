@@ -283,7 +283,8 @@ class TinyTag(object):
         # update the values of this tag with the values from another tag
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
-                    'genre', 'disc', 'disc_total', 'comment', 'composer']:
+                    'genre', 'disc', 'disc_total', 'comment', 'composer',
+                    '_image_data']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
 
@@ -1336,7 +1337,7 @@ class Wma(TinyTag):
                 fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
 
 
-class Aiff(ID3):
+class Aiff(TinyTag):
     #
     # AIFF is part of the IFF family of file formats.
     #
@@ -1379,7 +1380,7 @@ class Aiff(ID3):
     }
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        ID3.__init__(self, filehandler, filesize, *args, **kwargs)
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
 
     def _parse_tag(self, fh):
@@ -1404,7 +1405,9 @@ class Aiff(ID3):
                     self.samplerate = self.duration = self.bitrate = None  # invalid sample rate
                 fh.seek(sub_chunk_size - 18, 1)  # skip remaining data in chunk
             elif sub_chunk_id in (b'id3 ', b'ID3 ') and self._parse_tags:
-                ID3._parse_tag(self, fh)
+                id3 = ID3(fh, 0)
+                id3.load(tags=True, duration=False, image=self._load_image)
+                self.update(id3)
             elif sub_chunk_id == b'SSND':
                 self.audio_offset = fh.tell()
                 fh.seek(sub_chunk_size, 1)
