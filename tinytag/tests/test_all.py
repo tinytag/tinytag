@@ -66,9 +66,9 @@ testfiles = OrderedDict([
          'album': 'The Young Americans', 'title': 'Play Dead', 'filesize': 256, 'track': '12',
          'artist': 'Björk', 'year': '1993', 'comment': '                            '}),
     ('samples/UTF16.mp3',
-        {'extra': {'text': 'MusicBrainz Artist Id664c3e0e-42d8-48c1-b209-1efca19c0325',
-         'url': 'WIKIPEDIA_RELEASEhttp://en.wikipedia.org/wiki/High_Violet'}, 'track_total': '11',
-         'track': '07', 'artist': 'The National',
+        {'extra': {'text': 'MusicBrainz Artist Id\x00664c3e0e-42d8-48c1-b209-1efca19c0325',
+         'url': 'WIKIPEDIA_RELEASE\x00http://en.wikipedia.org/wiki/High_Violet'},
+         'track_total': '11', 'track': '07', 'artist': 'The National',
          'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld', 'filesize': 20480,
          'genre': 'Indie', 'comment': 'Track 7'}),
     ('samples/utf-8-id3v2.mp3',
@@ -100,14 +100,14 @@ testfiles = OrderedDict([
          'genre': '.'}),
     ('samples/id3v22.TCO.genre.mp3',
         {'extra': {}, 'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa',
-         'comment': 'engiTunPGAP0', 'genre': 'Pop', 'title': 'Applause'}),
+         'comment': 'engiTunPGAP\x000', 'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3',
         {'extra': {'isrc': 'USTC40852229'}, 'filesize': 19980, 'album': 'Ghosts I-IV',
          'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails', 'disc': '1',
          'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36',
          'year': '2008', 'comment': '3/4 time'}),
     ('samples/id3_comment_utf_16_double_bom.mp3',
-        {'extra': {'text': 'LABEL\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace',
+        {'extra': {'text': 'LABEL\x00\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace',
          'artist': 'Johannes Heil & D.Diggler', 'comment': 'Unclear',
          'title': 'The Embrace (Romano Alfieri Remix)',
          'track': '04-johannes_heil_and_d.diggler-the_embrace_(romano_alfieri_remix)',
@@ -122,7 +122,7 @@ testfiles = OrderedDict([
          'duration': 1.0438932496075353}),
     ('samples/id3v1_does_not_overwrite_id3v2.mp3',
         {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian',
-         'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATINGL'},
+         'artist': 'Blind Guardian', 'comment': '', 'extra': {'text': 'LOVE RATING\x00L'},
          'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': '01', 'year': '1992'}),
     ('samples/nicotinetestdata.mp3',
         {'extra': {}, 'filesize': 80919, 'audio_offset': 45, 'channels': 2,
@@ -138,7 +138,7 @@ testfiles = OrderedDict([
          'samplerate': 44100, 'title': 'Tony Hawk VS Wayne Gretzky'}),
     ('samples/id3_xxx_lang.mp3',
         {'extra': {'isrc': 'USVI20400513', 'lyrics': "Don't fret, precious",
-                   'text': 'SCRIPT\ufeffLatn'},
+                   'text': 'SCRIPT\x00\ufeffLatn'},
          'filesize': 6943, 'album': 'eMOTIVe', 'albumartist': 'A Perfect Circle',
          'artist': 'A Perfect Circle', 'audio_offset': 3647, 'bitrate': 192.0, 'channels': 2,
          'duration': 0.13198711063372717, 'genre': 'Rock',
@@ -409,7 +409,8 @@ testfiles = OrderedDict([
     ('samples/M1F1-mulawC-AFsp.afc',
         {'extra': {}, 'channels': 2, 'duration': 2.936625, 'filesize': 47148,
          'bitrate': 256.0, 'samplerate': 8000, 'bitdepth': 16, 'audio_offset': 154,
-         'comment': 'AFspdate: 2003-01-30 03:28:34 UTCuser: kabal@CAPELLAprogram: CopyAudio'}),
+         'comment':
+         'AFspdate: 2003-01-30 03:28:34 UTC\x00user: kabal@CAPELLA\x00program: CopyAudio'}),
     ('samples/invalid_sample_rate.aiff',
         {'extra': {}, 'channels': 1, 'filesize': 4096, 'bitdepth': 16}),
 
@@ -605,7 +606,7 @@ def test_invalid_aiff_file():
 def test_unpad():
     # make sure that unpad only removes trailing 0-bytes
     assert TinyTag._unpad('foo\x00') == 'foo'
-    assert TinyTag._unpad('foo\x00bar\x00') == 'foobar'
+    assert TinyTag._unpad('foo\x00bar\x00') == 'foo\x00bar'
 
 
 def test_mp3_image_loading():

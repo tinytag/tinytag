@@ -299,7 +299,7 @@ class TinyTag(object):
     @staticmethod
     def _unpad(s):
         # strings in mp3 and asf *may* be terminated with a zero byte at the end
-        return s.replace('\x00', '')
+        return s.strip('\x00')
 
 
 class MP4(TinyTag):
