@@ -78,7 +78,16 @@ For non-common fields and fields specific to certain file formats, use `extra`:
     tag.extra         # a dict of additional data
 
 The following standard `extra` field names are used when file formats provide relevant data:
-   `url`, `isrc`, `initial_key`, `lyrics`, `copyright`
+
+    `bpm`
+    `copyright`
+    `director`
+    `initial_key`
+    `isrc`
+    `language`
+    `lyrics`
+    `publisher`
+    `url`
 
 Any other `extra` field names are not guaranteed to be consistent across audio formats.
 

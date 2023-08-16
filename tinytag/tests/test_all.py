@@ -73,7 +73,7 @@ testfiles = OrderedDict([
                    'musicip puid': '6ff97581-1c73-fc05-b4e4-a4ccee12ec84', 'asin': 'B003KVNV4S',
                    'musicbrainz album status': 'Official', 'musicbrainz album type': 'Album',
                    'musicbrainz album release country': 'United States',
-                   'url': 'WIKIPEDIA_RELEASE\u0000http://en.wikipedia.org/wiki/High_Violet'},
+                   'publisher': '4AD'},
          'track_total': 11, 'track': 7, 'artist': 'The National',
          'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld', 'filesize': 20480,
          'genre': 'Indie', 'comment': 'Track 7'}),
@@ -110,7 +110,9 @@ testfiles = OrderedDict([
         {'extra': {}, 'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa',
          'comment': 'engiTunPGAP\x000', 'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3',
-        {'extra': {'copyright': '(c) 2008 nin', 'isrc': 'USTC40852229'}, 'filesize': 19980,
+        {'extra': {'copyright': '(c) 2008 nin', 'isrc': 'USTC40852229', 'bpm': '60',
+                   'url': 'www.nin.com'},
+         'filesize': 19980,
          'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails',
          'disc': 1, 'disc_total': 2, 'title': '1 Ghosts I', 'track': 1, 'track_total': 36,
          'year': '2008', 'comment': '3/4 time'}),
@@ -129,7 +131,7 @@ testfiles = OrderedDict([
          'duration': 1.0438932496075353}),
     ('samples/id3v1_does_not_overwrite_id3v2.mp3',
         {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian',
-         'artist': 'Blind Guardian', 'extra': {'love rating': 'L'},
+         'artist': 'Blind Guardian', 'extra': {'love rating': 'L', 'publisher': 'Century Media'},
          'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': 1, 'year': '1992'}),
     ('samples/nicotinetestdata.mp3',
         {'extra': {}, 'filesize': 80919, 'channels': 2,
@@ -159,7 +161,7 @@ testfiles = OrderedDict([
                    'asin': 'B000641ZIQ', 'musicbrainz album release country': 'US',
                    'isrc': 'USVI20400513', 'lyrics': 'Don\'t fret, precious',
                    'replaygain_track_gain': '-3.95 dB', 'replaygain_track_peak': '0.999969',
-                   'replaygain_album_gain': '-8.26 dB'},
+                   'replaygain_album_gain': '-8.26 dB', 'publisher': 'Virgin Records America'},
          'filesize': 6943, 'album': 'eMOTIVe', 'albumartist': 'A Perfect Circle',
          'artist': 'A Perfect Circle', 'bitrate': 192.0, 'channels': 2,
          'duration': 0.13198711063372717, 'genre': 'Rock',
@@ -414,7 +416,7 @@ testfiles = OrderedDict([
                    'itunnorm': (' 00000358 0000032E 000020AE 000020D9 0003A228 00032A28 00007E20 '
                                 '00007E90 00007BFD 00009293'),
                    'itunes_cddb_ids': '11++', 'ufidhttp://www.cddb.com/id3/taginfo1.html':
-                   '3CD3N48Q241232290U3387DD249F72E6B082B283425ADB9B0F324P1'},
+                   '3CD3N48Q241232290U3387DD249F72E6B082B283425ADB9B0F324P1', 'bpm': 0},
          'samplerate': 44100, 'duration': 314.97, 'bitrate': 256.0, 'channels': 2,
          'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose',
          'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
@@ -428,7 +430,8 @@ testfiles = OrderedDict([
                                 '"-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs'
                                 '/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>'
                                 'asset-info</key>\n\t<dict>\n\t\t<key>flavor</key>\n\t\t<string>'
-                                '2:256</string>\n\t</dict>\n</dict>\n</plist>\n')},
+                                '2:256</string>\n\t</dict>\n</dict>\n</plist>\n'),
+                   'tool': 144255989988720642},
          'bitrate': 256.0, 'track': 1,
          'albumartist': "Millie Jackson - Get It Out 'cha System - 1978",
          'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978',
@@ -467,6 +470,10 @@ testfiles = OrderedDict([
         'comment': 'test comment',
         'duration': 727.1066666666667,
         'extra': {'description': 'test description'}}),
+    ('samples/test3.m4a',
+        {'extra': {'publisher': 'test7', 'bpm': 99999}, 'artist': 'test1', 'composer': 'test8',
+         'filesize': 6260, 'samplerate': 8000, 'duration': 1.294, 'channels': 1,
+         'bitrate': 27.887}),
 
     # AIFF
     ('samples/test-tagged.aiff',
