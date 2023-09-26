@@ -102,10 +102,16 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 ### 1.10.0  (unreleased)
 
-- Fix deprecations related to setuptools #176
-- Add list of supported file extensions #177
+- Add support for OGG FLAC format #182
+- Add support for OGG Speex format #181
+- Wave: support image loading
 - Add support for file-like objects (BytesIO) #178
+- Add list of supported file extensions #177
+- Fix deprecations related to setuptools #176
 - Fix pathlib support in TinyTag.is_supported()
+- Only remove zero bytes at the end of strings
+- Stricter conditions in while loops
+- OGG: Add stricter magic byte matching for OGG files
 
 ### 1.9.0  (2023-04-23)
 
