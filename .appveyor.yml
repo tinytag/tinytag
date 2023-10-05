@@ -13,10 +13,8 @@ build: off
 init:
 - cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
 
-install: 
-- pip install -e .[tests]
-- pip install mypy
+install:
+- pip install .[tests]
 
-test_script: 
+test_script:
 - pytest --cov
-# - mypy . --ignore-missing-imports
