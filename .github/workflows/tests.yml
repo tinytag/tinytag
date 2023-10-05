@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-latest, windows-latest]
-        python: ['3.5', '3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12.0-rc.3', 'pypy-2.7', 'pypy-3.7', 'pypy-3.8', 'pypy-3.9', 'pypy-3.10']
+        python: ['3.5', '3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12', 'pypy-2.7', 'pypy-3.7', 'pypy-3.8', 'pypy-3.9', 'pypy-3.10']
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -33,12 +33,12 @@ jobs:
           DEBUG: true
 
       - name: Coverage report
-        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.11'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.12'
         run: coverage lcov
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
-        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.11'
+        if: matrix.os == 'ubuntu-20.04' && matrix.python == '3.12'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.lcov
