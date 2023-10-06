@@ -202,10 +202,7 @@ class TinyTag(object):
             ignore_errors=False, encoding=None, file_obj=None):
         should_open_file = (file_obj is None)
         if should_open_file:
-            try:
-                file_obj = io.open(filename, 'rb')
-            except TypeError:
-                file_obj = io.open(str(filename.absolute()), 'rb')  # Python 3.4/3.5 pathlib support
+            file_obj = io.open(filename, 'rb')
         elif isinstance(file_obj, io.BytesIO):
             file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
         try:
