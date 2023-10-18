@@ -100,7 +100,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 ## Changelog
 
-### 1.10.0  (unreleased)
+### 1.10.0  (2023-10-18)
 
 - Add support for OGG FLAC format #182
 - Add support for OGG Speex format #181
