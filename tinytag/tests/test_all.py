@@ -31,7 +31,7 @@ except ImportError:
 testfiles = OrderedDict([
     # MP3
     ('samples/vbri.mp3',
-        {'extra': {'url': ''}, 'channels': 2, 'samplerate': 44100,
+        {'extra': {'copyright': '', 'url': ''}, 'channels': 2, 'samplerate': 44100,
          'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007',
          'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': '01',
          'filesize': 8192, 'audio_offset': 1007, 'genre': '(3)Dance',
@@ -84,7 +84,9 @@ testfiles = OrderedDict([
         {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 4284, 'audio_offset': 0,
          'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v24-long-title.mp3',
-        {'extra': {}, 'track': '1', 'disc_total': '1',
+        {'extra':
+         {'copyright': '2013 Marathon Artists under exclsuive license from Courtney Barnett'},
+         'track': '1', 'disc_total': '1',
          'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000,
          'track_total': '12', 'genre': 'AlternRock',
          'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett',
@@ -102,9 +104,9 @@ testfiles = OrderedDict([
         {'extra': {}, 'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa',
          'comment': 'engiTunPGAP\x000', 'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3',
-        {'extra': {'isrc': 'USTC40852229'}, 'filesize': 19980, 'album': 'Ghosts I-IV',
-         'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails', 'disc': '1',
-         'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36',
+        {'extra': {'copyright': '(c) 2008 nin', 'isrc': 'USTC40852229'}, 'filesize': 19980,
+         'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails',
+         'disc': '1', 'disc_total': '2', 'title': '1 Ghosts I', 'track': '1', 'track_total': '36',
          'year': '2008', 'comment': '3/4 time'}),
     ('samples/id3_comment_utf_16_double_bom.mp3',
         {'extra': {'text': 'LABEL\x00\ufeffUnclear'}, 'filesize': 512, 'album': 'The Embrace',
@@ -416,8 +418,8 @@ testfiles = OrderedDict([
     ('samples/invalid_sample_rate.aiff',
         {'extra': {}, 'channels': 1, 'filesize': 4096, 'bitdepth': 16}),
     ('samples/aiff_extra_tags.aiff',
-        {'extra': {'isrc': 'CC-XXX-YY-NNNNN'}, 'channels': 1, 'duration': 2.176,
-         'filesize': 18532, 'bitrate': 64.0, 'samplerate': 8000, 'bitdepth': 8,
+        {'extra': {'copyright': 'test', 'isrc': 'CC-XXX-YY-NNNNN'}, 'channels': 1,
+         'duration': 2.176, 'filesize': 18532, 'bitrate': 64.0, 'samplerate': 8000, 'bitdepth': 8,
          'title': 'song title', 'artist': 'artist 1;artist 2', 'audio_offset': 46}),
 
 ])
