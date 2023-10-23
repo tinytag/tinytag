@@ -292,6 +292,8 @@ class TinyTag(object):
                     '_image_data']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
+        if other.extra:
+            self.extra.update(other.extra)
 
     @staticmethod
     def _unpad(s):

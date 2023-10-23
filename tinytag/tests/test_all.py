@@ -316,7 +316,8 @@ testfiles = OrderedDict([
         {'extra': {}, 'filesize': 4692, 'bitrate': 10.186943678613627, 'channels': 2,
          'duration': 3.68, 'samplerate': 44100, 'bitdepth': 16}),
     ('samples/with_id3_header.flac',
-        {'extra': {}, 'filesize': 64837, 'album': '   ', 'artist': '群星', 'disc': '0',
+        {'extra': {'text': 'ID\x00\ufeff8591671910'}, 'filesize': 64837, 'album': '   ',
+         'artist': '群星', 'disc': '0',
          'title': 'A 梦 哆啦 机器猫 短信铃声', 'track': '0', 'bitrate': 1143.72468, 'channels': 1,
          'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'bitdepth': 16,
          'year': '2018'}),
@@ -390,6 +391,7 @@ testfiles = OrderedDict([
         'comment': 'test comment',
         'duration': 727.1066666666667,
         'extra': {'description': 'test description'}}),
+
     # AIFF
     ('samples/test-tagged.aiff',
         {'extra': {}, 'channels': 2, 'duration': 1.0, 'filesize': 177620, 'artist': 'theartist',
@@ -413,6 +415,10 @@ testfiles = OrderedDict([
          'AFspdate: 2003-01-30 03:28:34 UTC\x00user: kabal@CAPELLA\x00program: CopyAudio'}),
     ('samples/invalid_sample_rate.aiff',
         {'extra': {}, 'channels': 1, 'filesize': 4096, 'bitdepth': 16}),
+    ('samples/aiff_extra_tags.aiff',
+        {'extra': {'isrc': 'CC-XXX-YY-NNNNN'}, 'channels': 1, 'duration': 2.176,
+         'filesize': 18532, 'bitrate': 64.0, 'samplerate': 8000, 'bitdepth': 8,
+         'title': 'song title', 'artist': 'artist 1;artist 2', 'audio_offset': 46}),
 
 ])
 
