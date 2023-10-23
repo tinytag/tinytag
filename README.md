@@ -100,6 +100,11 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 ## Changelog
 
+### 1.10.1  (Unreleased)
+
+- Update 'extra' fields with data from other tags #188
+- ID3: Add missing 'extra.copyright' field
+
 ### 1.10.0  (2023-10-18)
 
 - Add support for OGG FLAC format #182
