@@ -100,7 +100,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 ## Changelog
 
-### 1.10.1  (Unreleased)
+### 1.10.1  (2023-10-26)
 
 - Update 'extra' fields with data from other tags #188
 - ID3: Add missing 'extra.copyright' field
