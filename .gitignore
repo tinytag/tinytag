@@ -44,6 +44,7 @@ venv
 
 # Visual Studio Code
 .vscode
+*.code-workspace
 
 # custom test samples
 tinytag/tests/custom_samples
