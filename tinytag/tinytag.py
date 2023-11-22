@@ -1499,11 +1499,13 @@ class APE(TinyTag):
             # channels_num:         0x004006 -> 0x004007
             # sample_rate:          0x004008 -> 0x00400B
             # with descripor_length (0x000008 -> 0x00000B) <= 52
-            fh.seek(2, 1) # jump padding
+            fh.seek(2, os.SEEK_CUR) # jump padding
             descripor_len = _bytes_to_int_le(fh.read(4))
-            fh.seek(44,1)
+            fh.seek(44, os.SEEK_CUR)
             if descripor_len > 52:
-                fh.seek(descripor_len - 52, 1) # skip
+                fh.seek(descripor_len - 52, os.SEEK_CUR) # skip
+            # Although I didn't find any samples that descripor_length is greater than 52 (it seems that it's a reserved item, idk)
+            # but just do this seek just like the document said
             blocks_per_frame, final_frame_blocks, total_frames, bits_per_sample, channels_num, sample_rate = struct.unpack('IIIHHI', fh.read(20))
         else: # fver < 3980 (old versions)
             compression_level, format_flags, channels_num, sample_rate, wave_header_len, wave_tail_len, total_frames, final_frame_blocks = struct.unpack('HHHIIIII', fh.read(26))
@@ -1527,5 +1529,44 @@ class APE(TinyTag):
         self.duration = (blocks_per_frame * (total_frames - 1) + final_frame_blocks) / sample_rate
         self.channels = channels_num
         self.bitrate = self.filesize / self.duration * 8 / 1000
+
+        # start to parse metadatas
+
+        fh.seek(-1024, os.SEEK_END)
+        pos = fh.tell()
+        while pos >= 0:
+            fh.seek(pos, os.SEEK_SET)
+            data_read = fh.read(1024)
+            if data_read.rfind(b'APETAGEX') != -1:
+                pos = data_read.rfind(b'APETAGEX') + pos
+                break
+            if pos < 1024 and pos != 0:
+                pos = 0
+            else:
+                pos -= 1024
+        # find APETAG footer begin pos.
+
+        APETAG_FOOTER_bpos = pos  # footer begin pos.
+        fh.seek(APETAG_FOOTER_bpos+8, os.SEEK_SET)
+        APETAG_VERSION_num, APETAG_TAG_size, APETAG_ITEM_num, APETAG_flag = struct.unpack('III4s', fh.read(16))
+        # read all necessary datas from tag footer (version, tag size, item num)
+        # the reason is: although I never see a ape file still using apev1 tag, but the thing is apev1 tag doesn't contain a tag header (it's new in apev2)
+        # therefore: find the footer and read datas there, it should work on both apev1 and apev2
+
+        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)  # seek to the begin of tag item
+        for i in range(0, APETAG_ITEM_num):
+            this_item_value_len, this_item_flag = struct.unpack('II', fh.read(8))
+            this_item_key = str()
+            while True:
+                bit = fh.read(1)
+                if bit == b'\x00':
+                    break
+                this_item_key += bit.decode('ascii')  # item key can only contain ASCII characters (0x20 -> 0x7E)
+            print(this_item_key)
+            if APETAG_VERSION_num == 2000:  # apev2
+                print(fh.read(this_item_value_len).decode('utf-8'))
+            else:                           # apev1
+                print(fh.read(this_item_value_len).decode('ascii'))
+
 
         self._tags_parsed = True
