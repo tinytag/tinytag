@@ -83,7 +83,8 @@ class TinyTag(object):
         '.oga', '.ogg', '.opus', '.spx',
         '.wav', '.flac', '.wma',
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
-        '.aiff', '.aifc', '.aif', '.afc'
+        '.aiff', '.aifc', '.aif', '.afc',
+        '.ape'
     ]
     _file_extension_mapping = None
     _magic_bytes_mapping = None
@@ -145,6 +146,7 @@ class TinyTag(object):
                 (b'.wma',): Wma,
                 (b'.m4b', b'.m4a', b'.m4r', b'.m4v', b'.mp4', b'.aax', b'.aaxc'): MP4,
                 (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
+                (b'.ape',): APE,
             }
         if not isinstance(filename, bytes):  # convert filename to binary
             try:
@@ -176,6 +178,7 @@ class TinyTag(object):
                 b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
                 b'^FORM....AIFF': Aiff,
                 b'^FORM....AIFC': Aiff,
+                b'^MAC ': APE,
             }
         header = fh.peek(max(len(sig) for sig in cls._magic_bytes_mapping))
         for magic, parser in cls._magic_bytes_mapping.items():
@@ -1473,3 +1476,56 @@ class Aiff(TinyTag):
     def _determine_duration(self, fh):
         if not self._tags_parsed:
             self._parse_tag(fh)
+
+class APE(TinyTag):
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        self._tags_parsed = False
+
+    def _determine_duration(self, fh):
+        if not self._tags_parsed:
+            self._parse_tag(fh)
+
+    def _parse_tag(self, fh):
+        header, fver = struct.unpack('4sH', fh.read(6))
+        if header != b'MAC ':
+            raise TinyTagException('not an ape file!')
+        if fver >= 3980:
+            # only for help: to locate data in hex editor much more quickly
+            # blocks_per_frame:     0x003008 -> 0x00300B
+            # final_frame_blocks:   0x00300C -> 0x00300F
+            # total_frames:         0x004000 -> 0x004003
+            # bits_per_sample:      0x004004 -> 0x004005
+            # channels_num:         0x004006 -> 0x004007
+            # sample_rate:          0x004008 -> 0x00400B
+            # with descripor_length (0x000008 -> 0x00000B) <= 52
+            fh.seek(2, 1) # jump padding
+            descripor_len = _bytes_to_int_le(fh.read(4))
+            fh.seek(44,1)
+            if descripor_len > 52:
+                fh.seek(descripor_len - 52, 1) # skip
+            blocks_per_frame, final_frame_blocks, total_frames, bits_per_sample, channels_num, sample_rate = struct.unpack('IIIHHI', fh.read(20))
+        else: # fver < 3980 (old versions)
+            compression_level, format_flags, channels_num, sample_rate, wave_header_len, wave_tail_len, total_frames, final_frame_blocks = struct.unpack('HHHIIIII', fh.read(26))
+            if format_flags & 1:
+                bits_per_sample = 8
+            elif format_flags & 8:
+                bits_per_sample = 24
+            else:
+                bits_per_sample = 16
+            # bitdepth
+            if fver >= 3950:
+                blocks_per_frame = 73728 * 4
+            elif fver >= 3900 or (fver >= 3800 and compression_level >= 4000):
+                blocks_per_frame = 73728
+            else:
+                blocks_per_frame = 9216
+            # blocks per frame
+
+        self.samplerate = sample_rate
+        self.bitdepth = bits_per_sample
+        self.duration = (blocks_per_frame * (total_frames - 1) + final_frame_blocks) / sample_rate
+        self.channels = channels_num
+        self.bitrate = self.filesize / self.duration * 8 / 1000
+
+        self._tags_parsed = True
