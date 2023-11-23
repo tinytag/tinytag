@@ -1545,6 +1545,10 @@ class APE(TinyTag):
             else:
                 pos -= 1024
         # find APETAG footer begin pos.
+        if pos < 0:
+            self._tags_parsed = True
+            return
+        # not found
 
         APETAG_FOOTER_bpos = pos  # footer begin pos.
         fh.seek(APETAG_FOOTER_bpos+8, os.SEEK_SET)
@@ -1553,20 +1557,45 @@ class APE(TinyTag):
         # the reason is: although I never see a ape file still using apev1 tag, but the thing is apev1 tag doesn't contain a tag header (it's new in apev2)
         # therefore: find the footer and read datas there, it should work on both apev1 and apev2
 
-        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)  # seek to the begin of tag item
+        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)  # seek to the begin of tag items
         for i in range(0, APETAG_ITEM_num):
             this_item_value_len, this_item_flag = struct.unpack('II', fh.read(8))
-            this_item_key = str()
+            this_item_key = bytes()
             while True:
                 bit = fh.read(1)
                 if bit == b'\x00':
                     break
-                this_item_key += bit.decode('ascii')  # item key can only contain ASCII characters (0x20 -> 0x7E)
-            print(this_item_key)
-            if APETAG_VERSION_num == 2000:  # apev2
-                print(fh.read(this_item_value_len).decode('utf-8'))
-            else:                           # apev1
-                print(fh.read(this_item_value_len).decode('ascii'))
-
+                this_item_key += bit
+            this_item_key = this_item_key.decode('utf-8')
+            # item key SHOULD only contain ASCII characters (0x20 -> 0x7E)
+            # but I also realized that some of metadata editors (foobar2k, mp3tag, etc.) may also create / allow users to create an unicode-key
+            # therefore for compatibility: decode the key with utf-8
+            this_item_value = fh.read(this_item_value_len).decode('utf-8')
+            # same as before: decode with utf-8 for compatibility
+            self._update_meta(this_item_key, this_item_value)
 
         self._tags_parsed = True
+
+    apetag_mapping = {
+        'title':        'title',
+        'artist':       'artist',
+        'album':        'album',
+        'album artist': 'albumartist',
+        'comment':      'comment',
+        'composer':     'composer',
+        'disc':         'disc',
+        'discnumber':   'disc',
+        'genre':        'genre',
+        'track':        'track',
+        'tracknumber':  'track',
+        'year':         'year'
+    }
+
+    def _update_meta(self, key, value):
+        # the key name of apetag (especially apev2) is really casual: there's no restrictive rules so far as I know
+        # I choose the most common rule (which can be read by most of the music players I use), but I cannot be 100% sure that it always works
+        key_low = key.lower()
+        if key_low in self.apetag_mapping:
+            self._set_field(self.apetag_mapping[key_low], value)
+        else:
+            self._set_field("extra." + key, value)
