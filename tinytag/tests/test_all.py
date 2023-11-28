@@ -422,6 +422,15 @@ testfiles = OrderedDict([
          'duration': 2.176, 'filesize': 18532, 'bitrate': 64.0, 'samplerate': 8000, 'bitdepth': 8,
          'title': 'song title', 'artist': 'artist 1;artist 2', 'audio_offset': 46}),
 
+    # APE
+    ('samples/ape-44100-16-1.ape',
+        {'extra': {'Copyright': 'nope'}, 'channels': 1,
+         'duration': 1.131, 'filesize': 22990, 'bitrate': 162.666399261963, 'samplerate': 44100, 'bitdepth': 16,
+         'title': 'ape-44100-16-1', 'artist': 'Ace-Radom', 'album': 'ar', 'albumartist': 'nope',
+         'comment': 'Only one sample for tinytag, all metadatas are nonsense',
+         'year': '2023', 'composer': 'nope', 'genre': 'Podcast',
+         'track': '1', 'track_total': '1', 'disc': '1', 'disc_total': '1'}),
+
 ])
 
 testfolder = os.path.join(os.path.dirname(__file__))
