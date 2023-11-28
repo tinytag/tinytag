@@ -1477,6 +1477,7 @@ class Aiff(TinyTag):
         if not self._tags_parsed:
             self._parse_tag(fh)
 
+
 class APE(TinyTag):
     def __init__(self, filehandler, filesize, *args, **kwargs):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
@@ -1499,16 +1500,21 @@ class APE(TinyTag):
             # channels_num:         0x004006 -> 0x004007
             # sample_rate:          0x004008 -> 0x00400B
             # with descripor_length (0x000008 -> 0x00000B) <= 52
-            fh.seek(2, os.SEEK_CUR) # jump padding
+            fh.seek(2, os.SEEK_CUR)  # jump padding
             descripor_len = _bytes_to_int_le(fh.read(4))
             fh.seek(44, os.SEEK_CUR)
             if descripor_len > 52:
-                fh.seek(descripor_len - 52, os.SEEK_CUR) # skip
-            # Although I didn't find any samples that descripor_length is greater than 52 (it seems that it's a reserved item, idk)
+                fh.seek(descripor_len - 52, os.SEEK_CUR)  # skip
+            # Although I didn't find any samples that descripor_length is greater than 52
+            # it seems that it's a reserved item, idk
             # but just do this seek just like the document said
-            blocks_per_frame, final_frame_blocks, total_frames, bits_per_sample, channels_num, sample_rate = struct.unpack('IIIHHI', fh.read(20))
-        else: # fver < 3980 (old versions)
-            compression_level, format_flags, channels_num, sample_rate, wave_header_len, wave_tail_len, total_frames, final_frame_blocks = struct.unpack('HHHIIIII', fh.read(26))
+            blocks_per_frame, final_frame_blocks, total_frames = struct.unpack('III', fh.read(12))
+            bits_per_sample, channels_num, sample_rate = struct.unpack('HHI', fh.read(8))
+        else:  # fver < 3980 (old versions)
+            compression_level, format_flags = struct.unpack('HH', fh.read(4))
+            channels_num, sample_rate = struct.unpack('HI', fh.read(6))
+            fh.seek(8, os.SEEK_CUR)
+            total_frames, final_frame_blocks = struct.unpack('II', fh.read(8))
             if format_flags & 1:
                 bits_per_sample = 8
             elif format_flags & 8:
@@ -1551,13 +1557,15 @@ class APE(TinyTag):
         # not found
 
         APETAG_FOOTER_bpos = pos  # footer begin pos.
-        fh.seek(APETAG_FOOTER_bpos+8, os.SEEK_SET)
-        APETAG_VERSION_num, APETAG_TAG_size, APETAG_ITEM_num, APETAG_flag = struct.unpack('III4s', fh.read(16))
-        # read all necessary datas from tag footer (version, tag size, item num)
-        # the reason is: although I never see a ape file still using apev1 tag, but the thing is apev1 tag doesn't contain a tag header (it's new in apev2)
+        fh.seek(APETAG_FOOTER_bpos+12, os.SEEK_SET)
+        APETAG_TAG_size, APETAG_ITEM_num = struct.unpack('II', fh.read(8))
+        # read all necessary datas from tag footer
+        # the reason is: although I never see a ape file still using apev1 tag, but the thing
+        # is apev1 tag doesn't contain a tag header (it's new in apev2)
         # therefore: find the footer and read datas there, it should work on both apev1 and apev2
 
-        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)  # seek to the begin of tag items
+        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)
+        # seek to the begin of tag items
         for i in range(0, APETAG_ITEM_num):
             this_item_value_len, this_item_flag = struct.unpack('II', fh.read(8))
             this_item_key = bytes()
@@ -1568,7 +1576,8 @@ class APE(TinyTag):
                 this_item_key += bit
             this_item_key = this_item_key.decode('utf-8')
             # item key SHOULD only contain ASCII characters (0x20 -> 0x7E)
-            # but I also realized that some of metadata editors (foobar2k, mp3tag, etc.) may also create / allow users to create an unicode-key
+            # but I also realized that some of metadata editors (foobar2k, mp3tag, etc.)
+            # may also create / allow users to create an unicode-key
             # therefore for compatibility: decode the key with utf-8
             this_item_value = fh.read(this_item_value_len).decode('utf-8')
             # same as before: decode with utf-8 for compatibility
@@ -1592,8 +1601,10 @@ class APE(TinyTag):
     }
 
     def _update_meta(self, key, value):
-        # the key name of apetag (especially apev2) is really casual: there's no restrictive rules so far as I know
-        # I choose the most common rule (which can be read by most of the music players I use), but I cannot be 100% sure that it always works
+        # the key name of apetag (especially apev2) is really casual
+        # there's no restrictive rules so far as I know
+        # I choose the most common rule (which can be read by most of the music players I use),
+        # but I cannot be 100% sure that it always works
         key_low = key.lower()
         if key_low in self.apetag_mapping:
             self._set_field(self.apetag_mapping[key_low], value)
