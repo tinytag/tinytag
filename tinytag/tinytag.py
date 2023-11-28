@@ -1483,15 +1483,22 @@ class APE(TinyTag):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
 
-    def _determine_duration(self, fh):
-        if not self._tags_parsed:
-            self._parse_tag(fh)
+    _fver = -1
+    _header_parsed = False
 
-    def _parse_tag(self, fh):
-        header, fver = struct.unpack('4sH', fh.read(6))
+    def _parse_header(self, fh):
+        fh.seek(0, os.SEEK_SET)
+        header, self._fver = struct.unpack('4sH', fh.read(6))
         if header != b'MAC ':
             raise TinyTagException('not an ape file!')
-        if fver >= 3980:
+        self._header_parsed = True
+
+    def _determine_duration(self, fh):
+        if not self._header_parsed:
+            self._parse_header(fh)
+
+        fh.seek(6, os.SEEK_SET)
+        if self._fver >= 3980:
             # only for help: to locate data in hex editor much more quickly
             # blocks_per_frame:     0x003008 -> 0x00300B
             # final_frame_blocks:   0x00300C -> 0x00300F
@@ -1522,9 +1529,9 @@ class APE(TinyTag):
             else:
                 bits_per_sample = 16
             # bitdepth
-            if fver >= 3950:
+            if self._fver >= 3950:
                 blocks_per_frame = 73728 * 4
-            elif fver >= 3900 or (fver >= 3800 and compression_level >= 4000):
+            elif self._fver >= 3900 or (self._fver >= 3800 and compression_level >= 4000):
                 blocks_per_frame = 73728
             else:
                 blocks_per_frame = 9216
@@ -1536,7 +1543,9 @@ class APE(TinyTag):
         self.channels = channels_num
         self.bitrate = self.filesize / self.duration * 8 / 1000
 
-        # start to parse metadatas
+    def _parse_tag(self, fh):
+        if not self._header_parsed:
+            self._parse_header(fh)
 
         fh.seek(-1024, os.SEEK_END)
         pos = fh.tell()
