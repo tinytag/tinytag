@@ -425,7 +425,8 @@ testfiles = OrderedDict([
     # APE
     ('samples/ape-44100-16-1.ape',
         {'extra': {'Copyright': 'nope'}, 'channels': 1,
-         'duration': 1.131, 'filesize': 22990, 'bitrate': 162.666399261963, 'samplerate': 44100, 'bitdepth': 16,
+         'duration': 1.131, 'filesize': 22990, 'bitrate': 162.666399261963, 'samplerate': 44100, 
+         'bitdepth': 16,
          'title': 'ape-44100-16-1', 'artist': 'Ace-Radom', 'album': 'ar', 'albumartist': 'nope',
          'comment': 'Only one sample for tinytag, all metadatas are nonsense',
          'year': '2023', 'composer': 'nope', 'genre': 'Podcast',
