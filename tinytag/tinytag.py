@@ -1479,12 +1479,25 @@ class Aiff(TinyTag):
 
 
 class APE(TinyTag):
+    apetag_mapping = {
+        'title':        'title',
+        'artist':       'artist',
+        'album':        'album',
+        'album artist': 'albumartist',
+        'comment':      'comment',
+        'composer':     'composer',
+        'disc':         'disc',
+        'discnumber':   'disc',
+        'genre':        'genre',
+        'track':        'track',
+        'tracknumber':  'track',
+        'year':         'year'
+    }
+
     def __init__(self, filehandler, filesize, *args, **kwargs):
         TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
-        self._tags_parsed = False
-
-    _fver = -1
-    _header_parsed = False
+        self._fver = -1
+        self._header_parsed = False
 
     def _parse_header(self, fh):
         fh.seek(0, os.SEEK_SET)
@@ -1561,7 +1574,6 @@ class APE(TinyTag):
                 pos -= 1024
         # find APETAG footer begin pos.
         if pos < 0:
-            self._tags_parsed = True
             return
         # not found
 
@@ -1591,23 +1603,6 @@ class APE(TinyTag):
             this_item_value = fh.read(this_item_value_len).decode('utf-8')
             # same as before: decode with utf-8 for compatibility
             self._update_meta(this_item_key, this_item_value)
-
-        self._tags_parsed = True
-
-    apetag_mapping = {
-        'title':        'title',
-        'artist':       'artist',
-        'album':        'album',
-        'album artist': 'albumartist',
-        'comment':      'comment',
-        'composer':     'composer',
-        'disc':         'disc',
-        'discnumber':   'disc',
-        'genre':        'genre',
-        'track':        'track',
-        'tracknumber':  'track',
-        'year':         'year'
-    }
 
     def _update_meta(self, key, value):
         # the key name of apetag (especially apev2) is really casual
