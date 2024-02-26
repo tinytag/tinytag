@@ -289,7 +289,7 @@ class TinyTag(object):
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
                     'genre', 'disc', 'disc_total', 'comment', 'composer',
-                    '_image_data']:
+                    'extra', '_image_data']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
         if other.extra:
@@ -308,15 +308,15 @@ class MP4(TinyTag):
     class Parser:
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
         ATOM_DECODER_BY_TYPE = {
-            0: lambda x: x,  # 'reserved',
+            # 0: 'reserved'
             1: lambda x: codecs.decode(x, 'utf-8', 'replace'),   # UTF-8
             2: lambda x: codecs.decode(x, 'utf-16', 'replace'),  # UTF-16
             3: lambda x: codecs.decode(x, 's/jis', 'replace'),   # S/JIS
             # 16: duration in millis
             13: lambda x: x,  # JPEG
             14: lambda x: x,  # PNG
-            21: lambda x: struct.unpack('>b', x)[0],  # BE Signed int
-            22: lambda x: struct.unpack('>B', x)[0],  # BE Unsigned int
+            # 21: BE Signed int
+            # 22: BE Unsigned int
             23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
             24: lambda x: struct.unpack('>d', x)[0],  # BE Float64
             # 27: lambda x: x,  # BMP
@@ -365,6 +365,29 @@ class MP4(TinyTag):
             for i in range(4):
                 if esds_atom.read(1) != b'\x80':
                     break
+
+        @classmethod
+        def parse_custom_field(cls, data):
+            fh = BytesIO(data)
+            header_size = 8
+            field_name = None
+            data_atom = b''
+            atom_header = fh.read(header_size)
+            while len(atom_header) == header_size:
+                atom_size = struct.unpack('>I', atom_header[:4])[0] - header_size
+                atom_type = atom_header[4:]
+                if atom_type == b'name':
+                    atom_value = fh.read(atom_size)[4:].lower()
+                    field_name = 'extra.' + codecs.decode(atom_value, 'utf-8', 'replace')
+                elif atom_type == b'data':
+                    data_atom = fh.read(atom_size)
+                else:
+                    fh.seek(atom_size, os.SEEK_CUR)
+                atom_header = fh.read(header_size)  # read next atom
+            if len(data_atom) < 8:
+                return {}
+            parser = cls.make_data_atom_parser(field_name)
+            return parser(data_atom)
 
         @classmethod
         def parse_audio_sample_entry_mp4a(cls, data):
@@ -453,6 +476,7 @@ class MP4(TinyTag):
         b'disk': {b'data': Parser.make_number_parser('disc', 'disc_total')},
         b'gnre': {b'data': Parser.parse_id3v1_genre},
         b'trkn': {b'data': Parser.make_number_parser('track', 'track_total')},
+        b'----': Parser.parse_custom_field,
         # need test-data for this
         # b'tmpo': {b'data': Parser.make_data_atom_parser('extra.bmp')},
     }}}}}
@@ -538,13 +562,13 @@ class ID3(TinyTag):
         'TPE2': 'albumartist', 'TCOM': 'composer',
         'WXXX': 'extra.url',
         'TSRC': 'extra.isrc',
-        'TXXX': 'extra.text',
         'TKEY': 'extra.initial_key',
         'USLT': 'extra.lyrics',
         'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
-    PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS)
+    CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
+    PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS, CUSTOM_FRAME_IDS)
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
@@ -826,6 +850,12 @@ class ID3(TinyTag):
             if fieldname:
                 language = fieldname in ("comment", "extra.lyrics")
                 self._set_field(fieldname, self._decode_string(content, language))
+            elif frame_id in self.CUSTOM_FRAME_IDS:
+                # custom fields
+                custom_text = self._decode_string(content)
+                custom_field_name, _separator, value = custom_text.partition('\x00')
+                if custom_field_name:
+                    self._set_field('extra.' + custom_field_name.lower(), value.lstrip(u'\ufeff'))
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 encoding = content[0:1]
@@ -1005,10 +1035,8 @@ class Ogg(TinyTag):
             'genre': 'genre',
             'description': 'comment',
             'comment': 'comment',
+            'comments': 'comment',
             'composer': 'composer',
-            'copyright': 'extra.copyright',
-            'isrc': 'extra.isrc',
-            'lyrics': 'extra.lyrics',
         }
         if contains_vendor:
             vendor_length = struct.unpack('I', fh.read(4))[0]
@@ -1031,9 +1059,9 @@ class Ogg(TinyTag):
                 else:
                     if DEBUG:
                         stderr('Found Vorbis Comment', key, value[:64])
-                    fieldname = comment_type_to_attr_mapping.get(key_lowercase)
-                    if fieldname:
-                        self._set_field(fieldname, value)
+                    fieldname = comment_type_to_attr_mapping.get(
+                        key_lowercase, 'extra.' + key_lowercase)  # custom fields go in 'extra'
+                    self._set_field(fieldname, value)
 
     def _parse_pages(self, fh):
         # for the spec, see: https://wiki.xiph.org/Ogg
@@ -1337,11 +1365,16 @@ class Wma(TinyTag):
                     name = self.__decode_string(fh.read(name_len))
                     value_type = _bytes_to_int_le(fh.read(2))
                     value_len = _bytes_to_int_le(fh.read(2))
-                    value = fh.read(value_len)
-                    field_name = mapping.get(name)
-                    if field_name:
-                        field_value = self.__decode_ext_desc(value_type, value)
-                        self._set_field(field_name, field_value)
+                    if value_type == 1:
+                        fh.seek(value_len, os.SEEK_CUR)  # skip byte values
+                        continue
+                    field_name = mapping.get(name)  # try to get normalized field name
+                    if field_name is None:  # custom field
+                        if name.startswith('WM/'):
+                            name = name[3:]
+                        field_name = 'extra.' + name.lower()
+                    field_value = self.__decode_ext_desc(value_type, fh.read(value_len))
+                    self._set_field(field_name, field_value)
             elif object_id == Wma.ASF_FILE_PROPERTY_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('file_id', 16, False),
