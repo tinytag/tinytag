@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 # tinytag - an audio meta info reader
 # Copyright (c) 2014-2023 Tom Wallroth
@@ -31,16 +30,11 @@
 # SOFTWARE.
 
 
-from __future__ import division, print_function
-from collections import OrderedDict, defaultdict
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping
+from collections import defaultdict
+from collections.abc import MutableMapping
 from functools import reduce
 from io import BytesIO
 import base64
-import codecs
 import io
 import json
 import operator
@@ -64,7 +58,8 @@ def _read(fh, nbytes):  # helper function to check if we haven't reached EOF
 
 
 def stderr(*args):
-    sys.stderr.write('%s\n' % ' '.join(repr(arg) for arg in args))
+    args_str = ' '.join(repr(arg) for arg in args)
+    sys.stderr.write(f'{args_str}\n')
     sys.stderr.flush()
 
 
@@ -77,7 +72,7 @@ def _bytes_to_int(b):
     return reduce(lambda accu, elem: (accu << 8) + elem, b, 0)
 
 
-class TinyTag(object):
+class TinyTag:
     SUPPORTED_FILE_EXTENSIONS = [
         '.mp1', '.mp2', '.mp3',
         '.oga', '.ogg', '.opus', '.spx',
@@ -89,11 +84,7 @@ class TinyTag(object):
     _magic_bytes_mapping = None
 
     def __init__(self, filehandler, filesize, ignore_errors=False):
-        # This is required for compatibility between python2 and python3
-        # in python2 there is a difference between `str` and `unicode`
-        # whereas in python3 everything every string is `unicode` by default and
-        # the type `unicode` is deprecated
-        if type(filehandler).__name__ in ('str', 'unicode'):
+        if isinstance(filehandler, str):
             raise Exception('Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`')
         self._filehandler = filehandler
         self._filename = None  # for debugging purposes
@@ -202,7 +193,7 @@ class TinyTag(object):
             ignore_errors=False, encoding=None, file_obj=None):
         should_open_file = (file_obj is None)
         if should_open_file:
-            file_obj = io.open(filename, 'rb')
+            file_obj = open(filename, 'rb')
         elif isinstance(file_obj, io.BytesIO):
             file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
         try:
@@ -223,7 +214,7 @@ class TinyTag(object):
                 file_obj.close()
 
     def __str__(self):
-        return json.dumps(OrderedDict(sorted(self.as_dict().items())))
+        return json.dumps(dict(sorted(self.as_dict().items())))
 
     def __repr__(self):
         return str(self)
@@ -253,7 +244,7 @@ class TinyTag(object):
         if get_func(write_dest, fieldname):  # do not overwrite existing data
             return
         if DEBUG:
-            stderr('Setting field "%s" to "%s"' % (fieldname, value))
+            stderr(f'Setting field "{fieldname}" to "{value}"')
         if overwrite or not get_func(write_dest, fieldname):
             set_func(write_dest, fieldname, value)
 
@@ -291,9 +282,9 @@ class _MP4(TinyTag):
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
         ATOM_DECODER_BY_TYPE = {
             # 0: 'reserved'
-            1: lambda x: codecs.decode(x, 'utf-8', 'replace'),   # UTF-8
-            2: lambda x: codecs.decode(x, 'utf-16', 'replace'),  # UTF-16
-            3: lambda x: codecs.decode(x, 's/jis', 'replace'),   # S/JIS
+            1: lambda x: x.decode('utf-8', 'replace'),   # UTF-8
+            2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
+            3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
             # 16: duration in millis
             13: lambda x: x,  # JPEG
             14: lambda x: x,  # PNG
@@ -319,7 +310,7 @@ class _MP4(TinyTag):
                 data_type = struct.unpack('>I', data_atom[:4])[0]
                 conversion = cls.ATOM_DECODER_BY_TYPE.get(data_type)
                 if conversion is None:
-                    stderr('Cannot convert data type: %s' % data_type)
+                    stderr(f'Cannot convert data type: {data_type}')
                     return {}  # don't know how to convert data atom
                 # skip header & null-bytes, convert rest
                 return {fieldname: conversion(data_atom[8:])}
@@ -360,7 +351,7 @@ class _MP4(TinyTag):
                 atom_type = atom_header[4:]
                 if atom_type == b'name':
                     atom_value = fh.read(atom_size)[4:].lower()
-                    field_name = 'extra.' + codecs.decode(atom_value, 'utf-8', 'replace')
+                    field_name = 'extra.' + atom_value.decode('utf-8', 'replace')
                 elif atom_type == b'data':
                     data_atom = fh.read(atom_size)
                 else:
@@ -601,7 +592,7 @@ class _ID3(TinyTag):
     ]
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        super().__init__(filehandler, filesize, *args, **kwargs)
         # save position after the ID3 tag for duration measurement speedup
         self._bytepos_after_id3v2 = None
 
@@ -705,7 +696,7 @@ class _ID3(TinyTag):
                     if xframes and xframes != 0 and byte_count:
                         # MPEG-2 Audio Layer III uses 576 samples per frame
                         samples_per_frame = 576 if mpeg_id <= 2 else self.samples_per_frame
-                        self.duration = xframes * samples_per_frame / float(self.samplerate)
+                        self.duration = xframes * samples_per_frame / self.samplerate
                         # self.duration = (xframes * self.samples_per_frame / self.samplerate
                         #                  / self.channels)  # noqa
                         self.bitrate = byte_count * 8 / self.duration / 1000
@@ -752,12 +743,12 @@ class _ID3(TinyTag):
         size, extended, major = 0, None, None
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = struct.unpack('3sBBB4B', _read(fh, 10))
-        tag = codecs.decode(header[0], 'ISO-8859-1')
+        tag = header[0].decode('ISO-8859-1')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
             major, rev = header[1:3]
             if DEBUG:
-                stderr('Found id3 v2.%s' % major)
+                stderr('Found id3 v2.{major}')
             # unsync = (header[3] & 0x80) > 0
             extended = (header[3] & 0x40) > 0
             # experimental = (header[3] & 0x20) > 0
@@ -785,7 +776,7 @@ class _ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
             def asciidecode(x):
-                return self._unpad(codecs.decode(x, self._default_encoding or 'latin1'))
+                return self._unpad(x.decode(self._default_encoding or 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
             self._set_field('title', asciidecode(fields[:30]), overwrite=False)
             self._set_field('artist', asciidecode(fields[30:60]), overwrite=False)
@@ -836,7 +827,7 @@ class _ID3(TinyTag):
                     if fieldname in ('track', 'disc'):
                         if '/' in value:
                             value, total = value.split('/')[:2]
-                            self._set_field('%s_total' % fieldname, int(total))
+                            self._set_field(f'{fieldname}_total', int(total))
                         value = int(value)
                     elif fieldname == 'genre':
                         genre_id = 255
@@ -849,7 +840,7 @@ class _ID3(TinyTag):
                             value = _ID3.ID3V1_GENRES[genre_id]
                 except ValueError as exc:
                     if DEBUG:
-                        stderr('Failed to read %s: %s' % (fieldname, exc))
+                        stderr(f'Failed to read {fieldname}: {exc}')
                 else:
                     self._set_field(fieldname, value)
             elif frame_id in self.CUSTOM_FRAME_IDS:
@@ -857,7 +848,7 @@ class _ID3(TinyTag):
                 custom_text = self._decode_string(content)
                 custom_field_name, _separator, value = custom_text.partition('\x00')
                 if custom_field_name:
-                    self._set_field('extra.' + custom_field_name.lower(), value.lstrip(u'\ufeff'))
+                    self._set_field('extra.' + custom_field_name.lower(), value.lstrip('\ufeff'))
             elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
                 encoding = content[0:1]
@@ -913,9 +904,9 @@ class _ID3(TinyTag):
             if language and bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
                 bytestr = bytestr[4:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
-            return self._unpad(codecs.decode(bytestr, encoding, errors))
-        except UnicodeDecodeError:
-            raise TinyTagException('Error decoding ID3 Tag!')
+            return self._unpad(bytestr.decode(encoding, errors))
+        except UnicodeDecodeError as exc:
+            raise TinyTagException('Error decoding ID3 Tag!') from exc
 
     def _calc_size(self, bytestr, bits_per_byte):
         # length of some mp3 header fields is described by 7 or 8-bit-bytes
@@ -924,7 +915,7 @@ class _ID3(TinyTag):
 
 class _Ogg(TinyTag):
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        super().__init__(filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
         self._max_samplenum = 0  # maximum sample position ever read
 
@@ -1006,7 +997,7 @@ class _Ogg(TinyTag):
             elif check_speex_second_packet:
                 if self._parse_tags:
                     length = struct.unpack('I', walker.read(4))[0]  # starts with a comment string
-                    comment = codecs.decode(walker.read(length), 'UTF-8')
+                    comment = walker.read(length).decode('UTF-8')
                     self._set_field('comment', comment)
                     self._parse_vorbis_comment(walker, contains_vendor=False)  # other tags
                 check_speex_second_packet = False
@@ -1047,7 +1038,7 @@ class _Ogg(TinyTag):
         for i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
             try:
-                keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
+                keyvalpair = fh.read(length).decode('UTF-8')
             except UnicodeDecodeError:
                 continue
             if '=' in keyvalpair:
@@ -1067,13 +1058,13 @@ class _Ogg(TinyTag):
                         if fieldname in ('track', 'disc'):
                             if '/' in value:
                                 value, total = value.split('/')[:2]
-                                self._set_field('%s_total' % fieldname, int(total))
+                                self._set_field(f'{fieldname}_total', int(total))
                             value = int(value)
                         elif fieldname in ('track_total', 'disc_total'):
                             value = int(value)
                     except ValueError as exc:
                         if DEBUG:
-                            stderr('Failed to read %s: %s' % (fieldname, exc))
+                            stderr(f'Failed to read {fieldname}: {exc}')
                     else:
                         self._set_field(fieldname, value)
 
@@ -1126,7 +1117,7 @@ class _Wave(TinyTag):
     }
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        super().__init__(filehandler, filesize, *args, **kwargs)
         self._duration_parsed = False
 
     def _determine_duration(self, fh):
@@ -1168,13 +1159,13 @@ class _Wave(TinyTag):
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
-                            value = codecs.decode(data, 'utf-8')
+                            value = data.decode('utf-8')
                             try:
                                 if fieldname == 'track':
                                     value = int(value)
                             except ValueError as exc:
                                 if DEBUG:
-                                    stderr('Failed to read %s: %s' % (fieldname, exc))
+                                    stderr(f'Failed to read {fieldname}: {exc}')
                             else:
                                 self._set_field(fieldname, value)
                         field = sub_fh.read(4)
@@ -1299,7 +1290,7 @@ class _Wma(TinyTag):
     # http://uguisu.skr.jp/Windows/format_asf.html
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        super().__init__(filehandler, filesize, *args, **kwargs)
         self.__tag_parsed = False
 
     def _determine_duration(self, fh):
@@ -1326,7 +1317,7 @@ class _Wma(TinyTag):
         ])
 
     def __decode_string(self, bytestring):
-        return self._unpad(codecs.decode(bytestring, 'utf-16'))
+        return self._unpad(bytestring.decode('utf-16'))
 
     def __decode_ext_desc(self, value_type, value):
         """ decode ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
@@ -1402,7 +1393,7 @@ class _Wma(TinyTag):
                             field_value = int(field_value)
                     except ValueError as exc:
                         if DEBUG:
-                            stderr('Failed to read %s: %s' % (field_name, exc))
+                            stderr(f'Failed to read {field_name}: {exc}')
                     else:
                         self._set_field(field_name, field_value)
             elif object_id == self.ASF_FILE_PROPERTY_OBJECT:
@@ -1497,7 +1488,7 @@ class _Aiff(TinyTag):
     }
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
-        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        super().__init__(filehandler, filesize, *args, **kwargs)
         self._tags_parsed = False
 
     def _parse_tag(self, fh):
