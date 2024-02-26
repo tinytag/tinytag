@@ -240,6 +240,9 @@ class TinyTag:
             write_dest = self.extra  # write into the extra field instead
             get_func = operator.getitem
             set_func = operator.setitem
+        if isinstance(value, str) and not value:
+            # don't set empty value
+            return
         if get_func(write_dest, fieldname):  # do not overwrite existing data
             return
         if DEBUG:
