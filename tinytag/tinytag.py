@@ -83,7 +83,8 @@ class TinyTag(object):
         '.oga', '.ogg', '.opus', '.spx',
         '.wav', '.flac', '.wma',
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
-        '.aiff', '.aifc', '.aif', '.afc'
+        '.aiff', '.aifc', '.aif', '.afc',
+        '.ape'
     ]
     _file_extension_mapping = None
     _magic_bytes_mapping = None
@@ -145,6 +146,7 @@ class TinyTag(object):
                 (b'.wma',): Wma,
                 (b'.m4b', b'.m4a', b'.m4r', b'.m4v', b'.mp4', b'.aax', b'.aaxc'): MP4,
                 (b'.aiff', b'.aifc', b'.aif', b'.afc'): Aiff,
+                (b'.ape',): APE,
             }
         if not isinstance(filename, bytes):  # convert filename to binary
             try:
@@ -176,6 +178,7 @@ class TinyTag(object):
                 b'\xff\xf1': MP4,  # https://www.garykessler.net/library/file_sigs.html
                 b'^FORM....AIFF': Aiff,
                 b'^FORM....AIFC': Aiff,
+                b'^MAC ': APE,
             }
         header = fh.peek(max(len(sig) for sig in cls._magic_bytes_mapping))
         for magic, parser in cls._magic_bytes_mapping.items():
@@ -1506,3 +1509,141 @@ class Aiff(TinyTag):
     def _determine_duration(self, fh):
         if not self._tags_parsed:
             self._parse_tag(fh)
+
+
+class APE(TinyTag):
+    apetag_mapping = {
+        'title':        'title',
+        'artist':       'artist',
+        'album':        'album',
+        'album artist': 'albumartist',
+        'comment':      'comment',
+        'composer':     'composer',
+        'disc':         'disc',
+        'discnumber':   'disc',
+        'genre':        'genre',
+        'track':        'track',
+        'tracknumber':  'track',
+        'year':         'year'
+    }
+
+    def __init__(self, filehandler, filesize, *args, **kwargs):
+        TinyTag.__init__(self, filehandler, filesize, *args, **kwargs)
+        self._fver = -1
+        self._header_parsed = False
+
+    def _parse_header(self, fh):
+        fh.seek(0, os.SEEK_SET)
+        header, self._fver = struct.unpack('4sH', fh.read(6))
+        if header != b'MAC ':
+            raise TinyTagException('not an ape file!')
+        self._header_parsed = True
+
+    def _determine_duration(self, fh):
+        if not self._header_parsed:
+            self._parse_header(fh)
+
+        fh.seek(6, os.SEEK_SET)
+        if self._fver >= 3980:
+            # only for help: to locate data in hex editor much more quickly
+            # blocks_per_frame:     0x003008 -> 0x00300B
+            # final_frame_blocks:   0x00300C -> 0x00300F
+            # total_frames:         0x004000 -> 0x004003
+            # bits_per_sample:      0x004004 -> 0x004005
+            # channels_num:         0x004006 -> 0x004007
+            # sample_rate:          0x004008 -> 0x00400B
+            # with descripor_length (0x000008 -> 0x00000B) <= 52
+            fh.seek(2, os.SEEK_CUR)  # jump padding
+            descripor_len = _bytes_to_int_le(fh.read(4))
+            fh.seek(44, os.SEEK_CUR)
+            if descripor_len > 52:
+                fh.seek(descripor_len - 52, os.SEEK_CUR)  # skip
+            # Although I didn't find any samples that descripor_length is greater than 52
+            # it seems that it's a reserved item, idk
+            # but just do this seek just like the document said
+            blocks_per_frame, final_frame_blocks, total_frames = struct.unpack('III', fh.read(12))
+            bits_per_sample, channels_num, sample_rate = struct.unpack('HHI', fh.read(8))
+        else:  # fver < 3980 (old versions)
+            compression_level, format_flags = struct.unpack('HH', fh.read(4))
+            channels_num, sample_rate = struct.unpack('HI', fh.read(6))
+            fh.seek(8, os.SEEK_CUR)
+            total_frames, final_frame_blocks = struct.unpack('II', fh.read(8))
+            if format_flags & 1:
+                bits_per_sample = 8
+            elif format_flags & 8:
+                bits_per_sample = 24
+            else:
+                bits_per_sample = 16
+            # bitdepth
+            if self._fver >= 3950:
+                blocks_per_frame = 73728 * 4
+            elif self._fver >= 3900 or (self._fver >= 3800 and compression_level >= 4000):
+                blocks_per_frame = 73728
+            else:
+                blocks_per_frame = 9216
+            # blocks per frame
+
+        self.samplerate = sample_rate
+        self.bitdepth = bits_per_sample
+        self.duration = (blocks_per_frame * (total_frames - 1) + final_frame_blocks) / sample_rate
+        self.channels = channels_num
+        self.bitrate = self.filesize / self.duration * 8 / 1000
+
+    def _parse_tag(self, fh):
+        if not self._header_parsed:
+            self._parse_header(fh)
+
+        fh.seek(-1024, os.SEEK_END)
+        pos = fh.tell()
+        while pos >= 0:
+            fh.seek(pos, os.SEEK_SET)
+            data_read = fh.read(1024)
+            if data_read.rfind(b'APETAGEX') != -1:
+                pos = data_read.rfind(b'APETAGEX') + pos
+                break
+            if pos < 1024 and pos != 0:
+                pos = 0
+            else:
+                pos -= 1024
+        # find APETAG footer begin pos.
+        if pos < 0:
+            return
+        # not found
+
+        APETAG_FOOTER_bpos = pos  # footer begin pos.
+        fh.seek(APETAG_FOOTER_bpos+12, os.SEEK_SET)
+        APETAG_TAG_size, APETAG_ITEM_num = struct.unpack('II', fh.read(8))
+        # read all necessary datas from tag footer
+        # the reason is: although I never see a ape file still using apev1 tag, but the thing
+        # is apev1 tag doesn't contain a tag header (it's new in apev2)
+        # therefore: find the footer and read datas there, it should work on both apev1 and apev2
+
+        fh.seek(APETAG_FOOTER_bpos - APETAG_TAG_size + 32, os.SEEK_SET)
+        # seek to the begin of tag items
+        for i in range(0, APETAG_ITEM_num):
+            this_item_value_len, this_item_flag = struct.unpack('II', fh.read(8))
+            this_item_key = bytes()
+            while True:
+                bit = fh.read(1)
+                if bit == b'\x00':
+                    break
+                this_item_key += bit
+            this_item_key = this_item_key.decode('utf-8')
+            # item key SHOULD only contain ASCII characters (0x20 -> 0x7E)
+            # but I also realized that some of metadata editors (foobar2k, mp3tag, etc.)
+            # may also create / allow users to create an unicode-key
+            # therefore for compatibility: decode the key with utf-8
+            this_item_value = fh.read(this_item_value_len).decode('utf-8')
+            # same as before: decode with utf-8 for compatibility
+            self._update_meta(this_item_key, this_item_value)
+
+    def _update_meta(self, key, value):
+        # the key name of apetag (especially apev2) is really casual
+        # there's no restrictive rules so far as I know
+        # I choose the most common rule (which can be read by most of the music players I use),
+        # but I cannot be 100% sure that it always works
+        key_low = key.lower()
+        if key_low in self.apetag_mapping:
+            self._set_field(self.apetag_mapping[key_low], value)
+        else:
+            self._set_field("extra." + key, value)
