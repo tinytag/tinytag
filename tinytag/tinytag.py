@@ -331,7 +331,7 @@ class _MP4(TinyTag):
                 number_data = data_atom[8:14]
                 numbers = struct.unpack('>HHH', number_data)
                 # for some reason the first number is always irrelevant.
-                return {fieldname1: str(numbers[1]), fieldname2: str(numbers[2])}
+                return {fieldname1: numbers[1], fieldname2: numbers[2]}
             return _
 
         @classmethod
@@ -793,7 +793,7 @@ class _ID3(TinyTag):
             self._set_field('year', asciidecode(fields[90:94]), overwrite=False)
             comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
-                self._set_field('track', str(ord(comment[-1:])), overwrite=False)
+                self._set_field('track', ord(comment[-1:]), overwrite=False)
                 comment = comment[:-2]
             self._set_field('comment', asciidecode(comment), overwrite=False)
             genre_id = ord(fields[124:125])
@@ -832,20 +832,26 @@ class _ID3(TinyTag):
             if fieldname:
                 language = fieldname in ('comment', 'extra.lyrics')
                 value = self._decode_string(content, language)
-                if fieldname in ('track', 'disc'):
-                    if '/' in value:
-                        value, total = value.split('/')[:2]
-                        self._set_field('%s_total' % fieldname, total)
-                elif fieldname == 'genre':
-                    genre_id = 255
-                    if value.isdigit():  # funky: id3v1 genre hidden in a id3v2 field
-                        genre_id = int(value)
-                    else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
-                        if value[:1] == '(' and value[-1:] == ')' and value[1:-1].isdigit():
-                            genre_id = int(value[1:-1])
-                    if 0 <= genre_id < len(_ID3.ID3V1_GENRES):
-                        value = _ID3.ID3V1_GENRES[genre_id]
-                self._set_field(fieldname, value)
+                try:
+                    if fieldname in ('track', 'disc'):
+                        if '/' in value:
+                            value, total = value.split('/')[:2]
+                            self._set_field('%s_total' % fieldname, int(total))
+                        value = int(value)
+                    elif fieldname == 'genre':
+                        genre_id = 255
+                        if value.isdigit():  # funky: id3v1 genre hidden in a id3v2 field
+                            genre_id = int(value)
+                        else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
+                            if value[:1] == '(' and value[-1:] == ')' and value[1:-1].isdigit():
+                                genre_id = int(value[1:-1])
+                        if 0 <= genre_id < len(_ID3.ID3V1_GENRES):
+                            value = _ID3.ID3V1_GENRES[genre_id]
+                except ValueError as exc:
+                    if DEBUG:
+                        stderr('Failed to read %s: %s' % (fieldname, exc))
+                else:
+                    self._set_field(fieldname, value)
             elif frame_id in self.CUSTOM_FRAME_IDS:
                 # custom fields
                 custom_text = self._decode_string(content)
@@ -1057,10 +1063,19 @@ class _Ogg(TinyTag):
                         stderr('Found Vorbis Comment', key, value[:64])
                     fieldname = comment_type_to_attr_mapping.get(
                         key_lowercase, 'extra.' + key_lowercase)  # custom fields go in 'extra'
-                    if fieldname in ('track', 'disc') and '/' in value:
-                        value, total = value.split('/')[:2]
-                        self._set_field('%s_total' % fieldname, total)
-                    self._set_field(fieldname, value)
+                    try:
+                        if fieldname in ('track', 'disc'):
+                            if '/' in value:
+                                value, total = value.split('/')[:2]
+                                self._set_field('%s_total' % fieldname, int(total))
+                            value = int(value)
+                        elif fieldname in ('track_total', 'disc_total'):
+                            value = int(value)
+                    except ValueError as exc:
+                        if DEBUG:
+                            stderr('Failed to read %s: %s' % (fieldname, exc))
+                    else:
+                        self._set_field(fieldname, value)
 
     def _parse_pages(self, fh):
         # for the spec, see: https://wiki.xiph.org/Ogg
@@ -1101,6 +1116,7 @@ class _Wave(TinyTag):
         b'ICRD': 'year',
         b'IGNR': 'genre',
         b'ISRC': 'extra.isrc',
+        b'IPRT': 'track',
         b'ITRK': 'track',
         b'TRCK': 'track',
         b'PRT1': 'track',
@@ -1152,7 +1168,15 @@ class _Wave(TinyTag):
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self.riff_mapping.get(field)
                         if fieldname:
-                            self._set_field(fieldname, codecs.decode(data, 'utf-8'))
+                            value = codecs.decode(data, 'utf-8')
+                            try:
+                                if fieldname == 'track':
+                                    value = int(value)
+                            except ValueError as exc:
+                                if DEBUG:
+                                    stderr('Failed to read %s: %s' % (fieldname, exc))
+                            else:
+                                self._set_field(fieldname, value)
                         field = sub_fh.read(4)
             elif subchunkid in (b'id3 ', b'ID3 ') and self._parse_tags:
                 id3 = _ID3(fh, 0)
@@ -1373,9 +1397,14 @@ class _Wma(TinyTag):
                             name = name[3:]
                         field_name = 'extra.' + name.lower()
                     field_value = self.__decode_ext_desc(value_type, fh.read(value_len))
-                    if field_name in ('track', 'disc'):
-                        field_value = str(field_value)
-                    self._set_field(field_name, field_value)
+                    try:
+                        if field_name in ('track', 'disc'):
+                            field_value = int(field_value)
+                    except ValueError as exc:
+                        if DEBUG:
+                            stderr('Failed to read %s: %s' % (field_name, exc))
+                    else:
+                        self._set_field(field_name, field_value)
             elif object_id == self.ASF_FILE_PROPERTY_OBJECT:
                 blocks = self.read_blocks(fh, [
                     ('file_id', 16, False),
