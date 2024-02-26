@@ -58,7 +58,6 @@ List of possible attributes you can get with TinyTag:
     tag.album         # album as string
     tag.albumartist   # album artist as string
     tag.artist        # artist name as string
-    tag.audio_offset  # number of bytes before audio data begins
     tag.bitdepth      # bit depth for lossless audio
     tag.bitrate       # bitrate in kBits/s
     tag.comment       # file comment as string

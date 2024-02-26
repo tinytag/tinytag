@@ -93,7 +93,6 @@ class TinyTag:
         self.album = None
         self.albumartist = None
         self.artist = None
-        self.audio_offset = None
         self.bitrate = None
         self.channels = None
         self.comment = None
@@ -700,14 +699,13 @@ class _ID3(TinyTag):
                         # self.duration = (xframes * self.samples_per_frame / self.samplerate
                         #                  / self.channels)  # noqa
                         self.bitrate = byte_count * 8 / self.duration / 1000
-                        self.audio_offset = fh.tell()
                         return
                     continue
 
             frames += 1  # it's most probably an mp3 frame
             bitrate_accu += frame_bitrate
             if frames == 1:
-                self.audio_offset = fh.tell()
+                audio_offset = fh.tell()
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.append(frame_bitrate)
             fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
@@ -719,7 +717,7 @@ class _ID3(TinyTag):
             if frames == max_estimation_frames or is_cbr:
                 # try to estimate duration
                 fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
-                audio_stream_size = fh.tell() - self.audio_offset
+                audio_stream_size = fh.tell() - audio_offset
                 est_frame_count = audio_stream_size / (frame_size_accu / frames)
                 samples = est_frame_count * self.samples_per_frame
                 self.duration = samples / self.samplerate
@@ -942,7 +940,7 @@ class _Ogg(TinyTag):
                 fh.seek(max(seekpos, 1), os.SEEK_CUR)
 
     def _parse_tag(self, fh):
-        page_start_pos = fh.tell()  # set audio_offset later if its audio data
+        page_start_pos = fh.tell()
         check_flac_second_packet = False
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
@@ -951,9 +949,7 @@ class _Ogg(TinyTag):
                 if self._parse_duration:
                     (channels, self.samplerate, max_bitrate, bitrate,
                      min_bitrate) = struct.unpack("<B4i", packet[11:28])
-                    if not self.audio_offset:
-                        self.bitrate = bitrate / 1000
-                        self.audio_offset = page_start_pos
+                    self.bitrate = bitrate / 1000
             elif packet[0:7] == b"\x03vorbis":
                 if self._parse_tags:
                     walker.seek(7, os.SEEK_CUR)  # jump over header name
@@ -1144,7 +1140,6 @@ class _Wave(TinyTag):
                     fh.seek(remaining_size, 1)  # skip remaining data in chunk
             elif subchunkid == b'data':
                 self.duration = subchunksize / self.channels / self.samplerate / (self.bitdepth / 8)
-                self.audio_offset = fh.tell() - 8  # rewind to data header
                 fh.seek(subchunksize, 1)
             elif subchunkid == b'LIST' and self._parse_tags:
                 is_info = fh.read(4)  # check INFO header
@@ -1517,7 +1512,6 @@ class _Aiff(TinyTag):
                 id3.load(tags=True, duration=False, image=self._load_image)
                 self.update(id3)
             elif sub_chunk_id == b'SSND':
-                self.audio_offset = fh.tell()
                 fh.seek(sub_chunk_size, 1)
             else:  # some other chunk, just skip the data
                 fh.seek(sub_chunk_size, 1)
