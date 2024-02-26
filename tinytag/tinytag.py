@@ -940,7 +940,6 @@ class _Ogg(TinyTag):
                 fh.seek(max(seekpos, 1), os.SEEK_CUR)
 
     def _parse_tag(self, fh):
-        page_start_pos = fh.tell()
         check_flac_second_packet = False
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
@@ -1001,7 +1000,6 @@ class _Ogg(TinyTag):
                 if DEBUG:
                     stderr('Unsupported Ogg page type: ', packet[:16])
                 break
-            page_start_pos = fh.tell()
         self._tags_parsed = True
 
     def _parse_vorbis_comment(self, fh, contains_vendor=True):
