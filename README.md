@@ -26,7 +26,7 @@ tinytag is a library for reading music meta data of most common audio files in p
     * WMA
     * AIFF / AIFF-C
   * Pure Python, no dependencies
-  * Supports Python 2.7 and 3.6 or higher
+  * Supports Python 3.6 or higher
   * High test coverage
   * Just a few hundred lines of code (just include it in your project!) 
 

@@ -42,7 +42,7 @@ def test_print_help():
 def test_save_image_long_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
-    run_cli('--save-image %s %s' % (temp_file.name, mp3_with_image))
+    run_cli(f'--save-image {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
     with open(temp_file.name, 'rb') as fh:
         image_data = fh.read(20)
@@ -55,7 +55,7 @@ def test_save_image_long_opt():
 def test_save_image_short_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
-    run_cli('-i %s %s' % (temp_file.name, mp3_with_image))
+    run_cli(f'-i {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
 
 
@@ -65,7 +65,7 @@ def test_save_image_bulk():
     temp_file = NamedTemporaryFile(suffix='.jpg')
     temp_file_no_ext = temp_file.name[:-4]
     assert file_size(temp_file.name) == 0
-    run_cli('-i %s %s %s %s' % (temp_file.name, mp3_with_image, mp3_with_image, mp3_with_image))
+    run_cli(f'-i {temp_file.name} {mp3_with_image} {mp3_with_image} {mp3_with_image}')
     assert file_size(temp_file.name) == 0
     assert file_size(temp_file_no_ext + '00000.jpg') > 0
     assert file_size(temp_file_no_ext + '00001.jpg') > 0
