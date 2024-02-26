@@ -385,7 +385,7 @@ testfiles = OrderedDict([
 
     # WMA
     ('samples/test2.wma',
-        {'extra': {'track': '0', 'lyrics': '',
+        {'extra': {'track': 0, 'lyrics': '',
                    'mediaprimaryclassid': '{D1607DBC-E323-4BE2-86A1-48A42A28441E}',
                    'encodingtime': 128861118183900000, 'wmfsdkversion': '11.0.5721.5145',
                    'wmfsdkneeded': '0.0.0.0000', 'isvbr': 1, 'peakvalue': 30369,
