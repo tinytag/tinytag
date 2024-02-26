@@ -46,7 +46,7 @@ import sys
 DEBUG = os.environ.get('DEBUG', False)  # some of the parsers can print debug info
 
 
-class TinyTagException(LookupError):  # inherit LookupError for backwards compat
+class TinyTagException(Exception):
     pass
 
 
