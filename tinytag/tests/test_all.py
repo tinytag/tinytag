@@ -20,7 +20,7 @@ import sys
 import pytest
 from pytest import raises
 
-from tinytag.tinytag import TinyTag, TinyTagException, ID3, Ogg, Wave, Flac, Wma, MP4, Aiff
+from tinytag.tinytag import TinyTag, TinyTagException, _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 try:
     from collections import OrderedDict
@@ -641,39 +641,39 @@ def test_unsubclassed_tinytag_parse_tag():
 
 
 def test_mp3_length_estimation():
-    ID3.set_estimation_precision(0.7)
+    _ID3.set_estimation_precision(0.7)
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
     assert 3.5 < tag.duration < 4.0
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_unexpected_eof():
-    ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
+    _ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_flac_file():
-    Flac.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
+    _Flac.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_mp3_file():
-    ID3.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
+    _ID3.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_ogg_file():
-    Ogg.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
+    _Ogg.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_wave_file():
-    Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
+    _Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
 
 
 @pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_aiff_file():
-    Aiff.get(os.path.join(testfolder, 'samples/ilbm.aiff'))
+    _Aiff.get(os.path.join(testfolder, 'samples/ilbm.aiff'))
 
 
 def test_unpad():
@@ -798,16 +798,16 @@ def test_aiff_image_loading():
 
 @pytest.mark.parametrize("testfile,expected", [
     pytest.param(testfile, expected) for testfile, expected in [
-        ('samples/detect_mp3_id3.x', ID3),
-        ('samples/detect_mp3_fffb.x', ID3),
-        ('samples/detect_ogg_flac.x', Ogg),
-        ('samples/detect_ogg_opus.x', Ogg),
-        ('samples/detect_ogg_vorbis.x', Ogg),
-        ('samples/detect_wav.x', Wave),
-        ('samples/detect_flac.x', Flac),
-        ('samples/detect_wma.x', Wma),
-        ('samples/detect_mp4_m4a.x', MP4),
-        ('samples/detect_aiff.x', Aiff),
+        ('samples/detect_mp3_id3.x', _ID3),
+        ('samples/detect_mp3_fffb.x', _ID3),
+        ('samples/detect_ogg_flac.x', _Ogg),
+        ('samples/detect_ogg_opus.x', _Ogg),
+        ('samples/detect_ogg_vorbis.x', _Ogg),
+        ('samples/detect_wav.x', _Wave),
+        ('samples/detect_flac.x', _Flac),
+        ('samples/detect_wma.x', _Wma),
+        ('samples/detect_mp4_m4a.x', _MP4),
+        ('samples/detect_aiff.x', _Aiff),
     ]
 ])
 def test_detect_magic_headers(testfile, expected):
