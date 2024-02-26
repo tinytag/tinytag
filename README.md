@@ -72,6 +72,10 @@ List of common attributes tinytag provides:
     tag.track_total   # total number of tracks
     tag.year          # year or date as string
 
+If multiple fields with the same name are provided, the values are separated with a null character:
+
+    tag.artist == 'artist 1\x00artist 2\x00artist 3'
+
 For non-common fields and fields specific to certain file formats, use `extra`:
 
     tag.extra         # a dict of additional data

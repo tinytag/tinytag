@@ -79,7 +79,11 @@ for i, filename in enumerate(filenames):
         data.update(tag.as_dict())
         if formatting == 'json':
             print(json.dumps(data))
-        elif formatting == 'csv':
+            continue
+        for k, v in data.items():
+            if isinstance(v, str):
+                data[k] = v.replace('\x00', ';')  # use a more friendly separator for text output
+        if formatting == 'csv':
             print('\n'.join('%s,%s' % (k, v) for k, v in data.items()))
         elif formatting == 'tsv':
             print('\n'.join('%s\t%s' % (k, v) for k, v in data.items()))

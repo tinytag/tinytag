@@ -53,8 +53,13 @@ testfiles = OrderedDict([
          'channels': 2, 'duration': 250.04408163265308, 'samplerate': 22050,
          'title': 'Lochaber No More', 'year': '1992'}),
     ('samples/id3v22-test.mp3',
-        {'extra': {'ten': 'iTunes v4.6'}, 'channels': 2, 'samplerate': 44100,
-         'track_total': 11, 'duration': 0.138,
+        {'extra': {'ten': 'iTunes v4.6',
+                   'itunnorm': (' 0000044E 00000061 00009B67 000044C3 00022478 00022182 '
+                                '00007FCC 00007E5C 0002245E 0002214E'),
+                   'itunes_cddb_1': ('9D09130B+174405+11+150+14097+27391+43983+65786+84877+'
+                                     '99399+113226+132452+146426+163829'),
+                   'itunes_cddb_tracknumber': '3'},
+         'channels': 2, 'samplerate': 44100, 'track_total': 11, 'duration': 0.138,
          'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american',
          'artist': 'Anais Mitchell', 'track': 3, 'filesize': 5120,
          'bitrate': 160.0, 'comment': 'Waterbug Records, www.anaismitchell.com'}),
@@ -113,9 +118,14 @@ testfiles = OrderedDict([
          'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008',
          'genre': '.'}),
     ('samples/id3v22.TCO.genre.mp3',
-        {'extra': {'ten': 'iTunes 11.0.4'}, 'filesize': 500, 'album': 'ARTPOP',
-         'artist': 'Lady GaGa',
-         'comment': 'engiTunPGAP\x000', 'genre': 'Pop', 'title': 'Applause'}),
+        {'extra': {'ten': 'iTunes 11.0.4',
+                   'itunnorm': (' 000019F0 00001E2A 00009F9A 0000C689 000312A1 00030C1A 0000902E '
+                                '00008D36 00020882 000321D6'),
+                   'itunsmpb': (' 00000000 00000210 000007B9 00000000008FB737 00000000 008242F1 '
+                                '00000000 00000000 00000000 00000000 00000000 00000000'),
+                   'itunpgap': '0'},
+         'filesize': 500, 'album': 'ARTPOP', 'artist': 'Lady GaGa',
+         'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3',
         {'extra': {'copyright': '(c) 2008 nin', 'isrc': 'USTC40852229', 'bpm': '60',
                    'url': 'www.nin.com', 'tenc': 'LAME 3.97'},
@@ -140,7 +150,8 @@ testfiles = OrderedDict([
         {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian',
          'artist': 'Blind Guardian',
          'extra': {'love rating': 'L', 'publisher': 'Century Media', 'popm': 'MusicBee\x00Ä'},
-         'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': 1, 'year': '1992'}),
+         'genre': 'Power Metal\x00Other', 'title': 'Time What Is Time', 'track': 1,
+         'year': '1992'}),
     ('samples/nicotinetestdata.mp3',
         {'extra': {'tsse': 'Lavf58.20.100'}, 'filesize': 80919, 'channels': 2,
          'duration': 5.067755102040817, 'samplerate': 44100, 'bitrate': 127.6701030927835}),
@@ -308,7 +319,8 @@ testfiles = OrderedDict([
     ('samples/id3_header_with_a_zero_byte.wav',
         {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 44280, 'bitrate': 352.8,
          'samplerate': 22050, 'bitdepth': 16, 'artist': 'Purpley',
-         'title': 'Test000', 'track': 17, 'album': 'prototypes'}),
+         'title': 'Test000\x00Stacked\x00Test000\x00Stacked', 'track': 17,
+         'album': 'prototypes'}),
     ('samples/adpcm.wav',
         {'extra': {}, 'channels': 1, 'duration': 12.167256235827665, 'filesize': 268686,
          'bitrate': 176.4, 'samplerate': 44100, 'bitdepth': 4,
@@ -379,9 +391,9 @@ testfiles = OrderedDict([
         {'extra': {}, 'filesize': 4692, 'bitrate': 10.186943678613627, 'channels': 2,
          'duration': 3.68, 'samplerate': 44100, 'bitdepth': 16}),
     ('samples/with_id3_header.flac',
-        {'extra': {'id': '8591671910'}, 'filesize': 64837, 'album': 'album',
-         'artist': 'artist',
-         'title': 'title', 'track': 1, 'bitrate': 1143.72468, 'channels': 1,
+        {'extra': {'id': '8591671910'}, 'filesize': 64837, 'album': 'album\x00   ',
+         'artist': 'artist\x00群星',
+         'title': 'title\x00A 梦 哆啦 机器猫 短信铃声', 'track': 1, 'bitrate': 1143.72468, 'channels': 1,
          'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'bitdepth': 16,
          'year': '2018', 'comment': 'comment'}),
     ('samples/with_padded_id3_header.flac',
@@ -397,11 +409,11 @@ testfiles = OrderedDict([
                    'tsse': ('flac.exe -T "artist=Unbekannter Künstler" -T "title=Track01" -T '
                             '"album=Unbekannter Titel" -T "date=" -T "tracknumber=01" -T '
                             '"genre=" -5')},
-         'filesize': 19522, 'album': 'album',
-         'artist': 'artist', 'bitrate': 344.36807999999996,
+         'filesize': 19522, 'album': 'album\x00Unbekannter Titel',
+         'artist': 'artist\x00Unbekannter Künstler', 'bitrate': 344.36807999999996,
          'channels': 1, 'disc': 1, 'disc_total': 1,
          'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'bitdepth': 16,
-         'title': 'title', 'track': 1, 'track_total': 5, 'year': '2018',
+         'title': 'title\x00Track01', 'track': 1, 'track_total': 5, 'year': '2018',
          'comment': 'comment'}),
     ('samples/flac_with_image.flac',
         {'extra': {}, 'filesize': 80000, 'album': 'smilin´ in circles',
@@ -412,6 +424,11 @@ testfiles = OrderedDict([
     ('samples/flac_invalid_track_number.flac',
         {'extra': {}, 'filesize': 235, 'bitrate': 18.8, 'channels': 1,
          'duration': 0.1, 'samplerate': 44100, 'bitdepth': 16}),
+    ('samples/flac_multiple_fields.flac',
+        {'extra': {}, 'filesize': 235, 'album': 'album 1\x00album 2',
+         'artist': 'artist 1\x00artist 2\x00artist 3',
+         'bitrate': 18.8, 'channels': 1, 'duration': 0.1, 'genre': 'genre 1\x00genre 2',
+         'samplerate': 44100, 'bitdepth': 16}),
 
     # WMA
     ('samples/test2.wma',
@@ -869,7 +886,10 @@ def test_to_str():
         '{"album": "Hymns for the Exiled", "albumartist": null, "artist": "Anais Mitchell", '
         '"bitdepth": null, "bitrate": 160.0, "channels": 2, '
         '"comment": "Waterbug Records, www.anaismitchell.com", "disc": null, '
-        '"disc_total": null, "duration": 0.13836297152858082, "extra": {"ten": "iTunes v4.6"}, '
+        '"disc_total": null, "duration": 0.13836297152858082, "extra": {"ten": "iTunes v4.6", '
+        '"itunnorm": " 0000044E 00000061 00009B67 000044C3 00022478 00022182 00007FCC '
+        '00007E5C 0002245E 0002214E", "itunes_cddb_1": "9D09130B+174405+11+150+14097+27391+43983+'
+        '65786+84877+99399+113226+132452+146426+163829", "itunes_cddb_tracknumber": "3"}, '
         '"filesize": 5120, '
         '"genre": null, "samplerate": 44100, "title": "cosmic american", "track": 3, '
         '"track_total": 11, "year": "2004"}')
