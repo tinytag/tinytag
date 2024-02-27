@@ -1,7 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-__version__ = '1.10.1'
+# pylint: disable=missing-module-docstring
 
 import sys
 from .tinytag import TinyTag, TinyTagException  # noqa: F401
