@@ -7,7 +7,8 @@ import sys
 
 def release_package():
     # Run tests
-    subprocess.check_call([sys.executable, "-m", "flake8"])
+    subprocess.check_call([sys.executable, "-m", "pycodestyle"])
+    subprocess.check_call([sys.executable, "-m", "pylint", "--recursive=y", "."])
     subprocess.check_call([sys.executable, "-m", "pytest"])
 
     # Prepare source distribution and wheel
