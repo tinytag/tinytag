@@ -1,7 +1,5 @@
-from __future__ import absolute_import
 from os.path import splitext
 import os
-import json
 import sys
 
 from tinytag.tinytag import TinyTag, TinyTagException
@@ -78,6 +76,7 @@ for i, filename in enumerate(filenames):
         data = {'filename': filename}
         data.update(tag.as_dict())
         if formatting == 'json':
+            import json
             print(json.dumps(data))
             continue
         for k, v in data.items():

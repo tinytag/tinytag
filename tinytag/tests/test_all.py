@@ -8,8 +8,6 @@
 #
 
 
-from __future__ import unicode_literals
-
 import io
 import operator
 import os
@@ -22,13 +20,8 @@ from pytest import raises
 
 from tinytag.tinytag import TinyTag, TinyTagException, _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    OrderedDict = dict  # python 2.6 and 3.2 compat
 
-
-testfiles = OrderedDict([
+testfiles = dict([
     # MP3
     ('samples/vbri.mp3',
         {'extra': {}, 'channels': 2, 'samplerate': 44100,
@@ -880,16 +873,14 @@ def test_show_hint_for_wrong_usage():
 
 def test_to_str():
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
-    assert str(tag)  # since the dict is not ordered we cannot == 'somestring'
-    assert repr(tag)  # since the dict is not ordered we cannot == 'somestring'
     assert str(tag) == (
-        '{"album": "Hymns for the Exiled", "albumartist": null, "artist": "Anais Mitchell", '
-        '"bitdepth": null, "bitrate": 160.0, "channels": 2, '
-        '"comment": "Waterbug Records, www.anaismitchell.com", "disc": null, '
-        '"disc_total": null, "duration": 0.13836297152858082, "extra": {"ten": "iTunes v4.6", '
-        '"itunnorm": " 0000044E 00000061 00009B67 000044C3 00022478 00022182 00007FCC '
-        '00007E5C 0002245E 0002214E", "itunes_cddb_1": "9D09130B+174405+11+150+14097+27391+43983+'
-        '65786+84877+99399+113226+132452+146426+163829", "itunes_cddb_tracknumber": "3"}, '
-        '"filesize": 5120, '
-        '"genre": null, "samplerate": 44100, "title": "cosmic american", "track": 3, '
-        '"track_total": 11, "year": "2004"}')
+        "{'album': 'Hymns for the Exiled', 'albumartist': None, 'artist': 'Anais Mitchell', "
+        "'bitdepth': None, 'bitrate': 160.0, 'channels': 2, "
+        "'comment': 'Waterbug Records, www.anaismitchell.com', 'disc': None, "
+        "'disc_total': None, 'duration': 0.13836297152858082, 'extra': {'ten': 'iTunes v4.6', "
+        "'itunnorm': ' 0000044E 00000061 00009B67 000044C3 00022478 00022182 00007FCC "
+        "00007E5C 0002245E 0002214E', 'itunes_cddb_1': '9D09130B+174405+11+150+14097+27391+43983+"
+        "65786+84877+99399+113226+132452+146426+163829', 'itunes_cddb_tracknumber': '3'}, "
+        "'filesize': 5120, "
+        "'genre': None, 'samplerate': 44100, 'title': 'cosmic american', 'track': 3, "
+        "'track_total': 11, 'year': '2004'}")

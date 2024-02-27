@@ -1,6 +1,4 @@
-import json
 import os
-import sys
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
@@ -19,7 +17,10 @@ tinytag_attributes = {'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
 
 
 def run_cli(args):
+    debug_env = os.environ.pop("DEBUG", None)
     output = check_output('python -m tinytag ' + args, cwd=project_folder, shell=True)
+    if debug_env:
+        os.environ["DEBUG"] = debug_env
     return output.decode('utf-8')
 
 
@@ -37,11 +38,10 @@ def test_print_help():
     assert 'tinytag [options] <filename' in run_cli('--help')
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_long_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
+    temp_file.close()
     run_cli(f'--save-image {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
     with open(temp_file.name, 'rb') as fh:
@@ -50,29 +50,28 @@ def test_save_image_long_opt():
         assert b'JFIF' in image_data
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_short_opt():
     temp_file = NamedTemporaryFile()
     assert file_size(temp_file.name) == 0
+    temp_file.close()
     run_cli(f'-i {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="NamedTemporaryFile can't be reopened on windows")
 def test_save_image_bulk():
     temp_file = NamedTemporaryFile(suffix='.jpg')
     temp_file_no_ext = temp_file.name[:-4]
     assert file_size(temp_file.name) == 0
+    temp_file.close()
     run_cli(f'-i {temp_file.name} {mp3_with_image} {mp3_with_image} {mp3_with_image}')
-    assert file_size(temp_file.name) == 0
+    assert not os.path.isfile(temp_file.name)
     assert file_size(temp_file_no_ext + '00000.jpg') > 0
     assert file_size(temp_file_no_ext + '00001.jpg') > 0
     assert file_size(temp_file_no_ext + '00002.jpg') > 0
 
 
 def test_meta_data_output_default_json():
+    import json
     output = run_cli(mp3_with_image)
     data = json.loads(output)
     assert data
@@ -80,6 +79,7 @@ def test_meta_data_output_default_json():
 
 
 def test_meta_data_output_format_json():
+    import json
     output = run_cli('-f json ' + mp3_with_image)
     data = json.loads(output)
     assert data
