@@ -280,6 +280,19 @@ class _MP4(TinyTag):
     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
 
+    @classmethod
+    def unpack_integer(cls, value, signed=True):
+        value_length = len(value)
+        if value_length == 1:
+            return struct.unpack('>b' if signed else '>B', value)[0]
+        if value_length == 2:
+            return struct.unpack('>h' if signed else '>H', value)[0]
+        if value_length == 4:
+            return struct.unpack('>i' if signed else '>I', value)[0]
+        if value_length == 8:
+            return struct.unpack('>q' if signed else '>Q', value)[0]
+        return None
+
     class Parser:
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
         ATOM_DECODER_BY_TYPE = {
@@ -290,8 +303,8 @@ class _MP4(TinyTag):
             # 16: duration in millis
             13: lambda x: x,  # JPEG
             14: lambda x: x,  # PNG
-            # 21: BE Signed int
-            # 22: BE Unsigned int
+            21: lambda x: _MP4.unpack_integer(x),                # BE Signed int
+            22: lambda x: _MP4.unpack_integer(x, signed=False),  # BE Unsigned int
             23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
             24: lambda x: struct.unpack('>d', x)[0],  # BE Float64
             # 27: lambda x: x,  # BMP
@@ -440,10 +453,12 @@ class _MP4(TinyTag):
         # b'cpil':   {b'data': Parser.make_data_atom_parser('extra.compilation')},
         b'\xa9day': {b'data': Parser.make_data_atom_parser('year')},
         b'\xa9des': {b'data': Parser.make_data_atom_parser('extra.description')},
+        b'\xa9dir': {b'data': Parser.make_data_atom_parser('extra.director')},
         b'\xa9gen': {b'data': Parser.make_data_atom_parser('genre')},
         b'\xa9lyr': {b'data': Parser.make_data_atom_parser('extra.lyrics')},
         b'\xa9mvn': {b'data': Parser.make_data_atom_parser('movement')},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
+        b'\xa9pub': {b'data': Parser.make_data_atom_parser('extra.publisher')},
         b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
         b'aART': {b'data': Parser.make_data_atom_parser('albumartist')},
         b'cprt': {b'data': Parser.make_data_atom_parser('extra.copyright')},
@@ -451,9 +466,8 @@ class _MP4(TinyTag):
         b'disk': {b'data': Parser.make_number_parser('disc', 'disc_total')},
         b'gnre': {b'data': Parser.parse_id3v1_genre},
         b'trkn': {b'data': Parser.make_number_parser('track', 'track_total')},
+        b'tmpo': {b'data': Parser.make_data_atom_parser('extra.bpm')},
         b'----': Parser.parse_custom_field,
-        # need test-data for this
-        # b'tmpo': {b'data': Parser.make_data_atom_parser('extra.bmp')},
     }}}}}
 
     # see: https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
@@ -525,7 +539,9 @@ class _MP4(TinyTag):
 
 
 class _ID3(TinyTag):
-    FRAME_ID_TO_FIELD = {  # Mapping from Frame ID to a field of the TinyTag
+    FRAME_ID_TO_FIELD = {
+        # Mapping from Frame ID to a field of the TinyTag
+        # https://exiftool.org/TagNames/ID3.html
         'COMM': 'comment', 'COM': 'comment',
         'TRCK': 'track', 'TRK': 'track',
         'TYER': 'year', 'TYE': 'year', 'TDRC': 'year',
@@ -533,13 +549,17 @@ class _ID3(TinyTag):
         'TPE1': 'artist', 'TP1': 'artist',
         'TIT2': 'title', 'TT2': 'title',
         'TCON': 'genre', 'TCO': 'genre',
-        'TPOS': 'disc',
-        'TPE2': 'albumartist', 'TCOM': 'composer',
-        'WXXX': 'extra.url',
+        'TPOS': 'disc', 'TPA': 'disc',
+        'TPE2': 'albumartist', 'TP2': 'albumartist',
+        'TCOM': 'composer', 'TCM': 'composer',
+        'WOAR': 'extra.url', 'WAR': 'extra.url',
         'TSRC': 'extra.isrc',
-        'TKEY': 'extra.initial_key',
-        'USLT': 'extra.lyrics',
         'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
+        'TBPM': 'extra.bpm',
+        'TKEY': 'extra.initial_key',
+        'TLAN': 'extra.language', 'TLA': 'extra.language',
+        'TPUB': 'extra.publisher', 'TPB': 'extra.publisher',
+        'USLT': 'extra.lyrics', 'ULT': 'extra.lyrics',
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -1027,6 +1047,14 @@ class _Ogg(TinyTag):
             'comment': 'comment',
             'comments': 'comment',
             'composer': 'composer',
+            'bpm': 'extra.bpm',
+            'copyright': 'extra.copyright',
+            'isrc': 'extra.isrc',
+            'lyrics': 'extra.lyrics',
+            'publisher': 'extra.publisher',
+            'language': 'extra.language',
+            'director': 'extra.director',
+            'website': 'extra.url',
         }
         if contains_vendor:
             vendor_length = struct.unpack('I', fh.read(4))[0]
@@ -1100,17 +1128,22 @@ class _Wave(TinyTag):
         b'TITL': 'title',
         b'IPRD': 'album',
         b'IART': 'artist',
+        b'IBPM': 'extra.bpm',
         b'ICMT': 'comment',
+        b'IMUS': 'composer',
+        b'ICOP': 'extra.copyright',
         b'ICRD': 'year',
         b'IGNR': 'genre',
+        b'ILNG': 'extra.language',
         b'ISRC': 'extra.isrc',
+        b'IPUB': 'extra.publisher',
         b'IPRT': 'track',
         b'ITRK': 'track',
         b'TRCK': 'track',
         b'PRT1': 'track',
         b'PRT2': 'track_number',
+        b'IBSU': 'extra.url',
         b'YEAR': 'year',
-        # riff format is lacking the composer field.
     }
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
@@ -1367,6 +1400,12 @@ class _Wma(TinyTag):
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
                     'WM/Composer': 'composer',
+                    'WM/Publisher': 'extra.publisher',
+                    'WM/BeatsPerMinute': 'extra.bpm',
+                    'WM/InitialKey': 'extra.initial_key',
+                    'WM/Lyrics': 'extra.lyrics',
+                    'WM/Language': 'extra.language',
+                    'WM/AuthorURL': 'extra.url',
                 }
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = _bytes_to_int_le(fh.read(2))
