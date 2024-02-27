@@ -53,7 +53,7 @@ Alternatively, check if a file is supported:
 
     is_supported = TinyTag.is_supported('/some/music.mp3')
 
-List of possible attributes you can get with TinyTag:
+List of common attributes tinytag provides:
 
     tag.album         # album as string
     tag.albumartist   # album artist as string
@@ -61,7 +61,6 @@ List of possible attributes you can get with TinyTag:
     tag.bitdepth      # bit depth for lossless audio
     tag.bitrate       # bitrate in kBits/s
     tag.comment       # file comment as string
-    tag.composer      # composer as string 
     tag.disc          # disc number
     tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
@@ -69,8 +68,8 @@ List of possible attributes you can get with TinyTag:
     tag.genre         # genre as string
     tag.samplerate    # samples per second
     tag.title         # title of the song
-    tag.track         # track number as string
-    tag.track_total   # total number of tracks as string
+    tag.track         # track number
+    tag.track_total   # total number of tracks
     tag.year          # year or date as string
 
 For non-common fields and fields specific to certain file formats, use `extra`:
@@ -80,6 +79,7 @@ For non-common fields and fields specific to certain file formats, use `extra`:
 The following standard `extra` field names are used when file formats provide relevant data:
 
     `bpm`
+    `composer`
     `copyright`
     `director`
     `initial_key`
