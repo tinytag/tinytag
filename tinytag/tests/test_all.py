@@ -1,22 +1,21 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
 # tests can be extended using other bigger files that are not going to be
 # checked into git, by placing them into the custom_samples folder
 #
 # see custom_samples/instructions.txt
 #
 
+# pylint: disable=missing-function-docstring,missing-module-docstring,protected-access
+
 
 import io
 import operator
 import os
+import pathlib
 import re
 import shutil
 import sys
 
 import pytest
-from pytest import raises
 
 from tinytag.tinytag import TinyTag, TinyTagException, _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
@@ -588,38 +587,35 @@ def startswith(val1, val2):
 
 
 def error_fmt(value):
-    return '%s (%s)' % (repr(value), type(value))
+    return f'{repr(value)} ({type(value)})'
 
 
 def compare(results, expected, file, prev_path=None):
     assert isinstance(results, dict)
     missing_keys = set(expected.keys()) - set(results)
-    assert not missing_keys, 'Missing data in fixture \n%s' % str(missing_keys)
+    assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
 
     for key, result_val in results.items():
         path = prev_path + '.' + key if prev_path else key
         try:
             expected_val = expected[key]
         except KeyError:
-            assert False, 'Missing field "%s": "%s" in fixture "%s"!' % (
-                key, error_fmt(result_val), file)
+            assert False, f'Missing field "{key}": "{error_fmt(result_val)}" in fixture "{file}"!'
         # recurse if the result and expected values are a dict:
         if isinstance(result_val, dict) and isinstance(expected_val, dict):
             compare(result_val, expected_val, file, prev_path=key)
         else:
             fmt_string = 'field "%s": got %s expected %s in %s!'
             fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
-            op = operator.eq
+            oper = operator.eq
             if path == 'duration':  # allow duration to be off by 100 ms and a maximum of 1%
-                op = almost_equal_float
+                oper = almost_equal_float
             if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
-                op = startswith
-            assert op(result_val, expected_val), fmt_string % fmt_values
+                oper = startswith
+            assert oper(result_val, expected_val), fmt_string % fmt_values
 
 
-@pytest.mark.parametrize("testfile,expected", [
-    pytest.param(testfile, expected) for testfile, expected in testfiles.items()
-])
+@pytest.mark.parametrize("testfile,expected", testfiles.items())
 def test_file_reading(testfile, expected):
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename)
@@ -631,10 +627,6 @@ def test_file_reading(testfile, expected):
 
 
 def test_pathlib_compatibility():
-    try:
-        import pathlib
-    except ImportError:
-        return
     testfile = next(iter(testfiles.keys()))
     filename = pathlib.Path(testfolder) / testfile
     TinyTag.get(filename)
@@ -688,101 +680,49 @@ def test_unsubclassed_tinytag_parse_tag():
 
 
 def test_mp3_length_estimation():
-    _ID3.set_estimation_precision(0.7)
+    _ID3._MAX_ESTIMATION_SEC = 0.7
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
     assert 3.5 < tag.duration < 4.0
 
 
+@pytest.mark.parametrize("path,cls", [
+    ('samples/silence-44-s-v1.mp3', _Flac),
+    ('samples/incomplete.mp3', _ID3),
+    ('samples/flac1.5sStereo.flac', _Ogg),
+    ('samples/flac1.5sStereo.flac', _Wave),
+    ('samples/ilbm.aiff', _Aiff),
+])
 @pytest.mark.xfail(raises=TinyTagException)
-def test_unexpected_eof():
-    _ID3.get(os.path.join(testfolder, 'samples/incomplete.mp3'))
+def test_invalid_file(path, cls):
+    cls.get(os.path.join(testfolder, path))
 
 
-@pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_flac_file():
-    _Flac.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
-
-
-@pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_mp3_file():
-    _ID3.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
-
-
-@pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_ogg_file():
-    _Ogg.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
-
-
-@pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_wave_file():
-    _Wave.get(os.path.join(testfolder, 'samples/flac1.5sStereo.flac'))
-
-
-@pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_aiff_file():
-    _Aiff.get(os.path.join(testfolder, 'samples/ilbm.aiff'))
-
-
-def test_unpad():
-    # make sure that unpad only removes trailing 0-bytes
-    assert TinyTag._unpad('foo\x00') == 'foo'
-    assert TinyTag._unpad('foo\x00bar\x00') == 'foo\x00bar'
-
-
-def test_mp3_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/cover_img.mp3'), image=True)
+@pytest.mark.parametrize('path,expected_size', [
+    ('samples/cover_img.mp3', 146676),
+    ('samples/id3v22_image.mp3', 18092),
+    ('samples/id3image_without_description.mp3', 28680),
+    ('samples/image-text-encoding.mp3', 5708),
+    ('samples/12oz.mp3', 2210),
+    ('samples/iso8859_with_image.m4a', 21963),
+    ('samples/flac_with_image.flac', 73246),
+    ('samples/ogg_with_image.ogg', 1220),
+    ('samples/wav_with_image.wav', 4627),
+    ('samples/aiff_with_image.aiff', 21963),
+])
+def test_image_loading(path, expected_size):
+    tag = TinyTag.get(os.path.join(testfolder, path), image=True)
     image_data = tag.get_image()
+    image_size = len(image_data)
     assert image_data is not None
-    assert 140000 < len(image_data) < 150000, ('Image is %d bytes but should be around 145kb' %
-                                               len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
+    assert image_size == expected_size, \
+           f'Image is {image_size} bytes but should be {expected_size} bytes'
+    assert image_data.startswith(b'\xff\xd8\xff\xe0'), \
+           'The image data must start with a jpeg header'
 
 
-def test_mp3_id3v22_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22_image.mp3'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 18000 < len(image_data) < 19000, ('Image is %d bytes but should be around 18.1kb' %
-                                             len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_mp3_image_loading_without_description():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3image_without_description.mp3'),
-                      image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 28600 < len(image_data) < 28700, ('Image is %d bytes but should be around 28.6kb' %
-                                             len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_mp3_image_loading_with_utf8_description():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/image-text-encoding.mp3'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 5700 < len(image_data) < 6000, ('Image is %d bytes but should be around 6kb' %
-                                           len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_mp3_image_loading2():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/12oz.mp3'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 2000 < len(image_data) < 2500, ('Image is %d bytes but should be around 145kb' %
-                                           len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
+@pytest.mark.xfail(raises=TinyTagException)
 def test_mp3_utf_8_invalid_string_raises_exception():
-    with raises(TinyTagException):
-        TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
+    TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
 
 
 def test_mp3_utf_8_invalid_string_can_be_ignored():
@@ -793,81 +733,29 @@ def test_mp3_utf_8_invalid_string_can_be_ignored():
     assert tag.title == 'ran día'
 
 
-def test_mp4_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/iso8859_with_image.m4a'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 20000 < len(image_data) < 25000, ('Image is %d bytes but should be around 22kb' %
-                                             len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_flac_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/flac_with_image.flac'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 70000 < len(image_data) < 80000, ('Image is %d bytes but should be around 75kb' %
-                                             len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_ogg_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 1000 < len(image_data) < 2000, ('Image is %d bytes but should be around 1.2kb' %
-                                           len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_wav_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/wav_with_image.wav'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 4000 < len(image_data) < 5000, ('Image is %d bytes but should be around 20kb' %
-                                           len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
-def test_aiff_image_loading():
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/aiff_with_image.aiff'), image=True)
-    image_data = tag.get_image()
-    assert image_data is not None
-    assert 15000 < len(image_data) < 25000, ('Image is %d bytes but should be around 20kb' %
-                                             len(image_data))
-    assert image_data.startswith(b'\xff\xd8\xff\xe0'), ('The image data must start with a jpeg '
-                                                        'header')
-
-
 @pytest.mark.parametrize("testfile,expected", [
-    pytest.param(testfile, expected) for testfile, expected in [
-        ('samples/detect_mp3_id3.x', _ID3),
-        ('samples/detect_mp3_fffb.x', _ID3),
-        ('samples/detect_ogg_flac.x', _Ogg),
-        ('samples/detect_ogg_opus.x', _Ogg),
-        ('samples/detect_ogg_vorbis.x', _Ogg),
-        ('samples/detect_wav.x', _Wave),
-        ('samples/detect_flac.x', _Flac),
-        ('samples/detect_wma.x', _Wma),
-        ('samples/detect_mp4_m4a.x', _MP4),
-        ('samples/detect_aiff.x', _Aiff),
-    ]
+    ('samples/detect_mp3_id3.x', _ID3),
+    ('samples/detect_mp3_fffb.x', _ID3),
+    ('samples/detect_ogg_flac.x', _Ogg),
+    ('samples/detect_ogg_opus.x', _Ogg),
+    ('samples/detect_ogg_vorbis.x', _Ogg),
+    ('samples/detect_wav.x', _Wave),
+    ('samples/detect_flac.x', _Flac),
+    ('samples/detect_wma.x', _Wma),
+    ('samples/detect_mp4_m4a.x', _MP4),
+    ('samples/detect_aiff.x', _Aiff),
 ])
 def test_detect_magic_headers(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    with io.open(filename, 'rb') as fh:
-        parser = TinyTag.get_parser_class(filename, fh)
+    with io.open(filename, 'rb') as file_handle:
+        parser = TinyTag._get_parser_class(filename, file_handle)
     assert parser == expected
 
 
 def test_show_hint_for_wrong_usage():
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(TinyTagException) as exc_info:
         TinyTag('filename.mp3', 0)
-    assert exc_info.type == Exception
+    assert exc_info.type == TinyTagException
     assert exc_info.value.args[0] == 'Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`'
 
 

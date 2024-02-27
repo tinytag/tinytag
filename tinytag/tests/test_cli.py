@@ -1,3 +1,6 @@
+# pylint: disable=missing-function-docstring,missing-module-docstring
+
+import json
 import os
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
@@ -39,30 +42,27 @@ def test_print_help():
 
 
 def test_save_image_long_opt():
-    temp_file = NamedTemporaryFile()
-    assert file_size(temp_file.name) == 0
-    temp_file.close()
+    with NamedTemporaryFile() as temp_file:
+        assert file_size(temp_file.name) == 0
     run_cli(f'--save-image {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
-    with open(temp_file.name, 'rb') as fh:
-        image_data = fh.read(20)
+    with open(temp_file.name, 'rb') as file_handle:
+        image_data = file_handle.read(20)
         assert image_data.startswith(b'\xff')
         assert b'JFIF' in image_data
 
 
 def test_save_image_short_opt():
-    temp_file = NamedTemporaryFile()
-    assert file_size(temp_file.name) == 0
-    temp_file.close()
+    with NamedTemporaryFile() as temp_file:
+        assert file_size(temp_file.name) == 0
     run_cli(f'-i {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
 
 
 def test_save_image_bulk():
-    temp_file = NamedTemporaryFile(suffix='.jpg')
-    temp_file_no_ext = temp_file.name[:-4]
-    assert file_size(temp_file.name) == 0
-    temp_file.close()
+    with NamedTemporaryFile(suffix='.jpg') as temp_file:
+        temp_file_no_ext = temp_file.name[:-4]
+        assert file_size(temp_file.name) == 0
     run_cli(f'-i {temp_file.name} {mp3_with_image} {mp3_with_image} {mp3_with_image}')
     assert not os.path.isfile(temp_file.name)
     assert file_size(temp_file_no_ext + '00000.jpg') > 0
@@ -71,7 +71,6 @@ def test_save_image_bulk():
 
 
 def test_meta_data_output_default_json():
-    import json
     output = run_cli(mp3_with_image)
     data = json.loads(output)
     assert data
@@ -79,7 +78,6 @@ def test_meta_data_output_default_json():
 
 
 def test_meta_data_output_format_json():
-    import json
     output = run_cli('-f json ' + mp3_with_image)
     data = json.loads(output)
     assert data
@@ -104,7 +102,7 @@ def test_meta_data_output_format_tsv():
 
 def test_meta_data_output_format_tabularcsv():
     output = run_cli('-f tabularcsv ' + mp3_with_image)
-    header, line, rest = output.split(os.linesep)
+    header, _line, _rest = output.split(os.linesep)
     assert set(header.split(',')) == tinytag_attributes
 
 

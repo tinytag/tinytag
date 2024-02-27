@@ -1,11 +1,14 @@
+# pylint: disable=missing-module-docstring,protected-access
+
 from os.path import splitext
+import json
 import os
 import sys
 
 from tinytag.tinytag import TinyTag, TinyTagException
 
 
-def usage():
+def _usage():
     print('''tinytag [options] <filename...>
 
     -h, --help
@@ -23,7 +26,7 @@ def usage():
 ''')
 
 
-def pop_param(name, _default):
+def _pop_param(name, _default):
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
@@ -31,7 +34,7 @@ def pop_param(name, _default):
     return _default
 
 
-def pop_switch(name, _default):
+def _pop_switch(name, _default):
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
@@ -39,58 +42,62 @@ def pop_switch(name, _default):
     return False
 
 
-try:
-    display_help = pop_switch('--help', False) or pop_switch('-h', False)
+def _print_tag(tag, formatting, header_printed=False):
+    data = {'filename': tag._filename}
+    data.update(tag._as_dict())
+    if formatting == 'json':
+        print(json.dumps(data))
+        return header_printed
+    for field, value in data.items():
+        if isinstance(value, str):
+            data[field] = value.replace('\x00', ';')  # use a more friendly separator for output
+    if formatting == 'csv':
+        print('\n'.join(f'{field},{value}' for field, value in data.items()))
+    elif formatting == 'tsv':
+        print('\n'.join(f'{field}\t{value}' for field, value in data.items()))
+    elif formatting == 'tabularcsv':
+        if not header_printed:
+            print(','.join(field for field, value in data.items()))
+            header_printed = True
+        print(','.join(f'"{value}"' for field, value in data.items()))
+    return header_printed
+
+
+def _run():
+    display_help = _pop_switch('--help', False) or _pop_switch('-h', False)
     if display_help:
-        usage()
-        sys.exit(0)
-    save_image_path = pop_param('--save-image', None) or pop_param('-i', None)
-    formatting = (pop_param('--format', None) or pop_param('-f', None)) or 'json'
-    skip_unsupported = pop_switch('--skip-unsupported', False) or pop_switch('-s', False)
+        _usage()
+        return 0
+    save_image_path = _pop_param('--save-image', None) or _pop_param('-i', None)
+    formatting = (_pop_param('--format', None) or _pop_param('-f', None)) or 'json'
+    skip_unsupported = _pop_switch('--skip-unsupported', False) or _pop_switch('-s', False)
     filenames = sys.argv[1:]
-except Exception as exc:
-    print(exc)
-    usage()
-    sys.exit(1)
+    header_printed = False
 
-header_printed = False
-
-for i, filename in enumerate(filenames):
-    try:
+    for i, filename in enumerate(filenames):
         if skip_unsupported:
             if os.path.isdir(filename):
                 continue
             if not TinyTag.is_supported(filename):
                 continue
-        tag = TinyTag.get(filename, image=save_image_path is not None)
+        try:
+            tag = TinyTag.get(filename, image=save_image_path is not None)
+        except TinyTagException as exc:
+            sys.stderr.write(f'{filename}: {exc}\n')
+            return 1
         if save_image_path:
             # allow for saving the image of multiple files
             actual_save_image_path = save_image_path
             if len(filenames) > 1:
                 actual_save_image_path, ext = splitext(actual_save_image_path)
-                actual_save_image_path += '%05d' % i + ext
+                actual_save_image_path += f'{i:05d}{ext}'
             image = tag.get_image()
             if image:
-                with open(actual_save_image_path, 'wb') as fh:
-                    fh.write(image)
-        data = {'filename': filename}
-        data.update(tag.as_dict())
-        if formatting == 'json':
-            import json
-            print(json.dumps(data))
-            continue
-        for k, v in data.items():
-            if isinstance(v, str):
-                data[k] = v.replace('\x00', ';')  # use a more friendly separator for text output
-        if formatting == 'csv':
-            print('\n'.join('%s,%s' % (k, v) for k, v in data.items()))
-        elif formatting == 'tsv':
-            print('\n'.join('%s\t%s' % (k, v) for k, v in data.items()))
-        elif formatting == 'tabularcsv':
-            if not header_printed:
-                print(','.join(k for k, v in data.items()))
-                header_printed = True
-            print(','.join('"%s"' % v for k, v in data.items()))
-    except TinyTagException as e:
-        sys.stderr.write('%s: %s\n' % (filename, str(e)))
-        sys.exit(1)
+                with open(actual_save_image_path, 'wb') as file_handle:
+                    file_handle.write(image)
+        header_printed = _print_tag(tag, formatting, header_printed)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(_run())

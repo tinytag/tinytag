@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: disable=missing-function-docstring,missing-module-docstring
 
 import subprocess
 import sys
