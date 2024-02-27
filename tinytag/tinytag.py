@@ -1348,15 +1348,6 @@ class _Wma(TinyTag):
             decoded[block[0]] = val
         return decoded
 
-    def __bytes_to_guid(self, obj_id_bytes):
-        return '-'.join([
-            hex(_bytes_to_int_le(obj_id_bytes[:-12]))[2:].zfill(6),
-            hex(_bytes_to_int_le(obj_id_bytes[-12:-10]))[2:].zfill(4),
-            hex(_bytes_to_int_le(obj_id_bytes[-10:-8]))[2:].zfill(4),
-            hex(_bytes_to_int(obj_id_bytes[-8:-6]))[2:].zfill(4),
-            hex(_bytes_to_int(obj_id_bytes[-6:]))[2:].zfill(12),
-        ])
-
     def __decode_string(self, bytestring):
         return self._unpad(bytestring.decode('utf-16'))
 
