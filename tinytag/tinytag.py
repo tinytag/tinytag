@@ -1238,7 +1238,6 @@ class _Flac(TinyTag):
         if id3 is not None:  # apply ID3 tags after vorbis
             self.update(id3)
 
-
     def _determine_duration(self, fh):
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
