@@ -96,7 +96,6 @@ class TinyTag:
         self.bitrate = None
         self.channels = None
         self.comment = None
-        self.composer = None
         self.disc = None
         self.disc_total = None
         self.duration = None
@@ -263,7 +262,7 @@ class TinyTag:
             return
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
-                    'genre', 'disc', 'disc_total', 'comment', 'composer',
+                    'genre', 'disc', 'disc_total', 'comment',
                     'extra', '_image_data']:
             if not getattr(self, key) and getattr(other, key):
                 setattr(self, key, getattr(other, key))
@@ -459,7 +458,7 @@ class _MP4(TinyTag):
         b'\xa9mvn': {b'data': Parser.make_data_atom_parser('movement')},
         b'\xa9nam': {b'data': Parser.make_data_atom_parser('title')},
         b'\xa9pub': {b'data': Parser.make_data_atom_parser('extra.publisher')},
-        b'\xa9wrt': {b'data': Parser.make_data_atom_parser('composer')},
+        b'\xa9wrt': {b'data': Parser.make_data_atom_parser('extra.composer')},
         b'aART': {b'data': Parser.make_data_atom_parser('albumartist')},
         b'cprt': {b'data': Parser.make_data_atom_parser('extra.copyright')},
         b'desc': {b'data': Parser.make_data_atom_parser('extra.description')},
@@ -551,7 +550,7 @@ class _ID3(TinyTag):
         'TCON': 'genre', 'TCO': 'genre',
         'TPOS': 'disc', 'TPA': 'disc',
         'TPE2': 'albumartist', 'TP2': 'albumartist',
-        'TCOM': 'composer', 'TCM': 'composer',
+        'TCOM': 'extra.composer', 'TCM': 'extra.composer',
         'WOAR': 'extra.url', 'WAR': 'extra.url',
         'TSRC': 'extra.isrc',
         'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
@@ -1046,7 +1045,7 @@ class _Ogg(TinyTag):
             'description': 'comment',
             'comment': 'comment',
             'comments': 'comment',
-            'composer': 'composer',
+            'composer': 'extra.composer',
             'bpm': 'extra.bpm',
             'copyright': 'extra.copyright',
             'isrc': 'extra.isrc',
@@ -1130,7 +1129,7 @@ class _Wave(TinyTag):
         b'IART': 'artist',
         b'IBPM': 'extra.bpm',
         b'ICMT': 'comment',
-        b'IMUS': 'composer',
+        b'IMUS': 'extra.composer',
         b'ICOP': 'extra.copyright',
         b'ICRD': 'year',
         b'IGNR': 'genre',
@@ -1399,7 +1398,7 @@ class _Wma(TinyTag):
                     'WM/AlbumArtist': 'albumartist',
                     'WM/Genre': 'genre',
                     'WM/AlbumTitle': 'album',
-                    'WM/Composer': 'composer',
+                    'WM/Composer': 'extra.composer',
                     'WM/Publisher': 'extra.publisher',
                     'WM/BeatsPerMinute': 'extra.bpm',
                     'WM/InitialKey': 'extra.initial_key',
