@@ -228,26 +228,28 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname, value, overwrite=True):
+    def _set_field(self, fieldname, value):
         """convenience function to set fields of the tinytag by name"""
         write_dest = self  # write into the TinyTag by default
         get_func = getattr
         set_func = setattr
         is_extra = fieldname.startswith('extra.')  # but if it's marked as extra field
+        is_str = isinstance(value, str)
         if is_extra:
             fieldname = fieldname[6:]
             write_dest = self.extra  # write into the extra field instead
             get_func = operator.getitem
             set_func = operator.setitem
-        if isinstance(value, str) and not value:
+        if is_str and not value:
             # don't set empty value
             return
-        if get_func(write_dest, fieldname):  # do not overwrite existing data
-            return
+        old_value = get_func(write_dest, fieldname)
+        if is_str and old_value and old_value != value:
+            # Combine same field with a null character
+            value = old_value + '\x00' + value
         if DEBUG:
             stderr(f'Setting field "{fieldname}" to "{value}"')
-        if overwrite or not get_func(write_dest, fieldname):
-            set_func(write_dest, fieldname, value)
+        set_func(write_dest, fieldname, value)
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -255,19 +257,18 @@ class TinyTag:
     def _parse_tag(self, fh):
         raise NotImplementedError()
 
-    def update(self, other, all_fields=False):
+    def update(self, other):
         # update the values of this tag with the values from another tag
-        if all_fields:
-            self.__dict__.update(other.__dict__)
-            return
         for key in ['track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
                     'genre', 'disc', 'disc_total', 'comment',
-                    'extra', '_image_data']:
-            if not getattr(self, key) and getattr(other, key):
-                setattr(self, key, getattr(other, key))
-        if other.extra:
-            self.extra.update(other.extra)
+                    'bitdepth', 'bitrate', 'channels', 'samplerate',
+                    '_image_data']:
+            new_value = getattr(other, key)
+            if new_value:
+                self._set_field(key, new_value)
+        for key, value in other.extra.items():
+            self._set_field("extra." + key, value)
 
     @staticmethod
     def _unpad(s):
@@ -798,18 +799,25 @@ class _ID3(TinyTag):
             def asciidecode(x):
                 return self._unpad(x.decode(self._default_encoding or 'latin1'))
             fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
-            self._set_field('title', asciidecode(fields[:30]), overwrite=False)
-            self._set_field('artist', asciidecode(fields[30:60]), overwrite=False)
-            self._set_field('album', asciidecode(fields[60:90]), overwrite=False)
-            self._set_field('year', asciidecode(fields[90:94]), overwrite=False)
+            self._set_field('title', asciidecode(fields[:30]))
+            self._set_field('artist', asciidecode(fields[30:60]))
+            self._set_field('album', asciidecode(fields[60:90]))
+            self._set_field('year', asciidecode(fields[90:94]))
             comment = fields[94:124]
             if b'\x00\x00' < comment[-2:] < b'\x01\x00':
-                self._set_field('track', ord(comment[-1:]), overwrite=False)
+                self._set_field('track', ord(comment[-1:]))
                 comment = comment[:-2]
-            self._set_field('comment', asciidecode(comment), overwrite=False)
+            self._set_field('comment', asciidecode(comment))
             genre_id = ord(fields[124:125])
             if genre_id < len(self.ID3V1_GENRES):
-                self._set_field('genre', self.ID3V1_GENRES[genre_id], overwrite=False)
+                self._set_field('genre', self.ID3V1_GENRES[genre_id])
+
+    def _parse_custom_field(self, content):
+        custom_field_name, separator, value = content.partition('\x00')
+        if custom_field_name and separator:
+            self._set_field('extra.' + custom_field_name.lower(), value.lstrip('\ufeff'))
+            return True
+        return False
 
     @staticmethod
     def index_utf16(s, search):
@@ -837,11 +845,15 @@ class _ID3(TinyTag):
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             content = fh.read(frame_size)
             fieldname = self.FRAME_ID_TO_FIELD.get(frame_id)
+            should_set_field = True
             if fieldname:
                 language = fieldname in ('comment', 'extra.lyrics')
                 value = self._decode_string(content, language)
                 try:
-                    if fieldname in ('track', 'disc'):
+                    if fieldname == "comment":
+                        # check if comment is a key-value pair (used by iTunes)
+                        should_set_field = not self._parse_custom_field(value)
+                    elif fieldname in ('track', 'disc'):
                         if '/' in value:
                             value, total = value.split('/')[:2]
                             self._set_field(f'{fieldname}_total', int(total))
@@ -859,13 +871,11 @@ class _ID3(TinyTag):
                     if DEBUG:
                         stderr(f'Failed to read {fieldname}: {exc}')
                 else:
-                    self._set_field(fieldname, value)
+                    if should_set_field:
+                        self._set_field(fieldname, value)
             elif frame_id in self.CUSTOM_FRAME_IDS:
                 # custom fields
-                custom_text = self._decode_string(content)
-                custom_field_name, _separator, value = custom_text.partition('\x00')
-                if custom_field_name:
-                    self._set_field('extra.' + custom_field_name.lower(), value.lstrip('\ufeff'))
+                self._parse_custom_field(self._decode_string(content))
             elif frame_id in self.IMAGE_FRAME_IDS:
                 if self._load_image:
                     # See section 4.14: http://id3.org/id3v2.4.0-frames
@@ -900,8 +910,8 @@ class _ID3(TinyTag):
                 if language:
                     if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
                         bytestr = bytestr[3:]
-                    if bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
-                        bytestr = bytestr[4:]  # remove language
+                    if bytestr[:3].isalpha():
+                        bytestr = bytestr[3:].lstrip(b'\x00')  # remove language
                     if bytestr[:1] == b'\x00':
                         bytestr = bytestr[1:]  # strip optional additional null byte
                 # read byte order mark to determine endianness
@@ -922,8 +932,8 @@ class _ID3(TinyTag):
             else:
                 bytestr = bytestr
                 encoding = default_encoding  # wild guess
-            if language and bytestr[:3].isalpha() and bytestr[3:4] == b'\x00':
-                bytestr = bytestr[4:]  # remove language
+            if language and bytestr[:3].isalpha():
+                bytestr = bytestr[3:].lstrip(b'\x00')  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
             return self._unpad(bytestr.decode(encoding, errors))
         except UnicodeDecodeError as exc:
@@ -995,7 +1005,7 @@ class _Ogg(TinyTag):
                 flactag = _Flac(io.BufferedReader(walker), self.filesize)
                 flactag.load(tags=self._parse_tags, duration=self._parse_duration,
                              image=self._load_image)
-                self.update(flactag, all_fields=True)
+                self.update(flactag)
                 check_flac_second_packet = True
             elif check_flac_second_packet:
                 # second packet contains FLAC metadata block
