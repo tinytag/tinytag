@@ -232,11 +232,11 @@ class TinyTag:
 
     def _update(self, other):
         # update the values of this tag with the values from another tag
-        for key in ['track', 'track_total', 'title', 'artist',
+        for key in ('track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
                     'genre', 'disc', 'disc_total', 'comment',
                     'bitdepth', 'bitrate', 'channels', 'samplerate',
-                    '_image_data']:
+                    '_image_data'):
             new_value = getattr(other, key)
             if new_value:
                 self._set_field(key, new_value)
@@ -826,24 +826,25 @@ class _ID3(TinyTag):
             fieldname = self.FRAME_ID_TO_FIELD.get(frame_id)
             should_set_field = True
             if fieldname:
-                language = fieldname in ('comment', 'extra.lyrics')
+                language = fieldname in {'comment', 'extra.lyrics'}
                 value = self._decode_string(content, language)
                 try:
                     if fieldname == "comment":
                         # check if comment is a key-value pair (used by iTunes)
                         should_set_field = not self.__parse_custom_field(value)
-                    elif fieldname in ('track', 'disc'):
+                    elif fieldname in {'track', 'disc'}:
                         if '/' in value:
                             value, total = value.split('/')[:2]
                             self._set_field(f'{fieldname}_total', int(total))
                         value = int(value)
                     elif fieldname == 'genre':
                         genre_id = 255
-                        if value.isdigit():  # funky: id3v1 genre hidden in a id3v2 field
+                        # funky: id3v1 genre hidden in a id3v2 field
+                        if value.isdigit():
                             genre_id = int(value)
-                        else:  # funkier: the TCO may contain genres in parens, e.g. '(13)'
-                            if value[:1] == '(' and value[-1:] == ')' and value[1:-1].isdigit():
-                                genre_id = int(value[1:-1])
+                        # funkier: the TCO may contain genres in parens, e.g. '(13)'
+                        elif value[:1] == '(' and value[-1:] == ')' and value[1:-1].isdigit():
+                            genre_id = int(value[1:-1])
                         if 0 <= genre_id < len(_ID3.ID3V1_GENRES):
                             value = _ID3.ID3V1_GENRES[genre_id]
                 except ValueError as exc:
@@ -864,7 +865,7 @@ class _ID3(TinyTag):
                     else:  # ID3 v2.3+
                         desc_start_pos = content.index(b'\x00', 1) + 1 + 1  # skip mtype, pictype(1)
                     # latin1 and utf-8 are 1 byte
-                    termination = b'\x00' if encoding in (b'\x00', b'\x03') else b'\x00\x00'
+                    termination = b'\x00' if encoding in {b'\x00', b'\x03'} else b'\x00\x00'
                     desc_length = self._index_utf16(content[desc_start_pos:], termination)
                     desc_end_pos = desc_start_pos + desc_length + len(termination)
                     self._image_data = content[desc_end_pos:]
@@ -887,7 +888,7 @@ class _ID3(TinyTag):
                 bytestr = bytestr[1:]
                 # remove language (but leave BOM)
                 if language:
-                    if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
+                    if bytestr[3:5] in {b'\xfe\xff', b'\xff\xfe'}:
                         bytestr = bytestr[3:]
                     if bytestr[:3].isalpha():
                         bytestr = bytestr[3:]  # remove language
@@ -895,7 +896,7 @@ class _ID3(TinyTag):
                 # read byte order mark to determine endianness
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom if it exists
-                if bytestr[:2] in (b'\xfe\xff', b'\xff\xfe'):
+                if bytestr[:2] in {b'\xfe\xff', b'\xff\xfe'}:
                     bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
                 # remove ADDITIONAL EXTRA BOM :facepalm:
                 if bytestr[:4] == b'\x00\x00\xff\xfe':
@@ -1068,12 +1069,12 @@ class _Ogg(TinyTag):
                     fieldname = comment_type_to_attr_mapping.get(
                         key_lowercase, 'extra.' + key_lowercase)  # custom fields go in 'extra'
                     try:
-                        if fieldname in ('track', 'disc'):
+                        if fieldname in {'track', 'disc'}:
                             if '/' in value:
                                 value, total = value.split('/')[:2]
                                 self._set_field(f'{fieldname}_total', int(total))
                             value = int(value)
-                        elif fieldname in ('track_total', 'disc_total'):
+                        elif fieldname in {'track_total', 'disc_total'}:
                             value = int(value)
                     except ValueError as exc:
                         if DEBUG:
@@ -1186,7 +1187,7 @@ class _Wave(TinyTag):
                             else:
                                 self._set_field(fieldname, value)
                         field = sub_fh.read(4)
-            elif subchunkid in (b'id3 ', b'ID3 ') and self._parse_tags:
+            elif subchunkid in {b'id3 ', b'ID3 '} and self._parse_tags:
                 id3 = _ID3(fh, 0)
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
@@ -1408,7 +1409,7 @@ class _Wma(TinyTag):
                         field_name = 'extra.' + name.lower()
                     field_value = self._decode_ext_desc(value_type, fh.read(value_len))
                     try:
-                        if field_name in ('track', 'disc'):
+                        if field_name in {'track', 'disc'}:
                             field_value = int(field_value)
                     except ValueError as exc:
                         if DEBUG:
@@ -1531,7 +1532,7 @@ class _Aiff(TinyTag):
                 except OverflowError:
                     self.samplerate = self.duration = self.bitrate = None  # invalid sample rate
                 fh.seek(sub_chunk_size - 18, 1)  # skip remaining data in chunk
-            elif sub_chunk_id in (b'id3 ', b'ID3 ') and self._parse_tags:
+            elif sub_chunk_id in {b'id3 ', b'ID3 '} and self._parse_tags:
                 id3 = _ID3(fh, 0)
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
