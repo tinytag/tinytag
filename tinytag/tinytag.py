@@ -30,37 +30,19 @@
 # SOFTWARE.
 
 
-from collections import defaultdict
-from collections.abc import MutableMapping
 from functools import reduce
-from io import BytesIO
+from sys import stderr
 import base64
 import io
-import json
-import operator
 import os
 import re
 import struct
-import sys
 
-DEBUG = os.environ.get('DEBUG', False)  # some of the parsers can print debug info
+DEBUG = bool(os.environ.get('DEBUG'))  # some of the parsers can print debug info
 
 
 class TinyTagException(Exception):
     pass
-
-
-def _read(fh, nbytes):  # helper function to check if we haven't reached EOF
-    b = fh.read(nbytes)
-    if len(b) < nbytes:
-        raise TinyTagException('Unexpected end of file')
-    return b
-
-
-def stderr(*args):
-    args_str = ' '.join(repr(arg) for arg in args)
-    sys.stderr.write(f'{args_str}\n')
-    sys.stderr.flush()
 
 
 def _bytes_to_int_le(b):
@@ -99,7 +81,7 @@ class TinyTag:
         self.disc = None
         self.disc_total = None
         self.duration = None
-        self.extra = defaultdict(lambda: None)
+        self.extra = {}
         self.genre = None
         self.samplerate = None
         self.bitdepth = None
@@ -113,8 +95,11 @@ class TinyTag:
         self._image_data = None
         self._ignore_errors = ignore_errors
 
+    def __repr__(self):
+        return str(self.as_dict())
+
     def as_dict(self):
-        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+        return {k: v for k, v in sorted(self.__dict__.items()) if not k.startswith('_')}
 
     @classmethod
     def is_supported(cls, filename):
@@ -204,18 +189,14 @@ class TinyTag:
             tag = parser_class(file_obj, filesize, ignore_errors=ignore_errors)
             tag._filename = filename
             tag._default_encoding = encoding
-            tag.load(tags=tags, duration=duration, image=image)
-            tag.extra = dict(tag.extra)  # turn default dict into dict so that it can throw KeyError
+            try:
+                tag.load(tags=tags, duration=duration, image=image)
+            except struct.error as exc:
+                raise TinyTagException('Unexpected file data') from exc
             return tag
         finally:
             if should_open_file:
                 file_obj.close()
-
-    def __str__(self):
-        return json.dumps(dict(sorted(self.as_dict().items())))
-
-    def __repr__(self):
-        return str(self)
 
     def load(self, tags, duration, image=False):
         self._parse_tags = tags
@@ -230,26 +211,21 @@ class TinyTag:
 
     def _set_field(self, fieldname, value):
         """convenience function to set fields of the tinytag by name"""
-        write_dest = self  # write into the TinyTag by default
-        get_func = getattr
-        set_func = setattr
-        is_extra = fieldname.startswith('extra.')  # but if it's marked as extra field
+        write_dest = self.__dict__  # write into the TinyTag by default
         is_str = isinstance(value, str)
-        if is_extra:
-            fieldname = fieldname[6:]
-            write_dest = self.extra  # write into the extra field instead
-            get_func = operator.getitem
-            set_func = operator.setitem
         if is_str and not value:
             # don't set empty value
             return
-        old_value = get_func(write_dest, fieldname)
+        if fieldname.startswith('extra.'):
+            fieldname = fieldname[6:]
+            write_dest = self.extra  # write into the extra field instead
+        old_value = write_dest.get(fieldname)
         if is_str and old_value and old_value != value:
             # Combine same field with a null character
             value = old_value + '\x00' + value
         if DEBUG:
-            stderr(f'Setting field "{fieldname}" to "{value}"')
-        set_func(write_dest, fieldname, value)
+            print(f'Setting field "{fieldname}" to "{value}"')
+        write_dest[fieldname] = value
 
     def _determine_duration(self, fh):
         raise NotImplementedError()
@@ -325,7 +301,8 @@ class _MP4(TinyTag):
                 data_type = struct.unpack('>I', data_atom[:4])[0]
                 conversion = cls.ATOM_DECODER_BY_TYPE.get(data_type)
                 if conversion is None:
-                    stderr(f'Cannot convert data type: {data_type}')
+                    if DEBUG:
+                        print(f'Cannot convert data type: {data_type}', file=stderr)
                     return {}  # don't know how to convert data atom
                 # skip header & null-bytes, convert rest
                 return {fieldname: conversion(data_atom[8:])}
@@ -356,7 +333,7 @@ class _MP4(TinyTag):
 
         @classmethod
         def parse_custom_field(cls, data):
-            fh = BytesIO(data)
+            fh = io.BytesIO(data)
             header_size = 8
             field_name = None
             data_atom = b''
@@ -383,7 +360,7 @@ class _MP4(TinyTag):
             # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
             # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
             # http://sasperger.tistory.com/103
-            datafh = BytesIO(data)
+            datafh = io.BytesIO(data)
             datafh.seek(16, os.SEEK_CUR)  # jump over version and flags
             channels = struct.unpack('>H', datafh.read(2))[0]
             datafh.seek(2, os.SEEK_CUR)   # jump over bit_depth
@@ -392,7 +369,7 @@ class _MP4(TinyTag):
 
             # ES Description Atom
             esds_atom_size = struct.unpack('>I', data[28:32])[0]
-            esds_atom = BytesIO(data[36:36 + esds_atom_size])
+            esds_atom = io.BytesIO(data[36:36 + esds_atom_size])
             esds_atom.seek(5, os.SEEK_CUR)   # jump over version, flags and tag
 
             # ES Descriptor
@@ -409,7 +386,7 @@ class _MP4(TinyTag):
         def parse_audio_sample_entry_alac(cls, data):
             # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
             alac_atom_size = struct.unpack('>I', data[28:32])[0]
-            alac_atom = BytesIO(data[36:36 + alac_atom_size])
+            alac_atom = io.BytesIO(data[36:36 + alac_atom_size])
             alac_atom.seek(9, os.SEEK_CUR)
             bitdepth = struct.unpack('b', alac_atom.read(1))[0]
             alac_atom.seek(3, os.SEEK_CUR)
@@ -422,7 +399,7 @@ class _MP4(TinyTag):
         @classmethod
         def parse_mvhd(cls, data):
             # http://stackoverflow.com/a/3639993/1191373
-            walker = BytesIO(data)
+            walker = io.BytesIO(data)
             version = struct.unpack('b', walker.read(1))[0]
             walker.seek(3, os.SEEK_CUR)  # jump over flags
             if version == 0:  # uses 32 bit integers for timestamps
@@ -437,7 +414,7 @@ class _MP4(TinyTag):
 
         @classmethod
         def debug_atom(cls, data):
-            stderr(data)  # use this function to inspect atoms in an atom tree
+            print(data)  # use this function to inspect atoms in an atom tree
             return {}
 
     # The parser tree: Each key is an atom name which is traversed if existing.
@@ -509,16 +486,15 @@ class _MP4(TinyTag):
                 atom_header = fh.read(header_size)
                 continue
             if DEBUG:
-                stderr('%s pos: %d atom: %s len: %d' %
-                       (' ' * 4 * len(curr_path), fh.tell() - header_size, atom_type,
-                        atom_size + header_size))
+                print((f'{" " * 4 * len(curr_path)} pos: {fh.tell() - header_size} '
+                       f'atom: {atom_type} len: {atom_size + header_size}'))
             if atom_type in self.VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, os.SEEK_CUR)
             if atom_type in self.FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, os.SEEK_CUR)
             sub_path = path.get(atom_type, None)
             # if the path leaf is a dict, traverse deeper into the tree:
-            if issubclass(type(sub_path), MutableMapping):
+            if isinstance(sub_path, dict):
                 atom_end_pos = fh.tell() + atom_size
                 self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
                                      curr_path=curr_path + [atom_type])
@@ -526,7 +502,7 @@ class _MP4(TinyTag):
             elif callable(sub_path):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if DEBUG:
-                        stderr(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
+                        print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if fieldname:
                         self._set_field(fieldname, value)
             # if no action was specified using dict or callable, jump over atom
@@ -763,13 +739,13 @@ class _ID3(TinyTag):
     def _parse_id3v2_header(self, fh):
         size, extended, major = 0, None, None
         # for info on the specs, see: http://id3.org/Developer%20Information
-        header = struct.unpack('3sBBB4B', _read(fh, 10))
+        header = struct.unpack('3sBBB4B', fh.read(10))
         tag = header[0].decode('ISO-8859-1')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
             major, rev = header[1:3]
             if DEBUG:
-                stderr(f'Found id3 v2.{major}')
+                print(f'Found id3 v2.{major}')
             # unsync = (header[3] & 0x80) > 0
             extended = (header[3] & 0x40) > 0
             # experimental = (header[3] & 0x20) > 0
@@ -784,7 +760,7 @@ class _ID3(TinyTag):
             end_pos = fh.tell() + size
             parsed_size = 0
             if extended:  # just read over the extended header.
-                size_bytes = struct.unpack('4B', _read(fh, 6)[0:4])
+                size_bytes = struct.unpack('4B', fh.read(6)[0:4])
                 extd_size = self._calc_size(size_bytes, 7)
                 fh.seek(extd_size - 6, os.SEEK_CUR)  # jump over extended_header
             while parsed_size < size:
@@ -839,8 +815,8 @@ class _ID3(TinyTag):
         frame_id = self._decode_string(frame[0])
         frame_size = self._calc_size(frame[1:1 + frame_size_bytes], bits_per_byte)
         if DEBUG:
-            stderr('Found id3 Frame %s at %d-%d of %d' %
-                   (frame_id, fh.tell(), fh.tell() + frame_size, self.filesize))
+            print((f'Found id3 Frame {frame_id} at {fh.tell()}-{fh.tell() + frame_size} '
+                   f'of {self.filesize}'))
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
             content = fh.read(frame_size)
@@ -869,7 +845,7 @@ class _ID3(TinyTag):
                             value = _ID3.ID3V1_GENRES[genre_id]
                 except ValueError as exc:
                     if DEBUG:
-                        stderr(f'Failed to read {fieldname}: {exc}')
+                        print(f'Failed to read {fieldname}: {exc}', file=stderr)
                 else:
                     if should_set_field:
                         self._set_field(fieldname, value)
@@ -976,7 +952,7 @@ class _Ogg(TinyTag):
         check_flac_second_packet = False
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
-            walker = BytesIO(packet)
+            walker = io.BytesIO(packet)
             if packet[0:7] == b"\x01vorbis":
                 if self._parse_duration:
                     (channels, self.samplerate, max_bitrate, bitrate,
@@ -1031,7 +1007,7 @@ class _Ogg(TinyTag):
                 check_speex_second_packet = False
             else:
                 if DEBUG:
-                    stderr('Unsupported Ogg page type: ', packet[:16])
+                    print('Unsupported Ogg page type: ', packet[:16], file=stderr)
                 break
         self._tags_parsed = True
 
@@ -1082,11 +1058,11 @@ class _Ogg(TinyTag):
 
                 if key_lowercase == "metadata_block_picture" and self._load_image:
                     if DEBUG:
-                        stderr('Found Vorbis Image', key, value[:64])
-                    self._image_data = _Flac._parse_image(BytesIO(base64.b64decode(value)))
+                        print('Found Vorbis Image', key, value[:64])
+                    self._image_data = _Flac._parse_image(io.BytesIO(base64.b64decode(value)))
                 else:
                     if DEBUG:
-                        stderr('Found Vorbis Comment', key, value[:64])
+                        print('Found Vorbis Comment', key, value[:64])
                     fieldname = comment_type_to_attr_mapping.get(
                         key_lowercase, 'extra.' + key_lowercase)  # custom fields go in 'extra'
                     try:
@@ -1099,7 +1075,7 @@ class _Ogg(TinyTag):
                             value = int(value)
                     except ValueError as exc:
                         if DEBUG:
-                            stderr(f'Failed to read {fieldname}: {exc}')
+                            print(f'Failed to read {fieldname}: {exc}', file=stderr)
                     else:
                         self._set_field(fieldname, value)
 
@@ -1190,7 +1166,7 @@ class _Wave(TinyTag):
                 if is_info != b'INFO':  # jump over non-INFO sections
                     fh.seek(subchunksize - 4, os.SEEK_CUR)
                 else:
-                    sub_fh = BytesIO(fh.read(subchunksize - 4))
+                    sub_fh = io.BytesIO(fh.read(subchunksize - 4))
                     field = sub_fh.read(4)
                     while len(field) == 4:
                         data_length = struct.unpack('I', sub_fh.read(4))[0]
@@ -1204,7 +1180,7 @@ class _Wave(TinyTag):
                                     value = int(value)
                             except ValueError as exc:
                                 if DEBUG:
-                                    stderr(f'Failed to read {fieldname}: {exc}')
+                                    print(f'Failed to read {fieldname}: {exc}', file=stderr)
                             else:
                                 self._set_field(fieldname, value)
                         field = sub_fh.read(4)
@@ -1299,7 +1275,7 @@ class _Flac(TinyTag):
                 return  # invalid block type
             else:
                 if DEBUG:
-                    stderr('Unknown FLAC block type', block_type)
+                    print('Unknown FLAC block type', block_type)
                 fh.seek(size, 1)  # seek over this block
 
             if is_last_block:
@@ -1431,7 +1407,7 @@ class _Wma(TinyTag):
                             field_value = int(field_value)
                     except ValueError as exc:
                         if DEBUG:
-                            stderr(f'Failed to read {field_name}: {exc}')
+                            print(f'Failed to read {field_name}: {exc}', file=stderr)
                     else:
                         self._set_field(field_name, field_value)
             elif object_id == self.ASF_FILE_PROPERTY_OBJECT:
