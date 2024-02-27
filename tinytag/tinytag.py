@@ -887,9 +887,8 @@ class _ID3(TinyTag):
                     if bytestr[3:5] in (b'\xfe\xff', b'\xff\xfe'):
                         bytestr = bytestr[3:]
                     if bytestr[:3].isalpha():
-                        bytestr = bytestr[3:].lstrip(b'\x00')  # remove language
-                    if bytestr[:1] == b'\x00':
-                        bytestr = bytestr[1:]  # strip optional additional null byte
+                        bytestr = bytestr[3:]  # remove language
+                    bytestr = bytestr.lstrip(b'\x00')  # strip optional additional null bytes
                 # read byte order mark to determine endianness
                 encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
                 # strip the bom if it exists
@@ -909,7 +908,7 @@ class _ID3(TinyTag):
                 bytestr = bytestr
                 encoding = default_encoding  # wild guess
             if language and bytestr[:3].isalpha():
-                bytestr = bytestr[3:].lstrip(b'\x00')  # remove language
+                bytestr = bytestr[3:]  # remove language
             errors = 'ignore' if self._ignore_errors else 'strict'
             return self._unpad(bytestr.decode(encoding, errors))
         except UnicodeDecodeError as exc:
