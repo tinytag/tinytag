@@ -1225,16 +1225,19 @@ class _Flac(TinyTag):
         self._parse_tags = tags
         self._parse_duration = duration
         self._load_image = image
+        id3 = None
         header = self._filehandler.peek(4)
         if header[:3] == b'ID3':  # parse ID3 header if it exists
             id3 = _ID3(self._filehandler, 0)
             id3._parse_id3v2(self._filehandler)
-            self.update(id3)
             header = self._filehandler.peek(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
             raise TinyTagException('Invalid flac header')
         self._filehandler.seek(4, os.SEEK_CUR)
         self._determine_duration(self._filehandler)
+        if id3 is not None:  # apply ID3 tags after vorbis
+            self.update(id3)
+
 
     def _determine_duration(self, fh):
         # for spec, see https://xiph.org/flac/ogg_mapping.html
