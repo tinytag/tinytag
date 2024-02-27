@@ -562,7 +562,7 @@ class _ID3(TinyTag):
     }
     IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
-    PARSABLE_FRAME_IDS = set(FRAME_ID_TO_FIELD.keys()).union(IMAGE_FRAME_IDS, CUSTOM_FRAME_IDS)
+    DISALLOWED_FRAME_IDS = {'PRIV', 'RGAD', 'GEOB', 'GEO', 'ÿû°d'}
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
@@ -768,7 +768,7 @@ class _ID3(TinyTag):
         if tag == 'ID3':
             major, rev = header[1:3]
             if DEBUG:
-                stderr('Found id3 v2.{major}')
+                stderr(f'Found id3 v2.{major}')
             # unsync = (header[3] & 0x80) > 0
             extended = (header[3] & 0x40) > 0
             # experimental = (header[3] & 0x20) > 0
@@ -835,9 +835,6 @@ class _ID3(TinyTag):
                    (frame_id, fh.tell(), fh.tell() + frame_size, self.filesize))
         if frame_size > 0:
             # flags = frame[1+frame_size_bytes:] # dont care about flags.
-            if frame_id not in self.PARSABLE_FRAME_IDS:  # jump over unparsable frames
-                fh.seek(frame_size, os.SEEK_CUR)
-                return frame_size
             content = fh.read(frame_size)
             fieldname = self.FRAME_ID_TO_FIELD.get(frame_id)
             if fieldname:
@@ -869,18 +866,22 @@ class _ID3(TinyTag):
                 custom_field_name, _separator, value = custom_text.partition('\x00')
                 if custom_field_name:
                     self._set_field('extra.' + custom_field_name.lower(), value.lstrip('\ufeff'))
-            elif frame_id in self.IMAGE_FRAME_IDS and self._load_image:
-                # See section 4.14: http://id3.org/id3v2.4.0-frames
-                encoding = content[0:1]
-                if frame_id == 'PIC':  # ID3 v2.2:
-                    desc_start_pos = 1 + 3 + 1  # skip encoding (1), imgformat (3), pictype(1)
-                else:  # ID3 v2.3+
-                    desc_start_pos = content.index(b'\x00', 1) + 1 + 1  # skip mimetype, pictype(1)
-                # latin1 and utf-8 are 1 byte
-                termination = b'\x00' if encoding in (b'\x00', b'\x03') else b'\x00\x00'
-                desc_length = self.index_utf16(content[desc_start_pos:], termination)
-                desc_end_pos = desc_start_pos + desc_length + len(termination)
-                self._image_data = content[desc_end_pos:]
+            elif frame_id in self.IMAGE_FRAME_IDS:
+                if self._load_image:
+                    # See section 4.14: http://id3.org/id3v2.4.0-frames
+                    encoding = content[0:1]
+                    if frame_id == 'PIC':  # ID3 v2.2:
+                        desc_start_pos = 1 + 3 + 1  # skip encoding (1), imgformat (3), pictype(1)
+                    else:  # ID3 v2.3+
+                        desc_start_pos = content.index(b'\x00', 1) + 1 + 1  # skip mtype, pictype(1)
+                    # latin1 and utf-8 are 1 byte
+                    termination = b'\x00' if encoding in (b'\x00', b'\x03') else b'\x00\x00'
+                    desc_length = self.index_utf16(content[desc_start_pos:], termination)
+                    desc_end_pos = desc_start_pos + desc_length + len(termination)
+                    self._image_data = content[desc_end_pos:]
+            elif frame_id not in self.DISALLOWED_FRAME_IDS:
+                # unknown, try to add to extra dict
+                self._set_field('extra.' + frame_id.lower(), self._decode_string(content))
             return frame_size
         return 0
 
