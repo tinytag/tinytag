@@ -75,27 +75,24 @@ def _run():
     header_printed = False
 
     for i, filename in enumerate(filenames):
-        if skip_unsupported:
-            if os.path.isdir(filename):
-                continue
-            if not TinyTag.is_supported(filename):
-                continue
+        if skip_unsupported and not (TinyTag.is_supported(filename) and os.path.isfile(filename)):
+            continue
         try:
             tag = TinyTag.get(filename, image=save_image_path is not None)
-        except TinyTagException as exc:
+            if save_image_path:
+                # allow for saving the image of multiple files
+                actual_save_image_path = save_image_path
+                if len(filenames) > 1:
+                    actual_save_image_path, ext = splitext(actual_save_image_path)
+                    actual_save_image_path += f'{i:05d}{ext}'
+                image = tag.get_image()
+                if image:
+                    with open(actual_save_image_path, 'wb') as file_handle:
+                        file_handle.write(image)
+            header_printed = _print_tag(tag, formatting, header_printed)
+        except Exception as exc:
             sys.stderr.write(f'{filename}: {exc}\n')
             return 1
-        if save_image_path:
-            # allow for saving the image of multiple files
-            actual_save_image_path = save_image_path
-            if len(filenames) > 1:
-                actual_save_image_path, ext = splitext(actual_save_image_path)
-                actual_save_image_path += f'{i:05d}{ext}'
-            image = tag.get_image()
-            if image:
-                with open(actual_save_image_path, 'wb') as file_handle:
-                    file_handle.write(image)
-        header_printed = _print_tag(tag, formatting, header_printed)
     return 0
 
 
