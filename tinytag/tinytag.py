@@ -770,6 +770,7 @@ class _ID3(TinyTag):
     def _parse_id3v1(self, fh):
         if fh.read(3) != b'TAG':  # check if this is an ID3 v1 tag
             return
+
         def asciidecode(x):
             return self._unpad(x.decode(self._default_encoding or 'latin1'))
         # Only set fields that were not set by ID3v2 tags, as ID3v1
@@ -957,7 +958,6 @@ class _Ogg(TinyTag):
             idx = b.find(b'OggS')  # try to find header in peeked data
             if idx != -1:
                 fh.seek(file_offset + idx)
-
 
     def _parse_tag(self, fh):
         check_flac_second_packet = False
