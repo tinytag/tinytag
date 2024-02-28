@@ -688,6 +688,7 @@ def test_mp3_length_estimation():
     ('samples/incomplete.mp3', _ID3),
     ('samples/flac1.5sStereo.flac', _Ogg),
     ('samples/flac1.5sStereo.flac', _Wave),
+    ('samples/flac1.5sStereo.flac', _Wma),
     ('samples/ilbm.aiff', _Aiff),
 ])
 @pytest.mark.xfail(raises=TinyTagException)

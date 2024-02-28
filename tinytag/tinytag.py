@@ -1342,15 +1342,12 @@ class _Wma(TinyTag):
         return None
 
     def _parse_tag(self, fh):
-        self._tags_parsed = True
-        guid = fh.read(16)  # 128 bit GUID
-        if guid != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel':
-            # not a valid ASF container! see: http://www.garykessler.net/library/file_sigs.html
-            return
-        fh.read(12)  # size and obj_count
-        if fh.read(2) != b'\x01\x02':
-            # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
-            return  # not a valid asf header!
+        header = fh.read(30)
+        # http://www.garykessler.net/library/file_sigs.html
+        # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
+        if (header[:16] != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'  # 128 bit GUID
+                or header[-1:] != b'\x02'):
+            raise TinyTagException('Invalid WMA file')
         while True:
             object_id = fh.read(16)
             object_size = self._bytes_to_int_le(fh.read(8))
@@ -1461,6 +1458,7 @@ class _Wma(TinyTag):
                 fh.seek(blocks['error_correction_data_length'], os.SEEK_CUR)
             else:
                 fh.seek(object_size - 24, os.SEEK_CUR)  # read over onknown object ids
+        self._tags_parsed = True
 
 
 class _Aiff(TinyTag):
