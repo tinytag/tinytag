@@ -8,7 +8,6 @@
 
 
 import io
-import operator
 import os
 import pathlib
 import re
@@ -572,36 +571,34 @@ def load_custom_samples():
 testfiles.update(load_custom_samples())
 
 
-def startswith(val1, val2):
-    return val1.startswith(val2)
-
-
-def error_fmt(value):
-    return f'{repr(value)} ({type(value)})'
-
-
-def compare(results, expected, file, prev_path=None):
-    assert isinstance(results, dict)
-    missing_keys = set(expected.keys()) - set(results)
-    assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
-
-    for key, result_val in results.items():
-        path = prev_path + '.' + key if prev_path else key
-        expected_val = expected[key]
-        # recurse if the result and expected values are a dict:
-        if isinstance(result_val, dict) and isinstance(expected_val, dict):
-            compare(result_val, expected_val, file, prev_path=key)
-        else:
-            fmt_string = 'field "%s": got %s expected %s in %s!'
-            fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
-            oper = operator.eq
-            if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
-                oper = startswith
-            assert oper(result_val, expected_val), fmt_string % fmt_values
-
-
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
 def test_file_reading(testfile, expected):
+    def compare(results, expected, file, prev_path=None):
+        def compare_values(path, result_val, expected_val):
+            if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
+                return result_val.startswith(expected_val)
+            if isinstance(expected_val, float):
+                return result_val == pytest.approx(expected_val)
+            return result_val == expected_val
+
+        def error_fmt(value):
+            return f'{repr(value)} ({type(value)})'
+
+        assert isinstance(results, dict)
+        missing_keys = set(expected.keys()) - set(results)
+        assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
+
+        for key, result_val in results.items():
+            path = prev_path + '.' + key if prev_path else key
+            expected_val = expected[key]
+            # recurse if the result and expected values are a dict:
+            if isinstance(result_val, dict) and isinstance(expected_val, dict):
+                compare(result_val, expected_val, file, prev_path=key)
+            else:
+                fmt_string = 'field "%s": got %s expected %s in %s!'
+                fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
+                assert compare_values(path, result_val, expected_val), fmt_string % fmt_values
+
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename)
     results = {
@@ -621,7 +618,7 @@ def test_pathlib_compatibility():
 def test_file_obj_compatibility():
     testfile = next(iter(testfiles.keys()))
     filename = os.path.join(testfolder, testfile)
-    with io.open(filename, 'rb') as file_handle:
+    with open(filename, 'rb') as file_handle:
         tag = TinyTag.get(file_obj=file_handle)
         file_handle.seek(0)
         tag_bytesio = TinyTag.get(file_obj=io.BytesIO(file_handle.read()))
@@ -732,7 +729,7 @@ def test_mp3_utf_8_invalid_string_can_be_ignored():
 ])
 def test_detect_magic_headers(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    with io.open(filename, 'rb') as file_handle:
+    with open(filename, 'rb') as file_handle:
         parser = TinyTag._get_parser_class(filename, file_handle)
     assert parser == expected
 
