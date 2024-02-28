@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from tinytag.tinytag import TinyTag, TinyTagException
+from tinytag.tinytag import TinyTag
 
 
 def _usage():
@@ -90,7 +90,7 @@ def _run():
                     with open(actual_save_image_path, 'wb') as file_handle:
                         file_handle.write(image)
             header_printed = _print_tag(tag, formatting, header_printed)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             sys.stderr.write(f'{filename}: {exc}\n')
             return 1
     return 0
