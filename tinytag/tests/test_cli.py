@@ -2,6 +2,8 @@
 
 import json
 import os
+import sys
+
 from subprocess import check_output, CalledProcessError
 from tempfile import NamedTemporaryFile
 
@@ -20,8 +22,8 @@ tinytag_attributes = {'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
 
 
 def run_cli(args):
-    debug_env = os.environ.pop("DEBUG", None)
-    output = check_output('python -m tinytag ' + args, cwd=project_folder, shell=True)
+    debug_env = str(os.environ.pop("DEBUG", None))
+    output = check_output(f'{sys.executable} -m tinytag ' + args, cwd=project_folder, shell=True)
     if debug_env:
         os.environ["DEBUG"] = debug_env
     return output.decode('utf-8')
