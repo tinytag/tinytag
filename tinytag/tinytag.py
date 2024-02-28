@@ -110,8 +110,8 @@ class TinyTag:
             tag._default_encoding = encoding
             try:
                 tag._load(tags=tags, duration=duration, image=image)
-            except struct.error as exc:
-                raise TinyTagException('Unexpected file data') from exc
+            except Exception as exc:
+                raise TinyTagException(f'Failed to parse file: {exc}') from exc
             return tag
         finally:
             if should_open_file:
@@ -193,7 +193,7 @@ class TinyTag:
             parser_class = cls._get_parser_for_file_handle(filehandle)
             if parser_class is not None:
                 return parser_class
-        raise TinyTagException('No tag reader found to support filetype! ')
+        raise TinyTagException('No tag reader found to support filetype')
 
     def _load(self, tags, duration, image=False):
         self._parse_tags = tags
@@ -680,12 +680,9 @@ class _ID3(TinyTag):
                     idx = len(b)  # not found: jump over the current peek buffer
                 fh.seek(max(idx, 1), os.SEEK_CUR)
                 continue
-            try:
-                self.channels = self.channels_per_channel_mode[channel_mode]
-                frame_bitrate = self.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
-                self.samplerate = self.samplerates[mpeg_id][sr_id]
-            except (IndexError, TypeError) as exc:
-                raise TinyTagException('mp3 parsing failed') from exc
+            self.channels = self.channels_per_channel_mode[channel_mode]
+            frame_bitrate = self.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
+            self.samplerate = self.samplerates[mpeg_id][sr_id]
             # There might be a xing header in the first frame that contains
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
@@ -883,43 +880,41 @@ class _ID3(TinyTag):
         default_encoding = 'ISO-8859-1'
         if self._default_encoding:
             default_encoding = self._default_encoding
-        try:  # it's not my fault, this is the spec.
-            first_byte = bytestr[:1]
-            if first_byte == b'\x00':  # ISO-8859-1
-                bytestr = bytestr[1:]
-                encoding = default_encoding
-            elif first_byte == b'\x01':  # UTF-16 with BOM
-                bytestr = bytestr[1:]
-                # remove language (but leave BOM)
-                if language:
-                    if bytestr[3:5] in {b'\xfe\xff', b'\xff\xfe'}:
-                        bytestr = bytestr[3:]
-                    if bytestr[:3].isalpha():
-                        bytestr = bytestr[3:]  # remove language
-                    bytestr = bytestr.lstrip(b'\x00')  # strip optional additional null bytes
-                # read byte order mark to determine endianness
-                encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
-                # strip the bom if it exists
-                if bytestr[:2] in {b'\xfe\xff', b'\xff\xfe'}:
-                    bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
-                # remove ADDITIONAL EXTRA BOM :facepalm:
-                if bytestr[:4] == b'\x00\x00\xff\xfe':
-                    bytestr = bytestr[4:]
-            elif first_byte == b'\x02':  # UTF-16LE
-                # strip optional null byte, if byte count uneven
-                bytestr = bytestr[1:-1] if len(bytestr) % 2 == 0 else bytestr[1:]
-                encoding = 'UTF-16le'
-            elif first_byte == b'\x03':  # UTF-8
-                bytestr = bytestr[1:]
-                encoding = 'UTF-8'
-            else:
-                encoding = default_encoding  # wild guess
-            if language and bytestr[:3].isalpha():
-                bytestr = bytestr[3:]  # remove language
-            errors = 'ignore' if self._ignore_errors else 'strict'
-            return self._unpad(bytestr.decode(encoding, errors))
-        except UnicodeDecodeError as exc:
-            raise TinyTagException('Error decoding ID3 Tag!') from exc
+        # it's not my fault, this is the spec.
+        first_byte = bytestr[:1]
+        if first_byte == b'\x00':  # ISO-8859-1
+            bytestr = bytestr[1:]
+            encoding = default_encoding
+        elif first_byte == b'\x01':  # UTF-16 with BOM
+            bytestr = bytestr[1:]
+            # remove language (but leave BOM)
+            if language:
+                if bytestr[3:5] in {b'\xfe\xff', b'\xff\xfe'}:
+                    bytestr = bytestr[3:]
+                if bytestr[:3].isalpha():
+                    bytestr = bytestr[3:]  # remove language
+                bytestr = bytestr.lstrip(b'\x00')  # strip optional additional null bytes
+            # read byte order mark to determine endianness
+            encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
+            # strip the bom if it exists
+            if bytestr[:2] in {b'\xfe\xff', b'\xff\xfe'}:
+                bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
+            # remove ADDITIONAL EXTRA BOM :facepalm:
+            if bytestr[:4] == b'\x00\x00\xff\xfe':
+                bytestr = bytestr[4:]
+        elif first_byte == b'\x02':  # UTF-16LE
+            # strip optional null byte, if byte count uneven
+            bytestr = bytestr[1:-1] if len(bytestr) % 2 == 0 else bytestr[1:]
+            encoding = 'UTF-16le'
+        elif first_byte == b'\x03':  # UTF-8
+            bytestr = bytestr[1:]
+            encoding = 'UTF-8'
+        else:
+            encoding = default_encoding  # wild guess
+        if language and bytestr[:3].isalpha():
+            bytestr = bytestr[3:]  # remove language
+        errors = 'ignore' if self._ignore_errors else 'strict'
+        return self._unpad(bytestr.decode(encoding, errors))
 
     @staticmethod
     def _calc_size(bytestr, bits_per_byte):
@@ -1096,7 +1091,7 @@ class _Ogg(TinyTag):
             oggs, version, _flags, pos, _serial, _pageseq, _crc, segments = header
             self._max_samplenum = max(self._max_samplenum, pos)
             if oggs != b'OggS' or version != 0:
-                raise TinyTagException('Not a valid ogg file!')
+                raise TinyTagException('Invalid OGG file')
             segsizes = struct.unpack('B' * segments, fh.read(segments))
             total = 0
             for segsize in segsizes:  # read all segments
@@ -1148,7 +1143,7 @@ class _Wave(TinyTag):
         # and: https://en.wikipedia.org/wiki/WAV
         riff, _size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
-            raise TinyTagException('not a wave file!')
+            raise TinyTagException('Invalid WAV file')
         self.bitdepth = 16  # assume 16bit depth (CD quality)
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
@@ -1227,7 +1222,7 @@ class _Flac(TinyTag):
             id3._parse_id3v2(self._filehandler)
             header = self._filehandler.peek(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
-            raise TinyTagException('Invalid flac header')
+            raise TinyTagException('Invalid FLAC file')
         self._filehandler.seek(4, os.SEEK_CUR)
         self._determine_duration(self._filehandler)
         if id3 is not None:  # apply ID3 tags after vorbis
@@ -1520,7 +1515,7 @@ class _Aiff(TinyTag):
     def _parse_tag(self, fh):
         chunk_id, _size, form = struct.unpack('>4sI4s', fh.read(12))
         if chunk_id != b'FORM' or form not in (b'AIFC', b'AIFF'):
-            raise TinyTagException('not an aiff file!')
+            raise TinyTagException('Invalid AIFF file')
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
             sub_chunk_id, sub_chunk_size = struct.unpack('>4sI', chunk_header)
