@@ -310,7 +310,7 @@ testfiles = dict([
     ('samples/id3_header_with_a_zero_byte.wav',
         {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 44280, 'bitrate': 352.8,
          'samplerate': 22050, 'bitdepth': 16, 'artist': 'Purpley',
-         'title': 'Test000\x00Stacked\x00Test000\x00Stacked', 'track': 17,
+         'title': 'Test000\x00Stacked', 'track': 17,
          'album': 'prototypes'}),
     ('samples/adpcm.wav',
         {'extra': {}, 'channels': 1, 'duration': 12.167256235827665, 'filesize': 268686,

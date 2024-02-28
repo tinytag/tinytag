@@ -89,6 +89,7 @@ class TinyTag:
         self._load_image = False
         self._image_data = None
         self._ignore_errors = ignore_errors
+        self._tags_parsed = False
 
     @classmethod
     def get(cls, filename=None, tags=True, duration=True, image=False,
@@ -592,8 +593,8 @@ class _ID3(TinyTag):
         'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     ]
 
-    def __init__(self, filehandler, filesize, *args, **kwargs):
-        super().__init__(filehandler, filesize, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # save position after the ID3 tag for duration measurement speedup
         self._bytepos_after_id3v2 = None
 
@@ -919,9 +920,8 @@ class _ID3(TinyTag):
 
 
 class _Ogg(TinyTag):
-    def __init__(self, filehandler, filesize, *args, **kwargs):
-        super().__init__(filehandler, filesize, *args, **kwargs)
-        self._tags_parsed = False
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._max_samplenum = 0  # maximum sample position ever read
 
     def _determine_duration(self, fh):
@@ -1130,11 +1130,11 @@ class _Wave(TinyTag):
         b'YEAR': 'year',
     }
 
-    def __init__(self, filehandler, filesize, *args, **kwargs):
-        super().__init__(filehandler, filesize, *args, **kwargs)
-        self._duration_parsed = False
-
     def _determine_duration(self, fh):
+        if not self._tags_parsed:
+            self._parse_tag(fh)
+
+    def _parse_tag(self, fh):
         # see: http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
         # and: https://en.wikipedia.org/wiki/WAV
         riff, _size, fformat = struct.unpack('4sI4s', fh.read(12))
@@ -1189,11 +1189,7 @@ class _Wave(TinyTag):
             else:  # some other chunk, just skip the data
                 fh.seek(subchunksize, 1)
             chunk_header = fh.read(8)
-        self._duration_parsed = True
-
-    def _parse_tag(self, fh):
-        if not self._duration_parsed:
-            self._determine_duration(fh)  # parse whole file to determine tags:(
+        self._tags_parsed = True
 
 
 class _Flac(TinyTag):
@@ -1205,26 +1201,22 @@ class _Flac(TinyTag):
     METADATA_CUESHEET = 5
     METADATA_PICTURE = 6
 
-    def _load(self, tags, duration, image=False):
-        self._parse_tags = tags
-        self._parse_duration = duration
-        self._load_image = image
+    def _determine_duration(self, fh):
+        if not self._tags_parsed:
+            self._parse_tag(fh)
+
+    def _parse_tag(self, fh):
         id3 = None
-        header = self._filehandler.peek(4)
+        header = fh.peek(4)
         if header[:3] == b'ID3':  # parse ID3 header if it exists
-            id3 = _ID3(self._filehandler, 0)
-            id3._parse_tags = tags
-            id3._load_image = image
-            id3._parse_id3v2(self._filehandler)
-            header = self._filehandler.peek(4)  # after ID3 should be fLaC
+            id3 = _ID3(fh, 0)
+            id3._parse_tags = self._parse_tags
+            id3._load_image = self._load_image
+            id3._parse_id3v2(fh)
+            header = fh.peek(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
             raise TinyTagException('Invalid FLAC file')
-        self._filehandler.seek(4, os.SEEK_CUR)
-        self._determine_duration(self._filehandler)
-        if id3 is not None:  # apply ID3 tags after vorbis
-            self._update(id3)
-
-    def _determine_duration(self, fh):
+        fh.seek(4, os.SEEK_CUR)
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
         while len(header_data) == 4:
@@ -1236,7 +1228,7 @@ class _Flac(TinyTag):
             if block_type == self.METADATA_STREAMINFO and self._parse_duration:
                 stream_info_header = fh.read(size)
                 if len(stream_info_header) < 34:  # invalid streaminfo
-                    return
+                    break
                 header = struct.unpack('HH3s3s8B16s', stream_info_header)
                 # From the xiph documentation:
                 # py | <bits>
@@ -1272,18 +1264,18 @@ class _Flac(TinyTag):
             elif block_type == self.METADATA_PICTURE and self._load_image:
                 self._image_data = self._parse_image(fh)
             elif block_type >= 127:
-                return  # invalid block type
+                break  # invalid block type
             else:
                 if DEBUG:
                     print('Unknown FLAC block type', block_type)
                 fh.seek(size, 1)  # seek over this block
 
             if is_last_block:
-                return
+                break
             header_data = fh.read(4)
-
-    def _parse_tag(self, fh):
-        pass
+        if id3 is not None:  # apply ID3 tags after vorbis
+            self._update(id3)
+        self._tags_parsed = True
 
     @staticmethod
     def _parse_image(fh):
@@ -1308,10 +1300,6 @@ class _Wma(TinyTag):
     # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx
     # and (japanese, but none the less helpful)
     # http://uguisu.skr.jp/Windows/format_asf.html
-
-    def __init__(self, filehandler, filesize, *args, **kwargs):
-        super().__init__(filehandler, filesize, *args, **kwargs)
-        self._tags_parsed = False
 
     def _determine_duration(self, fh):
         if not self._tags_parsed:
@@ -1503,10 +1491,6 @@ class _Aiff(TinyTag):
         b'ANNO': 'comment',
         b'(c) ': 'extra.copyright',
     }
-
-    def __init__(self, filehandler, filesize, *args, **kwargs):
-        super().__init__(filehandler, filesize, *args, **kwargs)
-        self._tags_parsed = False
 
     def _parse_tag(self, fh):
         chunk_id, _size, form = struct.unpack('>4sI4s', fh.read(12))
