@@ -451,6 +451,7 @@ class _MP4(TinyTag):
         b'gnre': {b'data': _Parser._parse_id3v1_genre},
         b'trkn': {b'data': _Parser._make_number_parser('track', 'track_total')},
         b'tmpo': {b'data': _Parser._make_data_atom_parser('extra.bpm')},
+        b'covr': {b'data': _Parser._make_data_atom_parser('_image_data')},
         b'----': _Parser._parse_custom_field,
     }}}}}
 
@@ -465,10 +466,6 @@ class _MP4(TinyTag):
         }
     }
 
-    IMAGE_DATA_TREE = {b'moov': {b'udta': {b'meta': {b'ilst': {
-        b'covr': {b'data': _Parser._make_data_atom_parser('_image_data')},
-    }}}}}
-
     VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
@@ -477,9 +474,6 @@ class _MP4(TinyTag):
 
     def _parse_tag(self, fh):
         self._traverse_atoms(fh, path=self.META_DATA_TREE)
-        if self._load_image:           # A bit inefficient, we rewind the file
-            self._filehandler.seek(0)  # to parse it again for the image
-            self._traverse_atoms(fh, path=self.IMAGE_DATA_TREE)
 
     def _traverse_atoms(self, fh, path, stop_pos=None, curr_path=None):
         header_size = 8
@@ -510,6 +504,8 @@ class _MP4(TinyTag):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
+                    if fieldname == '_image_data' and not self._load_image:
+                        continue
                     if fieldname:
                         self._set_field(fieldname, value)
             # if no action was specified using dict or callable, jump over atom

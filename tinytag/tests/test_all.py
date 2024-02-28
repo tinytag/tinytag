@@ -606,6 +606,7 @@ def test_file_reading_tags(testfile, expected):
         key: val for key, val in tag._as_dict().items() if val is not None
     }
     compare_tag(results, expected, filename)
+    assert tag._image_data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -621,6 +622,7 @@ def test_file_reading_no_tags(testfile, expected):
     }
     expected["extra"] = {}
     compare_tag(results, expected, filename)
+    assert tag._image_data is None
 
 
 def test_pathlib_compatibility():
