@@ -966,7 +966,7 @@ class _Ogg(TinyTag):
             walker = io.BytesIO(packet)
             if packet[0:7] == b"\x01vorbis":
                 if self._parse_duration:
-                    (_channels, self.samplerate, _max_bitrate, bitrate,
+                    (self.channels, self.samplerate, _max_bitrate, bitrate,
                      _min_bitrate) = struct.unpack("<B4i", packet[11:28])
                     self.bitrate = bitrate / 1000
             elif packet[0:7] == b"\x03vorbis":
