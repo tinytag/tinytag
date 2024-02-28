@@ -5,10 +5,11 @@ import subprocess
 import sys
 
 
-def release_package():
+def release_package() -> None:
     # Run tests
     subprocess.check_call([sys.executable, "-m", "pycodestyle"])
     subprocess.check_call([sys.executable, "-m", "pylint", "--recursive=y", "."])
+    subprocess.check_call([sys.executable, "-m", "mypy", "-p", "tinytag"])
     subprocess.check_call([sys.executable, "-m", "pytest"])
 
     # Prepare source distribution and wheel

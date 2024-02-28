@@ -1,6 +1,7 @@
 # pylint: disable=missing-module-docstring,protected-access
 
 from os.path import splitext
+from typing import Optional
 import json
 import os
 import sys
@@ -8,7 +9,7 @@ import sys
 from tinytag.tinytag import TinyTag
 
 
-def _usage():
+def _usage() -> None:
     print('''tinytag [options] <filename...>
 
     -h, --help
@@ -26,7 +27,7 @@ def _usage():
 ''')
 
 
-def _pop_param(name, _default):
+def _pop_param(name: str, _default: Optional[str]) -> Optional[str]:
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
@@ -34,7 +35,7 @@ def _pop_param(name, _default):
     return _default
 
 
-def _pop_switch(name, _default):
+def _pop_switch(name: str) -> bool:
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
@@ -42,7 +43,7 @@ def _pop_switch(name, _default):
     return False
 
 
-def _print_tag(tag, formatting, header_printed=False):
+def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> bool:
     data = {'filename': tag._filename}
     data.update(tag._as_dict())
     if formatting == 'json':
@@ -52,25 +53,25 @@ def _print_tag(tag, formatting, header_printed=False):
         if isinstance(value, str):
             data[field] = value.replace('\x00', ';')  # use a more friendly separator for output
     if formatting == 'csv':
-        print('\n'.join(f'{field},{value}' for field, value in data.items()))
+        print('\n'.join(f'{field},{value!r}' for field, value in data.items()))
     elif formatting == 'tsv':
-        print('\n'.join(f'{field}\t{value}' for field, value in data.items()))
+        print('\n'.join(f'{field}\t{value!r}' for field, value in data.items()))
     elif formatting == 'tabularcsv':
         if not header_printed:
             print(','.join(field for field, value in data.items()))
             header_printed = True
-        print(','.join(f'"{value}"' for field, value in data.items()))
+        print(','.join(f'"{value!r}"' for field, value in data.items()))
     return header_printed
 
 
-def _run():
-    display_help = _pop_switch('--help', False) or _pop_switch('-h', False)
+def _run() -> int:
+    display_help = _pop_switch('--help') or _pop_switch('-h')
     if display_help:
         _usage()
         return 0
     save_image_path = _pop_param('--save-image', None) or _pop_param('-i', None)
     formatting = (_pop_param('--format', None) or _pop_param('-f', None)) or 'json'
-    skip_unsupported = _pop_switch('--skip-unsupported', False) or _pop_switch('-s', False)
+    skip_unsupported = _pop_switch('--skip-unsupported') or _pop_switch('-s')
     filenames = sys.argv[1:]
     header_printed = False
 

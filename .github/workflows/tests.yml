@@ -30,6 +30,12 @@ jobs:
       - name: Linting
         run: python -m pylint --recursive=y .
 
+      - name: Typing
+        if: matrix.python != 'pypy-3.7'
+        run: |
+          python -m pip install mypy
+          python -m mypy -p tinytag
+
       - name: Unit tests
         run: python -m pytest --cov
         env:
