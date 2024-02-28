@@ -29,7 +29,7 @@ testfiles = dict([
          'filesize': 8192, 'genre': '(3)Dance',
          'comment': 'Ripped by THSLIVE', 'bitrate': 125.33333333333333}),
     ('samples/cbr.mp3',
-        {'extra': {}, 'channels': 2, 'samplerate': 44100, 'duration': 0.49,
+        {'extra': {}, 'channels': 2, 'samplerate': 44100, 'duration': 0.48866995073891617,
          'album': 'I Can Walk On Water I Can Fly', 'year': '2007',
          'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': 1,
          'filesize': 8186, 'bitrate': 128.0, 'genre': 'Dance',
@@ -51,13 +51,13 @@ testfiles = dict([
                    'itunes_cddb_1': ('9D09130B+174405+11+150+14097+27391+43983+65786+84877+'
                                      '99399+113226+132452+146426+163829'),
                    'itunes_cddb_tracknumber': '3'},
-         'channels': 2, 'samplerate': 44100, 'track_total': 11, 'duration': 0.138,
+         'channels': 2, 'samplerate': 44100, 'track_total': 11, 'duration': 0.13836297152858082,
          'album': 'Hymns for the Exiled', 'year': '2004', 'title': 'cosmic american',
          'artist': 'Anais Mitchell', 'track': 3, 'filesize': 5120,
          'bitrate': 160.0, 'comment': 'Waterbug Records, www.anaismitchell.com'}),
     ('samples/silence-44-s-v1.mp3',
         {'extra': {}, 'channels': 2, 'samplerate': 44100, 'genre': 'Darkwave',
-         'duration': 3.7355102040816326, 'album': 'Quod Libet Test Data', 'year': '2004',
+         'duration': 3.738712956446946, 'album': 'Quod Libet Test Data', 'year': '2004',
          'title': 'Silence', 'artist': 'piman', 'track': 2, 'filesize': 15070,
          'bitrate': 32.0}),
     ('samples/id3v1-latin1.mp3',
@@ -87,8 +87,8 @@ testfiles = dict([
     ('samples/empty_file.mp3',
         {'extra': {}, 'filesize': 0}),
     ('samples/silence-44khz-56k-mono-1s.mp3',
-        {'extra': {}, 'channels': 1, 'samplerate': 44100, 'duration': 1.018, 'filesize': 7280,
-         'bitrate': 56.0}),
+        {'extra': {}, 'channels': 1, 'samplerate': 44100, 'duration': 1.0265261269342902,
+         'filesize': 7280, 'bitrate': 56.0}),
     ('samples/silence-22khz-mono-1s.mp3',
         {'extra': {}, 'channels': 1, 'samplerate': 22050, 'filesize': 4284,
          'bitrate': 32.0, 'duration': 1.0438932496075353}),
@@ -187,26 +187,26 @@ testfiles = dict([
          'track': 10, 'comment': '                            ', 'disc': 1, 'disc_total': 1,
          'track_total': 12, 'year': '2004'}),
     ('samples/mp3/vbr/vbr8.mp3',
-        {'filesize': 9504, 'bitrate': 8.25, 'channels': 1, 'duration': 9.2,
+        {'filesize': 9504, 'bitrate': 8.25, 'channels': 1, 'duration': 9.216,
          'extra': {}, 'samplerate': 8000}),
     ('samples/mp3/vbr/vbr8stereo.mp3',
         {'filesize': 9504, 'bitrate': 8.25, 'channels': 2, 'duration': 9.216,
          'extra': {}, 'samplerate': 8000}),
     ('samples/mp3/vbr/vbr11.mp3',
         {'filesize': 9360, 'bitrate': 8.143465909090908, 'channels': 1,
-         'duration': 9.2, 'extra': {}, 'samplerate': 11025}),
+         'duration': 9.195102040816327, 'extra': {}, 'samplerate': 11025}),
     ('samples/mp3/vbr/vbr11stereo.mp3',
         {'filesize': 9360, 'bitrate': 8.143465909090908, 'channels': 2,
          'duration': 9.195102040816327, 'extra': {}, 'samplerate': 11025}),
     ('samples/mp3/vbr/vbr16.mp3',
         {'filesize': 9432, 'bitrate': 8.251968503937007, 'channels': 1,
-         'duration': 9.2, 'extra': {}, 'samplerate': 16000}),
+         'duration': 9.144, 'extra': {}, 'samplerate': 16000}),
     ('samples/mp3/vbr/vbr16stereo.mp3',
         {'filesize': 9432, 'bitrate': 8.251968503937007, 'channels': 2,
          'duration': 9.144, 'extra': {}, 'samplerate': 16000}),
     ('samples/mp3/vbr/vbr22.mp3',
         {'filesize': 9282, 'bitrate': 8.145021489971347, 'channels': 1,
-         'duration': 9.2, 'extra': {}, 'samplerate': 22050}),
+         'duration': 9.11673469387755, 'extra': {}, 'samplerate': 22050}),
     ('samples/mp3/vbr/vbr22stereo.mp3',
         {'filesize': 9282, 'bitrate': 8.145021489971347, 'channels': 2,
          'duration': 9.11673469387755, 'extra': {}, 'samplerate': 22050}),
@@ -221,7 +221,7 @@ testfiles = dict([
          'duration': 9.09061224489796, 'extra': {}, 'samplerate': 44100}),
     ('samples/mp3/vbr/vbr44stereo.mp3',
         {'filesize': 36609, 'bitrate': 32.21697198275862, 'channels': 2,
-         'duration': 9.0, 'extra': {}, 'samplerate': 44100}),
+         'duration': 9.09061224489796, 'extra': {}, 'samplerate': 44100}),
     ('samples/mp3/vbr/vbr48.mp3',
         {'filesize': 36672, 'bitrate': 32.33862433862434, 'channels': 1,
          'duration': 9.072, 'extra': {}, 'samplerate': 48000}),
@@ -276,7 +276,7 @@ testfiles = dict([
          'comment': 'ARCD0018 - Lovelight', 'disc_total': 1, 'track_total': 13}),
     ('samples/8khz_5s.opus',
         {'extra': {'encoder': 'opusenc from opus-tools 0.2'}, 'filesize': 7251, 'channels': 1,
-         'samplerate': 48000, 'duration': 5.0}),
+         'samplerate': 48000, 'duration': 5.0065}),
     ('samples/test_flac.oga',
         {'extra': {'copyright': 'test3', 'isrc': 'test4', 'lyrics': 'test7'},
          'filesize': 9273, 'album': 'test2', 'artist': 'test6', 'comment': 'test5',
@@ -306,8 +306,8 @@ testfiles = dict([
          'bitdepth': 16, 'title': 'thetitle', 'comment': 'hello',
          'year': '2014'}),
     ('samples/silence-22khz-mono-1s.wav',
-        {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 48160, 'bitrate': 352.8,
-         'samplerate': 22050, 'bitdepth': 16}),
+        {'extra': {}, 'channels': 1, 'duration': 0.9991836734693877, 'filesize': 48160,
+         'bitrate': 352.8, 'samplerate': 22050, 'bitdepth': 16}),
     ('samples/id3_header_with_a_zero_byte.wav',
         {'extra': {}, 'channels': 1, 'duration': 1.0, 'filesize': 44280, 'bitrate': 352.8,
          'samplerate': 22050, 'bitdepth': 16, 'artist': 'Purpley',
@@ -381,7 +381,7 @@ testfiles = dict([
         {'extra': {}, 'filesize': 4692}),
     ('samples/106-short-picture-block-size.flac',
         {'extra': {}, 'filesize': 4692, 'bitrate': 10.186943678613627, 'channels': 2,
-         'duration': 3.68, 'samplerate': 44100, 'bitdepth': 16}),
+         'duration': 3.684716553287982, 'samplerate': 44100, 'bitdepth': 16}),
     ('samples/with_id3_header.flac',
         {'extra': {'id': '8591671910'}, 'filesize': 64837, 'album': 'album\x00   ',
          'artist': 'artist\x00群星',
@@ -448,7 +448,7 @@ testfiles = dict([
                                 '00007E90 00007BFD 00009293'),
                    'itunes_cddb_ids': '11++', 'ufidhttp://www.cddb.com/id3/taginfo1.html':
                    '3CD3N48Q241232290U3387DD249F72E6B082B283425ADB9B0F324P1', 'bpm': 0},
-         'samplerate': 44100, 'duration': 314.97, 'bitrate': 256.0, 'channels': 2,
+         'samplerate': 44100, 'duration': 314.97868480725623, 'bitrate': 256.0, 'channels': 2,
          'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose',
          'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
     ('samples/test2.m4a',
@@ -572,16 +572,6 @@ def load_custom_samples():
 testfiles.update(load_custom_samples())
 
 
-def almost_equal_float(val1, val2):
-    # allow duration to be off by 100 ms and a maximum of 1%
-    if val1 == val2:
-        return True
-    if abs(val1 - val2) < 0.100:
-        if val2 and min(val1, val2) / max(val1, val2) > 0.99:
-            return True
-    return False
-
-
 def startswith(val1, val2):
     return val1.startswith(val2)
 
@@ -597,10 +587,7 @@ def compare(results, expected, file, prev_path=None):
 
     for key, result_val in results.items():
         path = prev_path + '.' + key if prev_path else key
-        try:
-            expected_val = expected[key]
-        except KeyError:
-            assert False, f'Missing field "{key}": "{error_fmt(result_val)}" in fixture "{file}"!'
+        expected_val = expected[key]
         # recurse if the result and expected values are a dict:
         if isinstance(result_val, dict) and isinstance(expected_val, dict):
             compare(result_val, expected_val, file, prev_path=key)
@@ -608,8 +595,6 @@ def compare(results, expected, file, prev_path=None):
             fmt_string = 'field "%s": got %s expected %s in %s!'
             fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
             oper = operator.eq
-            if path == 'duration':  # allow duration to be off by 100 ms and a maximum of 1%
-                oper = almost_equal_float
             if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
                 oper = startswith
             assert oper(result_val, expected_val), fmt_string % fmt_values
