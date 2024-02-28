@@ -330,6 +330,11 @@ testfiles = dict([
         {'extra': {}, 'filesize': 8908, 'bitrate': 705.6,
          'duration': 0.1, 'samplerate': 44100, 'channels': 1,
          'bitdepth': 16}),
+    ('samples/gsm_6_10.wav',
+        {'extra': {}, 'bitdepth': 1, 'bitrate': 44.1, 'channels': 1,
+         'duration': 0.16507936507936508, 'filesize': 1246, 'samplerate': 44100,
+         'album': 'album', 'artist': 'artist', 'title': 'track', 'track': 99,
+         'year': '2010', 'comment': 'some comment here', 'genre': 'Bass'}),
 
     # FLAC
     ('samples/flac1sMono.flac',
