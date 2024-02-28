@@ -97,8 +97,6 @@ class TinyTag:
         should_open_file = file_obj is None
         if should_open_file:
             file_obj = open(filename, 'rb')  # pylint: disable=consider-using-with
-        elif isinstance(file_obj, io.BytesIO):
-            file_obj = io.BufferedReader(file_obj)  # buffered reader to support peeking
         try:
             file_obj.seek(0, os.SEEK_END)
             filesize = file_obj.tell()
@@ -175,7 +173,8 @@ class TinyTag:
                 b'^FORM....AIFF': _Aiff,
                 b'^FORM....AIFC': _Aiff,
             }
-        header = fh.peek(max(len(sig) for sig in cls._magic_bytes_mapping))
+        header = fh.read(max(len(sig) for sig in cls._magic_bytes_mapping))
+        fh.seek(0)
         for magic, parser in cls._magic_bytes_mapping.items():
             if re.match(magic, header):
                 return parser
@@ -655,9 +654,12 @@ class _ID3(TinyTag):
         last_bitrates = []  # CBR mp3s (multiple frames with same bitrates)
         # seek to first position after id3 tag (speedup for large header)
         fh.seek(self._bytepos_after_id3v2)
+        file_offset = fh.tell()
+        walker = io.BytesIO(fh.read())
         while True:
             # reading through garbage until 11 '1' sync-bits are found
-            b = fh.peek(4)
+            b = walker.read()
+            walker.seek(-len(b), os.SEEK_CUR)
             if len(b) < 4:
                 if frames:
                     self.bitrate = bitrate_accu / frames
@@ -675,7 +677,7 @@ class _ID3(TinyTag):
                 idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
                 if idx == -1:
                     idx = len(b)  # not found: jump over the current peek buffer
-                fh.seek(max(idx, 1), os.SEEK_CUR)
+                walker.seek(max(idx, 1), os.SEEK_CUR)
                 continue
             self.channels = self.channels_per_channel_mode[channel_mode]
             frame_bitrate = self.bitrate_by_version_by_layer[mpeg_id][layer_id][br_id]
@@ -686,8 +688,8 @@ class _ID3(TinyTag):
             if frames == 0 and self._USE_XING_HEADER:
                 xing_header_offset = b.find(b'Xing')
                 if xing_header_offset != -1:
-                    fh.seek(xing_header_offset, os.SEEK_CUR)
-                    xframes, byte_count, _toc, _vbr_scale = self._parse_xing_header(fh)
+                    walker.seek(xing_header_offset, os.SEEK_CUR)
+                    xframes, byte_count, _toc, _vbr_scale = self._parse_xing_header(walker)
                     if xframes and xframes != 0 and byte_count:
                         # MPEG-2 Audio Layer III uses 576 samples per frame
                         samples_per_frame = 576 if mpeg_id <= 2 else self.samples_per_frame
@@ -701,10 +703,10 @@ class _ID3(TinyTag):
             frames += 1  # it's most probably an mp3 frame
             bitrate_accu += frame_bitrate
             if frames == 1:
-                audio_offset = fh.tell()
+                audio_offset = file_offset + walker.tell()
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.append(frame_bitrate)
-            fh.seek(4, os.SEEK_CUR)  # jump over peeked bytes
+            walker.seek(4, os.SEEK_CUR)  # jump over peeked bytes
 
             frame_length = (144000 * frame_bitrate) // self.samplerate + padding
             frame_size_accu += frame_length
@@ -721,7 +723,7 @@ class _ID3(TinyTag):
                 return
 
             if frame_length > 1:  # jump over current frame body
-                fh.seek(frame_length - header_bytes, os.SEEK_CUR)
+                walker.seek(frame_length - header_bytes, os.SEEK_CUR)
         if self.samplerate:
             self.duration = frames * self.samples_per_frame / self.samplerate
 
@@ -942,17 +944,20 @@ class _Ogg(TinyTag):
         if self.filesize > max_page_size:
             fh.seek(-max_page_size, 2)  # go to last possible page position
         while True:
-            b = fh.peek(4)
-            if len(b) == 0:
+            file_offset = fh.tell()
+            b = fh.read()
+            if len(b) < 4:
                 return  # EOF
             if b[:4] == b'OggS':  # look for an ogg header
+                fh.seek(file_offset)
                 for _ in self._parse_pages(fh):
                     pass  # parse all remaining pages
                 self.duration = self._max_samplenum / self.samplerate
-            else:
-                idx = b.find(b'OggS')  # try to find header in peeked data
-                seekpos = idx if idx != -1 else len(b) - 3
-                fh.seek(max(seekpos, 1), os.SEEK_CUR)
+                break
+            idx = b.find(b'OggS')  # try to find header in peeked data
+            if idx != -1:
+                fh.seek(file_offset + idx)
+
 
     def _parse_tag(self, fh):
         check_flac_second_packet = False
@@ -984,7 +989,7 @@ class _Ogg(TinyTag):
             elif packet[0:5] == b'\x7fFLAC':
                 # https://xiph.org/flac/ogg_mapping.html
                 walker.seek(9, os.SEEK_CUR)  # jump over header name, version and number of headers
-                flactag = _Flac(io.BufferedReader(walker), self.filesize)
+                flactag = _Flac(walker, self.filesize)
                 flactag._load(tags=self._parse_tags, duration=self._parse_duration,
                               image=self._load_image)
                 self._update(flactag)
@@ -1215,16 +1220,16 @@ class _Flac(TinyTag):
 
     def _parse_tag(self, fh):
         id3 = None
-        header = fh.peek(4)
+        header = fh.read(4)
         if header[:3] == b'ID3':  # parse ID3 header if it exists
+            fh.seek(-4, os.SEEK_CUR)
             id3 = _ID3(fh, 0)
             id3._parse_tags = self._parse_tags
             id3._load_image = self._load_image
             id3._parse_id3v2(fh)
-            header = fh.peek(4)  # after ID3 should be fLaC
+            header = fh.read(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
             raise TinyTagException('Invalid FLAC file')
-        fh.seek(4, os.SEEK_CUR)
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
         while len(header_data) == 4:
@@ -1525,8 +1530,6 @@ class _Aiff(TinyTag):
                 id3 = _ID3(fh, 0)
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
-            elif sub_chunk_id == b'SSND':
-                fh.seek(sub_chunk_size, 1)
             else:  # some other chunk, just skip the data
                 fh.seek(sub_chunk_size, 1)
             chunk_header = fh.read(8)
