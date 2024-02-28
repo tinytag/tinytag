@@ -90,7 +90,7 @@ def _run():
                     with open(actual_save_image_path, 'wb') as file_handle:
                         file_handle.write(image)
             header_printed = _print_tag(tag, formatting, header_printed)
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:  # pylint: disable=broad-except
             sys.stderr.write(f'{filename}: {exc}\n')
             return 1
     return 0
