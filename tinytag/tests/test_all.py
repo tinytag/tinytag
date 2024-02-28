@@ -571,41 +571,56 @@ def load_custom_samples():
 testfiles.update(load_custom_samples())
 
 
+def compare_tag(results, expected, file, prev_path=None):
+    def compare_values(path, result_val, expected_val):
+        if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
+            return result_val.startswith(expected_val)
+        if isinstance(expected_val, float):
+            return result_val == pytest.approx(expected_val)
+        return result_val == expected_val
+
+    def error_fmt(value):
+        return f'{repr(value)} ({type(value)})'
+
+    assert isinstance(results, dict)
+    missing_keys = set(expected.keys()) - set(results)
+    assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
+
+    for key, result_val in results.items():
+        path = prev_path + '.' + key if prev_path else key
+        expected_val = expected[key]
+        # recurse if the result and expected values are a dict:
+        if isinstance(result_val, dict) and isinstance(expected_val, dict):
+            compare_tag(result_val, expected_val, file, prev_path=key)
+        else:
+            fmt_string = 'field "%s": got %s expected %s in %s!'
+            fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
+            assert compare_values(path, result_val, expected_val), fmt_string % fmt_values
+
+
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading(testfile, expected):
-    def compare(results, expected, file, prev_path=None):
-        def compare_values(path, result_val, expected_val):
-            if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
-                return result_val.startswith(expected_val)
-            if isinstance(expected_val, float):
-                return result_val == pytest.approx(expected_val)
-            return result_val == expected_val
-
-        def error_fmt(value):
-            return f'{repr(value)} ({type(value)})'
-
-        assert isinstance(results, dict)
-        missing_keys = set(expected.keys()) - set(results)
-        assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
-
-        for key, result_val in results.items():
-            path = prev_path + '.' + key if prev_path else key
-            expected_val = expected[key]
-            # recurse if the result and expected values are a dict:
-            if isinstance(result_val, dict) and isinstance(expected_val, dict):
-                compare(result_val, expected_val, file, prev_path=key)
-            else:
-                fmt_string = 'field "%s": got %s expected %s in %s!'
-                fmt_values = (key, error_fmt(result_val), error_fmt(expected_val), file)
-                assert compare_values(path, result_val, expected_val), fmt_string % fmt_values
-
+def test_file_reading_tags(testfile, expected):
     filename = os.path.join(testfolder, testfile)
-    tag = TinyTag.get(filename)
+    tag = TinyTag.get(filename, tags=True)
     results = {
-        key: val for key, val in tag.__dict__.items()
-        if not key.startswith('_') and val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None
     }
-    compare(results, expected, filename)
+    compare_tag(results, expected, filename)
+
+
+@pytest.mark.parametrize("testfile,expected", testfiles.items())
+def test_file_reading_no_tags(testfile, expected):
+    filename = os.path.join(testfolder, testfile)
+    allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
+    tag = TinyTag.get(filename, tags=False)
+    results = {
+        key: val for key, val in tag._as_dict().items() if val is not None
+    }
+    expected = {
+        key: val for key, val in expected.items() if key in allowed_attrs
+    }
+    expected["extra"] = {}
+    compare_tag(results, expected, filename)
 
 
 def test_pathlib_compatibility():

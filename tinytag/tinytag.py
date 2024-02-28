@@ -826,6 +826,8 @@ class _ID3(TinyTag):
             fieldname = self.FRAME_ID_TO_FIELD.get(frame_id)
             should_set_field = True
             if fieldname:
+                if not self._parse_tags:
+                    return frame_size
                 language = fieldname in {'comment', 'extra.lyrics'}
                 value = self._decode_string(content, language)
                 try:
@@ -855,7 +857,8 @@ class _ID3(TinyTag):
                         self._set_field(fieldname, value)
             elif frame_id in self.CUSTOM_FRAME_IDS:
                 # custom fields
-                self.__parse_custom_field(self._decode_string(content))
+                if self._parse_tags:
+                    self.__parse_custom_field(self._decode_string(content))
             elif frame_id in self.IMAGE_FRAME_IDS:
                 if self._load_image:
                     # See section 4.14: http://id3.org/id3v2.4.0-frames
@@ -871,7 +874,8 @@ class _ID3(TinyTag):
                     self._image_data = content[desc_end_pos:]
             elif frame_id not in self.DISALLOWED_FRAME_IDS:
                 # unknown, try to add to extra dict
-                self._set_field('extra.' + frame_id.lower(), self._decode_string(content))
+                if self._parse_tags:
+                    self._set_field('extra.' + frame_id.lower(), self._decode_string(content))
             return frame_size
         return 0
 
@@ -1218,6 +1222,8 @@ class _Flac(TinyTag):
         header = self._filehandler.peek(4)
         if header[:3] == b'ID3':  # parse ID3 header if it exists
             id3 = _ID3(self._filehandler, 0)
+            id3._parse_tags = tags
+            id3._load_image = image
             id3._parse_id3v2(self._filehandler)
             header = self._filehandler.peek(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
@@ -1314,10 +1320,10 @@ class _Wma(TinyTag):
 
     def __init__(self, filehandler, filesize, *args, **kwargs):
         super().__init__(filehandler, filesize, *args, **kwargs)
-        self.__tag_parsed = False
+        self._tags_parsed = False
 
     def _determine_duration(self, fh):
-        if not self.__tag_parsed:
+        if not self._tags_parsed:
             self._parse_tag(fh)
 
     def _read_blocks(self, fh, blocks):
@@ -1344,7 +1350,7 @@ class _Wma(TinyTag):
         return None
 
     def _parse_tag(self, fh):
-        self.__tag_parsed = True
+        self._tags_parsed = True
         guid = fh.read(16)  # 128 bit GUID
         if guid != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel':
             # not a valid ASF container! see: http://www.garykessler.net/library/file_sigs.html
