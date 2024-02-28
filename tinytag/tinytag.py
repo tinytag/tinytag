@@ -328,9 +328,10 @@ class _MP4(TinyTag):
         def _parse_id3v1_genre(cls, data_atom):
             # dunno why the genre is offset by -1 but that's how mutagen does it
             idx = struct.unpack('>H', data_atom[8:])[0] - 1
+            result = {}
             if idx < len(_ID3.ID3V1_GENRES):
-                return {'genre': _ID3.ID3V1_GENRES[idx]}
-            return {'genre': None}
+                result['genre'] = _ID3.ID3V1_GENRES[idx]
+            return result
 
         @classmethod
         def _read_extended_descriptor(cls, esds_atom):
@@ -418,11 +419,6 @@ class _MP4(TinyTag):
                 time_scale = struct.unpack('>I', walker.read(4))[0]
                 duration = struct.unpack('>q', walker.read(8))[0]
             return {'duration': duration / time_scale}
-
-        @classmethod
-        def _debug_atom(cls, data):
-            print(data)  # use this function to inspect atoms in an atom tree
-            return {}
 
     # The parser tree: Each key is an atom name which is traversed if existing.
     # Leaves of the parser tree are callables which receive the atom data.
