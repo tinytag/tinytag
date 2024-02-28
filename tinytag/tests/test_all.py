@@ -141,7 +141,7 @@ testfiles = dict([
         {'filesize': 1130, 'album': 'Somewhere Far Beyond', 'albumartist': 'Blind Guardian',
          'artist': 'Blind Guardian',
          'extra': {'love rating': 'L', 'publisher': 'Century Media', 'popm': 'MusicBee\x00Ä'},
-         'genre': 'Power Metal\x00Other', 'title': 'Time What Is Time', 'track': 1,
+         'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': 1,
          'year': '1992'}),
     ('samples/nicotinetestdata.mp3',
         {'extra': {'tsse': 'Lavf58.20.100'}, 'filesize': 80919, 'channels': 2,

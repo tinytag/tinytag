@@ -727,9 +727,7 @@ class _ID3(TinyTag):
 
     def _parse_tag(self, fh):
         self._parse_id3v2(fh)
-        attrs = ['track', 'track_total', 'title', 'artist', 'album', 'albumartist', 'year', 'genre']
-        has_all_tags = all(getattr(self, attr) for attr in attrs)
-        if not has_all_tags and self.filesize > 128:
+        if self.filesize > 128:
             fh.seek(-128, os.SEEK_END)  # try parsing id3v1 in last 128 bytes
             self._parse_id3v1(fh)
 
@@ -768,19 +766,29 @@ class _ID3(TinyTag):
             fh.seek(end_pos, os.SEEK_SET)
 
     def _parse_id3v1(self, fh):
-        if fh.read(3) == b'TAG':  # check if this is an ID3 v1 tag
-            def asciidecode(x):
-                return self._unpad(x.decode(self._default_encoding or 'latin1'))
-            fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
+        if fh.read(3) != b'TAG':  # check if this is an ID3 v1 tag
+            return
+        def asciidecode(x):
+            return self._unpad(x.decode(self._default_encoding or 'latin1'))
+        # Only set fields that were not set by ID3v2 tags, as ID3v1
+        # tags are more likely to be outdated or have encoding issues
+        fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
+        if not self.title:
             self._set_field('title', asciidecode(fields[:30]))
+        if not self.artist:
             self._set_field('artist', asciidecode(fields[30:60]))
+        if not self.album:
             self._set_field('album', asciidecode(fields[60:90]))
+        if not self.year:
             self._set_field('year', asciidecode(fields[90:94]))
-            comment = fields[94:124]
-            if b'\x00\x00' < comment[-2:] < b'\x01\x00':
+        comment = fields[94:124]
+        if b'\x00\x00' < comment[-2:] < b'\x01\x00':
+            if self.track is None:
                 self._set_field('track', ord(comment[-1:]))
-                comment = comment[:-2]
+            comment = comment[:-2]
+        if not self.comment:
             self._set_field('comment', asciidecode(comment))
+        if not self.genre:
             genre_id = ord(fields[124:125])
             if genre_id < len(self.ID3V1_GENRES):
                 self._set_field('genre', self.ID3V1_GENRES[genre_id])
