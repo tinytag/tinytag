@@ -1393,7 +1393,7 @@ class _Wma(TinyTag):
                 data_blocks = {
                     'title': title_length,
                     'artist': author_length,
-                    '_copyright': copyright_length,
+                    'extra.copyright': copyright_length,
                     'comment': description_length,
                     '_rating': rating_length,
                 }
