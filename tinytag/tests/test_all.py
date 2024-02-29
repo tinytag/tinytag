@@ -610,9 +610,9 @@ def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
+def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
-    tag = TinyTag.get(filename, tags=True)
+    tag = TinyTag.get(filename, tags=True, duration=True)
     results = {
         key: val for key, val in tag._as_dict().items() if val is not None
     }
@@ -621,10 +621,25 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_no_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
+def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
+    filename = os.path.join(testfolder, testfile)
+    excluded_attrs = {"bitdepth", "bitrate", "channels", "duration", "samplerate"}
+    tag = TinyTag.get(filename, tags=True, duration=False)
+    results = {
+        key: val for key, val in tag._as_dict().items() if val is not None
+    }
+    expected = {
+        key: val for key, val in expected.items() if key not in excluded_attrs
+    }
+    compare_tag(results, expected, filename)
+    assert tag._image_data is None
+
+
+@pytest.mark.parametrize("testfile,expected", testfiles.items())
+def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
-    tag = TinyTag.get(filename, tags=False)
+    tag = TinyTag.get(filename, tags=False, duration=True)
     results = {
         key: val for key, val in tag._as_dict().items() if val is not None
     }

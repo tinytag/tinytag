@@ -1184,12 +1184,13 @@ class _Wave(TinyTag):
         riff, _size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
             raise TinyTagException('Invalid WAV file')
-        self.bitdepth = 16  # assume 16bit depth (CD quality)
+        if self._parse_duration:
+            self.bitdepth = 16  # assume 16bit depth (CD quality)
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
             subchunkid, subchunksize = struct.unpack('4sI', chunk_header)
             subchunksize += subchunksize % 2  # IFF chunks are padded to an even number of bytes
-            if subchunkid == b'fmt ':
+            if subchunkid == b'fmt ' and self._parse_duration:
                 _, channels, samplerate = struct.unpack('HHI', fh.read(8))
                 _, _, bitdepth = struct.unpack('<IHH', fh.read(8))
                 if bitdepth == 0:
@@ -1201,7 +1202,7 @@ class _Wave(TinyTag):
                 remaining_size = subchunksize - 16
                 if remaining_size > 0:
                     fh.seek(remaining_size, 1)  # skip remaining data in chunk
-            elif subchunkid == b'data':
+            elif subchunkid == b'data' and self._parse_duration:
                 if (self.channels is not None and self.samplerate is not None
                         and self.bitdepth is not None):
                     self.duration = (
@@ -1442,7 +1443,7 @@ class _Wma(TinyTag):
                     else:
                         if field_value is not None:
                             self._set_field(field_name, field_value)
-            elif object_id == self.ASF_FILE_PROPERTY_OBJECT:
+            elif object_id == self.ASF_FILE_PROPERTY_OBJECT and self._parse_duration:
                 fh.seek(40, os.SEEK_CUR)
                 play_duration = self._bytes_to_int_le(fh.read(8)) / 10000000
                 fh.seek(8, os.SEEK_CUR)
@@ -1451,7 +1452,7 @@ class _Wma(TinyTag):
                 # According to the specification, we need to subtract the preroll from play_duration
                 # to get the actual duration of the file
                 self.duration = max(play_duration - preroll, 0.0)
-            elif object_id == self.ASF_STREAM_PROPERTIES_OBJECT:
+            elif object_id == self.ASF_STREAM_PROPERTIES_OBJECT and self._parse_duration:
                 stream_type = fh.read(16)
                 fh.seek(24, os.SEEK_CUR)  # skip irrelevant fields
                 type_specific_data_length = self._bytes_to_int_le(fh.read(4))
@@ -1529,7 +1530,7 @@ class _Aiff(TinyTag):
             if sub_chunk_id in self.aiff_mapping and self._parse_tags:
                 value = self._unpad(fh.read(sub_chunk_size).decode('utf-8'))
                 self._set_field(self.aiff_mapping[sub_chunk_id], value)
-            elif sub_chunk_id == b'COMM':
+            elif sub_chunk_id == b'COMM' and self._parse_duration:
                 channels, num_frames, bitdepth = struct.unpack('>hLh', fh.read(8))
                 self.channels, self.bitdepth = channels, bitdepth
                 try:
