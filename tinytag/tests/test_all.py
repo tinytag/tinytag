@@ -7,6 +7,9 @@
 # pylint: disable=missing-function-docstring,missing-module-docstring,protected-access
 
 
+from __future__ import annotations
+from typing import Any
+
 import io
 import os
 import pathlib
@@ -541,7 +544,7 @@ testfiles = dict([
 testfolder = os.path.join(os.path.dirname(__file__))
 
 
-def load_custom_samples():
+def load_custom_samples() -> dict[str, dict[str, Any]]:
     retval = {}
     custom_samples_folder = os.path.join(testfolder, 'custom_samples')
     pattern_field_name_type = [
@@ -575,15 +578,19 @@ def load_custom_samples():
 testfiles.update(load_custom_samples())
 
 
-def compare_tag(results, expected, file, prev_path=None):
-    def compare_values(path, result_val, expected_val):
-        if path == 'extra.lyrics':  # lets not copy *all* the lyrics inside the fixture
+def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str, Any]],
+                file: str, prev_path: str | None = None) -> None:
+    def compare_values(path: str, result_val: int | float | str | dict[str, Any],
+                       expected_val: int | float | str | dict[str, Any]) -> bool:
+        # lets not copy *all* the lyrics inside the fixture
+        if (path == 'extra.lyrics'
+                and isinstance(expected_val, str) and isinstance(result_val, str)):
             return result_val.startswith(expected_val)
         if isinstance(expected_val, float):
             return result_val == pytest.approx(expected_val)
         return result_val == expected_val
 
-    def error_fmt(value):
+    def error_fmt(value: int | float | str | dict[str, Any]) -> str:
         return f'{repr(value)} ({type(value)})'
 
     assert isinstance(results, dict)
@@ -603,7 +610,7 @@ def compare_tag(results, expected, file, prev_path=None):
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_tags(testfile, expected):
+def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True)
     results = {
@@ -614,7 +621,7 @@ def test_file_reading_tags(testfile, expected):
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_no_tags(testfile, expected):
+def test_file_reading_no_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False)
@@ -629,14 +636,14 @@ def test_file_reading_no_tags(testfile, expected):
     assert tag._image_data is None
 
 
-def test_pathlib_compatibility():
+def test_pathlib_compatibility() -> None:
     testfile = next(iter(testfiles.keys()))
     filename = pathlib.Path(testfolder) / testfile
     TinyTag.get(filename)
     assert TinyTag.is_supported(filename)
 
 
-def test_file_obj_compatibility():
+def test_file_obj_compatibility() -> None:
     testfile = next(iter(testfiles.keys()))
     filename = os.path.join(testfolder, testfile)
     with open(filename, 'rb') as file_handle:
@@ -647,9 +654,9 @@ def test_file_obj_compatibility():
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason='Windows does not support binary paths')
-def test_binary_path_compatibility():
+def test_binary_path_compatibility() -> None:
     binary_file_path = os.path.join(os.path.dirname(__file__).encode('utf-8'), b'\x01.mp3')
-    testfile = os.path.join(testfolder, next(iter(testfiles.keys())))
+    testfile = os.path.join(testfolder, next(iter(testfiles.keys()))).encode('utf-8')
     shutil.copy(testfile, binary_file_path)
     assert os.path.exists(binary_file_path)
     TinyTag.get(binary_file_path)
@@ -658,33 +665,40 @@ def test_binary_path_compatibility():
 
 
 @pytest.mark.xfail(raises=TinyTagException)
-def test_unsupported_extension():
+def test_unsupported_extension() -> None:
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
     TinyTag.get(bogus_file)
 
 
-def test_override_encoding():
+def test_override_encoding() -> None:
     chinese_id3 = os.path.join(testfolder, 'samples/chinese_id3.mp3')
     tag = TinyTag.get(chinese_id3, encoding='gbk')
     assert tag.artist == '苏云'
     assert tag.album == '角落之歌'
 
 
-@pytest.mark.xfail(raises=NotImplementedError)
-def test_unsubclassed_tinytag_duration():
-    tag = TinyTag(None, 0)
-    tag._determine_duration(None)
+@pytest.mark.xfail(raises=TinyTagException)
+def test_unsubclassed_tinytag_load() -> None:
+    tag = TinyTag()
+    tag._load(tags=True, duration=True)
 
 
 @pytest.mark.xfail(raises=NotImplementedError)
-def test_unsubclassed_tinytag_parse_tag():
-    tag = TinyTag(None, 0)
-    tag._parse_tag(None)
+def test_unsubclassed_tinytag_duration() -> None:
+    tag = TinyTag()
+    tag._determine_duration(None)  # type: ignore
 
 
-def test_mp3_length_estimation():
+@pytest.mark.xfail(raises=NotImplementedError)
+def test_unsubclassed_tinytag_parse_tag() -> None:
+    tag = TinyTag()
+    tag._parse_tag(None)  # type: ignore
+
+
+def test_mp3_length_estimation() -> None:
     _ID3._MAX_ESTIMATION_SEC = 0.7
     tag = TinyTag.get(os.path.join(testfolder, 'samples/silence-44-s-v1.mp3'))
+    assert tag.duration is not None
     assert 3.5 < tag.duration < 4.0
 
 
@@ -697,7 +711,7 @@ def test_mp3_length_estimation():
     ('samples/ilbm.aiff', _Aiff),
 ])
 @pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_file(path, cls):
+def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
     cls.get(os.path.join(testfolder, path))
 
 
@@ -713,11 +727,11 @@ def test_invalid_file(path, cls):
     ('samples/wav_with_image.wav', 4627),
     ('samples/aiff_with_image.aiff', 21963),
 ])
-def test_image_loading(path, expected_size):
+def test_image_loading(path: str, expected_size: int) -> None:
     tag = TinyTag.get(os.path.join(testfolder, path), image=True)
     image_data = tag.get_image()
-    image_size = len(image_data)
     assert image_data is not None
+    image_size = len(image_data)
     assert image_size == expected_size, \
            f'Image is {image_size} bytes but should be {expected_size} bytes'
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), \
@@ -725,11 +739,11 @@ def test_image_loading(path, expected_size):
 
 
 @pytest.mark.xfail(raises=TinyTagException)
-def test_mp3_utf_8_invalid_string_raises_exception():
+def test_mp3_utf_8_invalid_string_raises_exception() -> None:
     TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
 
 
-def test_mp3_utf_8_invalid_string_can_be_ignored():
+def test_mp3_utf_8_invalid_string_can_be_ignored() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'),
                       ignore_errors=True)
     # the title used to be Gran dia, but I replaced the first byte with 0xFF,
@@ -749,21 +763,21 @@ def test_mp3_utf_8_invalid_string_can_be_ignored():
     ('samples/detect_mp4_m4a.x', _MP4),
     ('samples/detect_aiff.x', _Aiff),
 ])
-def test_detect_magic_headers(testfile, expected):
+def test_detect_magic_headers(testfile: str, expected: type[TinyTag]) -> None:
     filename = os.path.join(testfolder, testfile)
     with open(filename, 'rb') as file_handle:
         parser = TinyTag._get_parser_class(filename, file_handle)
     assert parser == expected
 
 
-def test_show_hint_for_wrong_usage():
+def test_show_hint_for_wrong_usage() -> None:
     with pytest.raises(TinyTagException) as exc_info:
-        TinyTag('filename.mp3', 0)
+        TinyTag.get()
     assert exc_info.type == TinyTagException
-    assert exc_info.value.args[0] == 'Use `TinyTag.get(filepath)` instead of `TinyTag(filepath)`'
+    assert exc_info.value.args[0] == 'Either filename or file_obj argument is required'
 
 
-def test_to_str():
+def test_to_str() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
     assert str(tag) == (
         "{'album': 'Hymns for the Exiled', 'albumartist': None, 'artist': 'Anais Mitchell', "

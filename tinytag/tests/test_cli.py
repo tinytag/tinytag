@@ -21,7 +21,7 @@ tinytag_attributes = {'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
                       'track_total', 'year'}
 
 
-def run_cli(args):
+def run_cli(args: str) -> str:
     debug_env = str(os.environ.pop("DEBUG", None))
     output = check_output(f'{sys.executable} -m tinytag ' + args, cwd=project_folder, shell=True)
     if debug_env:
@@ -29,21 +29,21 @@ def run_cli(args):
     return output.decode('utf-8')
 
 
-def file_size(filename):
+def file_size(filename: str) -> int:
     return os.stat(filename).st_size
 
 
 @pytest.mark.xfail(raises=CalledProcessError)
-def test_wrong_params():
+def test_wrong_params() -> None:
     assert 'tinytag [options] <filename' in run_cli('-lol')
 
 
-def test_print_help():
+def test_print_help() -> None:
     assert 'tinytag [options] <filename' in run_cli('-h')
     assert 'tinytag [options] <filename' in run_cli('--help')
 
 
-def test_save_image_long_opt():
+def test_save_image_long_opt() -> None:
     with NamedTemporaryFile() as temp_file:
         assert file_size(temp_file.name) == 0
     run_cli(f'--save-image {temp_file.name} {mp3_with_image}')
@@ -54,14 +54,14 @@ def test_save_image_long_opt():
         assert b'JFIF' in image_data
 
 
-def test_save_image_short_opt():
+def test_save_image_short_opt() -> None:
     with NamedTemporaryFile() as temp_file:
         assert file_size(temp_file.name) == 0
     run_cli(f'-i {temp_file.name} {mp3_with_image}')
     assert file_size(temp_file.name) > 0
 
 
-def test_save_image_bulk():
+def test_save_image_bulk() -> None:
     with NamedTemporaryFile(suffix='.jpg') as temp_file:
         temp_file_no_ext = temp_file.name[:-4]
         assert file_size(temp_file.name) == 0
@@ -72,21 +72,21 @@ def test_save_image_bulk():
     assert file_size(temp_file_no_ext + '00002.jpg') > 0
 
 
-def test_meta_data_output_default_json():
+def test_meta_data_output_default_json() -> None:
     output = run_cli(mp3_with_image)
     data = json.loads(output)
     assert data
     assert set(data.keys()) == tinytag_attributes
 
 
-def test_meta_data_output_format_json():
+def test_meta_data_output_format_json() -> None:
     output = run_cli('-f json ' + mp3_with_image)
     data = json.loads(output)
     assert data
     assert set(data.keys()) == tinytag_attributes
 
 
-def test_meta_data_output_format_csv():
+def test_meta_data_output_format_csv() -> None:
     output = run_cli('-f csv ' + mp3_with_image)
     lines = [line for line in output.split(os.linesep) if line]
     assert all(',' in line for line in lines)
@@ -94,7 +94,7 @@ def test_meta_data_output_format_csv():
     assert set(attributes) == tinytag_attributes
 
 
-def test_meta_data_output_format_tsv():
+def test_meta_data_output_format_tsv() -> None:
     output = run_cli('-f tsv ' + mp3_with_image)
     lines = [line for line in output.split(os.linesep) if line]
     assert all('\t' in line for line in lines)
@@ -102,20 +102,20 @@ def test_meta_data_output_format_tsv():
     assert set(attributes) == tinytag_attributes
 
 
-def test_meta_data_output_format_tabularcsv():
+def test_meta_data_output_format_tabularcsv() -> None:
     output = run_cli('-f tabularcsv ' + mp3_with_image)
     header, _line, _rest = output.split(os.linesep)
     assert set(header.split(',')) == tinytag_attributes
 
 
 @pytest.mark.xfail(raises=CalledProcessError)
-def test_fail_on_unsupported_file():
+def test_fail_on_unsupported_file() -> None:
     run_cli(bogus_file)
 
 
-def test_fail_skip_unsupported_file_long_opt():
+def test_fail_skip_unsupported_file_long_opt() -> None:
     run_cli('--skip-unsupported ' + bogus_file)
 
 
-def test_fail_skip_unsupported_file_short_opt():
+def test_fail_skip_unsupported_file_short_opt() -> None:
     run_cli('-s ' + bogus_file)
