@@ -75,7 +75,7 @@ class TinyTag:
         self.disc: int | None = None
         self.disc_total: int | None = None
         self.duration: float | None = None
-        self.extra: dict[str, bytes | str | int | float] = {}
+        self.extra: dict[str, str | int | float] = {}
         self.filesize = 0
         self.genre: str | None = None
         self.samplerate: int | None = None
@@ -222,7 +222,7 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: float | int | bytes | str) -> None:
+    def _set_field(self, fieldname: str, value: str | int | float) -> None:
         """convenience function to set fields of the tinytag by name"""
         write_dest = self.__dict__  # write into the TinyTag by default
         is_str = isinstance(value, str)
@@ -1347,12 +1347,10 @@ class _Wma(TinyTag):
     def _decode_string(self, bytestring: bytes) -> str:
         return self._unpad(bytestring.decode('utf-16'))
 
-    def _decode_ext_desc(self, value_type: int, value: bytes) -> bytes | int | str | None:
+    def _decode_ext_desc(self, value_type: int, value: bytes) -> int | str | None:
         """ decode ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
         if value_type == 0:  # Unicode string
             return self._decode_string(value)
-        if value_type == 1:  # BYTE array
-            return value
         if 1 < value_type < 6:  # DWORD / QWORD / WORD
             return self._bytes_to_int_le(value)
         return None
