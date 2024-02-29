@@ -7,7 +7,8 @@
 # pylint: disable=missing-function-docstring,missing-module-docstring,protected-access
 
 
-from typing import Any, Dict, Optional, Type, Union
+from __future__ import annotations
+from typing import Any
 
 import io
 import os
@@ -543,7 +544,7 @@ testfiles = dict([
 testfolder = os.path.join(os.path.dirname(__file__))
 
 
-def load_custom_samples() -> Dict[str, Dict[str, Any]]:
+def load_custom_samples() -> dict[str, dict[str, Any]]:
     retval = {}
     custom_samples_folder = os.path.join(testfolder, 'custom_samples')
     pattern_field_name_type = [
@@ -577,10 +578,10 @@ def load_custom_samples() -> Dict[str, Dict[str, Any]]:
 testfiles.update(load_custom_samples())
 
 
-def compare_tag(results: Dict[str, Dict[str, Any]], expected: Dict[str, Dict[str, Any]],
-                file: str, prev_path: Optional[str] = None) -> None:
-    def compare_values(path: str, result_val: Union[int, float, str, Dict[str, Any]],
-                       expected_val: Union[int, float, str, Dict[str, Any]]) -> bool:
+def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str, Any]],
+                file: str, prev_path: str | None = None) -> None:
+    def compare_values(path: str, result_val: int | float | str | dict[str, Any],
+                       expected_val: int | float | str | dict[str, Any]) -> bool:
         # lets not copy *all* the lyrics inside the fixture
         if (path == 'extra.lyrics'
                 and isinstance(expected_val, str) and isinstance(result_val, str)):
@@ -589,7 +590,7 @@ def compare_tag(results: Dict[str, Dict[str, Any]], expected: Dict[str, Dict[str
             return result_val == pytest.approx(expected_val)
         return result_val == expected_val
 
-    def error_fmt(value: Union[int, float, str, Dict[str, Any]]) -> str:
+    def error_fmt(value: int | float | str | dict[str, Any]) -> str:
         return f'{repr(value)} ({type(value)})'
 
     assert isinstance(results, dict)
@@ -609,7 +610,7 @@ def compare_tag(results: Dict[str, Dict[str, Any]], expected: Dict[str, Dict[str
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_tags(testfile: str, expected: Dict[str, Dict[str, Any]]) -> None:
+def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True)
     results = {
@@ -620,7 +621,7 @@ def test_file_reading_tags(testfile: str, expected: Dict[str, Dict[str, Any]]) -
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
-def test_file_reading_no_tags(testfile: str, expected: Dict[str, Dict[str, Any]]) -> None:
+def test_file_reading_no_tags(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False)
@@ -710,7 +711,7 @@ def test_mp3_length_estimation() -> None:
     ('samples/ilbm.aiff', _Aiff),
 ])
 @pytest.mark.xfail(raises=TinyTagException)
-def test_invalid_file(path: str, cls: Type[TinyTag]) -> None:
+def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
     cls.get(os.path.join(testfolder, path))
 
 
@@ -762,7 +763,7 @@ def test_mp3_utf_8_invalid_string_can_be_ignored() -> None:
     ('samples/detect_mp4_m4a.x', _MP4),
     ('samples/detect_aiff.x', _Aiff),
 ])
-def test_detect_magic_headers(testfile: str, expected: Type[TinyTag]) -> None:
+def test_detect_magic_headers(testfile: str, expected: type[TinyTag]) -> None:
     filename = os.path.join(testfolder, testfile)
     with open(filename, 'rb') as file_handle:
         parser = TinyTag._get_parser_class(filename, file_handle)

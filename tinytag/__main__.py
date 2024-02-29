@@ -1,12 +1,12 @@
 # pylint: disable=missing-module-docstring,protected-access
 
+from __future__ import annotations
 from os.path import splitext
-from typing import Optional
 import json
 import os
 import sys
 
-from tinytag.tinytag import TinyTag
+from tinytag.tinytag import TinyTag, TinyTagException
 
 
 def _usage() -> None:
@@ -27,7 +27,7 @@ def _usage() -> None:
 ''')
 
 
-def _pop_param(name: str, _default: Optional[str]) -> Optional[str]:
+def _pop_param(name: str, _default: str | None) -> str | None:
     if name in sys.argv:
         idx = sys.argv.index(name)
         sys.argv.pop(idx)
@@ -91,7 +91,7 @@ def _run() -> int:
                     with open(actual_save_image_path, 'wb') as file_handle:
                         file_handle.write(image)
             header_printed = _print_tag(tag, formatting, header_printed)
-        except Exception as exc:  # pylint: disable=broad-except
+        except (OSError, TinyTagException) as exc:
             sys.stderr.write(f'{filename}: {exc}\n')
             return 1
     return 0
