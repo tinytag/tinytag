@@ -614,10 +614,10 @@ def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str,
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -626,13 +626,13 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
     excluded_attrs = {"bitdepth", "bitrate", "channels", "duration", "samplerate"}
     tag = TinyTag.get(filename, tags=True, duration=False)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     expected = {
         key: val for key, val in expected.items() if key not in excluded_attrs
     }
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -641,14 +641,14 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     expected = {
         key: val for key, val in expected.items() if key in allowed_attrs
     }
     expected["extra"] = {}
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 def test_pathlib_compatibility() -> None:

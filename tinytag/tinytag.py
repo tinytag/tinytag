@@ -27,7 +27,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+# pylint: disable=missing-module-docstring,missing-class-docstring
 # pylint: disable=invalid-name,protected-access
 # pylint: disable=too-many-lines,too-many-arguments,too-many-boolean-expressions
 # pylint: disable=too-many-branches,too-many-instance-attributes,too-many-locals
@@ -39,7 +39,7 @@ from collections.abc import Callable, Iterator
 from functools import reduce
 from os import PathLike
 from sys import stderr
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Union
 
 import base64
 import io
@@ -51,6 +51,52 @@ DEBUG = bool(os.environ.get('DEBUG'))  # some of the parsers can print debug inf
 
 
 class TinyTagException(Exception):
+    pass
+
+
+class TagImage:
+    def __init__(self, data: bytes | None = None) -> None:
+        self.data = data
+        self.description: str | None = None
+
+    def __repr__(self) -> str:
+        variables = vars(self)
+        data = variables.get("data")
+        if data is not None:
+            variables["data"] = (data[:45] + '..') if len(data) > 45 else data
+        return str(variables)
+
+
+class TagImages:
+    def __init__(self) -> None:
+        image = TagImage()
+        self.other: TagImage = image
+        self.icon: TagImage = image
+        self.other_icon: TagImage = image
+        self.front_cover: TagImage = image
+        self.back_cover: TagImage = image
+        self.leaflet: TagImage = image
+        self.media: TagImage = image
+        self.lead_artist: TagImage = image
+        self.artist: TagImage = image
+        self.conductor: TagImage = image
+        self.band: TagImage = image
+        self.composer: TagImage = image
+        self.lyricist: TagImage = image
+        self.recording_location: TagImage = image
+        self.during_recording: TagImage = image
+        self.during_performance: TagImage = image
+        self.video: TagImage = image
+        self.bright_colored_fish: TagImage = image
+        self.illustration: TagImage = image
+        self.band_logo: TagImage = image
+        self.publisher_logo: TagImage = image
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+
+class TagExtra(dict[str, Union[str, int, float]]):
     pass
 
 
@@ -75,9 +121,10 @@ class TinyTag:
         self.disc: int | None = None
         self.disc_total: int | None = None
         self.duration: float | None = None
-        self.extra: dict[str, str | int | float] = {}
+        self.extra = TagExtra()
         self.filesize = 0
         self.genre: str | None = None
+        self.images = TagImages()
         self.samplerate: int | None = None
         self.bitdepth: int | None = None
         self.title: str | None = None
@@ -86,7 +133,6 @@ class TinyTag:
         self.year: str | None = None
         self._filehandler: BinaryIO | None = None
         self._filename: bytes | str | PathLike[Any] | None = None  # for debugging
-        self._image_data: bytes | None = None
         self._default_encoding: str | None = None  # allow override for some file formats
         self._ignore_errors = False
         self._parse_duration = True
@@ -103,6 +149,7 @@ class TinyTag:
             ignore_errors: bool = False,
             encoding: str | None = None,
             file_obj: BinaryIO | None = None) -> TinyTag:
+        """Create a tag object for a file path or a file-like object."""
         should_close_file = file_obj is None
         if filename and should_close_file:
             file_obj = open(filename, 'rb')  # pylint: disable=consider-using-with
@@ -130,17 +177,31 @@ class TinyTag:
                 file_obj.close()
 
     def get_image(self) -> bytes | None:
-        return self._image_data
+        """Return the closest equivalent to a cover image as bytes."""
+        front_cover = self.images.front_cover.data  # check the obvious location
+        if front_cover is not None:
+            return front_cover
+        other = self.images.other.data  # cover images are sometimes stored here
+        if other is not None:
+            return other
+        back_cover = self.images.back_cover.data  # last resort, maybe there's something here...
+        if back_cover is not None:
+            return back_cover
+        return None
 
     @classmethod
     def is_supported(cls, filename: bytes | str | PathLike[Any]) -> bool:
+        """Check if a specific file is supported based on the file extension."""
         return cls._get_parser_for_filename(filename) is not None
 
     def __repr__(self) -> str:
         return str(self._as_dict())
 
     def _as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in sorted(self.__dict__.items()) if not k.startswith('_')}
+        return {
+            k: v for k, v in sorted(self.__dict__.items())
+            if not k.startswith('_') and k != 'images'
+        }
 
     @classmethod
     def _get_parser_for_filename(
@@ -222,7 +283,7 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: str | int | float) -> None:
+    def _set_field(self, fieldname: str, value: str | int | float | TagImage) -> None:
         """convenience function to set fields of the tinytag by name"""
         write_dest = self.__dict__  # write into the TinyTag by default
         is_str = isinstance(value, str)
@@ -232,6 +293,9 @@ class TinyTag:
         if fieldname.startswith('extra.'):
             fieldname = fieldname[6:]
             write_dest = self.extra  # write into the extra field instead
+        elif fieldname.startswith('images.'):
+            fieldname = fieldname[7:]
+            write_dest = self.images.__dict__
         old_value = write_dest.get(fieldname)
         if is_str and old_value and old_value != value:
             # Combine same field with a null character
@@ -251,13 +315,14 @@ class TinyTag:
         for key in ('track', 'track_total', 'title', 'artist',
                     'album', 'albumartist', 'year', 'duration',
                     'genre', 'disc', 'disc_total', 'comment',
-                    'bitdepth', 'bitrate', 'channels', 'samplerate',
-                    '_image_data'):
+                    'bitdepth', 'bitrate', 'channels', 'samplerate'):
             new_value = getattr(other, key)
             if new_value:
                 self._set_field(key, new_value)
         for key, value in other.extra.items():
             self._set_field("extra." + key, value)
+        for second_key, second_value in other.images.__dict__.items():
+            self._set_field("images." + second_key, second_value)
 
     @staticmethod
     def _bytes_to_int_le(b: bytes) -> int:
@@ -280,7 +345,8 @@ class _MP4(TinyTag):
     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
 
     class _Parser:
-        atom_decoder_by_type: dict[int, Callable[[bytes], int | str | bytes]] | None = None
+        atom_decoder_by_type: dict[
+            int, Callable[[bytes], int | str | bytes | TagImage]] | None = None
 
         @classmethod
         def _unpack_integer(cls, value: bytes, signed: bool = True) -> int:
@@ -302,8 +368,8 @@ class _MP4(TinyTag):
 
         @classmethod
         def _make_data_atom_parser(
-                cls, fieldname: str) -> Callable[[bytes], dict[str, int | str | bytes]]:
-            def _parse_data_atom(data_atom: bytes) -> dict[str, int | str | bytes]:
+                cls, fieldname: str) -> Callable[[bytes], dict[str, int | str | bytes | TagImage]]:
+            def _parse_data_atom(data_atom: bytes) -> dict[str, int | str | bytes | TagImage]:
                 data_type = struct.unpack('>I', data_atom[:4])[0]
                 if cls.atom_decoder_by_type is None:
                     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
@@ -313,8 +379,8 @@ class _MP4(TinyTag):
                         2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
                         3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
                         # 16: duration in millis
-                        13: lambda x: x,  # JPEG
-                        14: lambda x: x,  # PNG
+                        13: TagImage,                                  # JPEG
+                        14: TagImage,                                  # PNG
                         21: cls._unpack_integer,                    # BE Signed int
                         22: cls._unpack_integer_unsigned,           # BE Unsigned int
                         # 23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
@@ -365,7 +431,7 @@ class _MP4(TinyTag):
                     break
 
         @classmethod
-        def _parse_custom_field(cls, data: bytes) -> dict[str, int | str | bytes]:
+        def _parse_custom_field(cls, data: bytes) -> dict[str, int | str | bytes | TagImage]:
             fh = io.BytesIO(data)
             header_size = 8
             field_name = None
@@ -472,7 +538,7 @@ class _MP4(TinyTag):
         b'gnre': {b'data': _Parser._parse_id3v1_genre},
         b'trkn': {b'data': _Parser._make_number_parser('track', 'track_total')},
         b'tmpo': {b'data': _Parser._make_data_atom_parser('extra.bpm')},
-        b'covr': {b'data': _Parser._make_data_atom_parser('_image_data')},
+        b'covr': {b'data': _Parser._make_data_atom_parser('images.front_cover')},
         b'----': _Parser._parse_custom_field,
     }}}}}
 
@@ -527,7 +593,7 @@ class _MP4(TinyTag):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
-                    if fieldname == '_image_data' and not self._load_image:
+                    if fieldname.startswith('images.') and not self._load_image:
                         continue
                     if fieldname:
                         self._set_field(fieldname, value)
@@ -613,6 +679,29 @@ class _ID3(TinyTag):
         'Psytrance', 'Shoegaze', 'Space Rock', 'Trop Rock', 'World Music',
         'Neoclassical', 'Audiobook', 'Audio Theatre', 'Neue Deutsche Welle',
         'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
+    )
+    _IMAGE_TYPES = (
+        'other',
+        'icon',
+        'other_icon',
+        'front_cover',
+        'back_cover',
+        'leaflet',
+        'media',
+        'lead_artist',
+        'artist',
+        'conductor',
+        'band',
+        'composer',
+        'lyricist',
+        'recording_location',
+        'during_recording',
+        'during_performance',
+        'video',
+        'bright_colored_fish',
+        'illustration',
+        'band_logo',
+        'publisher_logo',
     )
 
     # see this page for the magic values used in mp3:
@@ -898,11 +987,18 @@ class _ID3(TinyTag):
                         desc_start_pos = 1 + 3 + 1  # skip encoding (1), imgformat (3), pictype(1)
                     else:  # ID3 v2.3+
                         desc_start_pos = content.index(b'\x00', 1) + 1 + 1  # skip mtype, pictype(1)
+                    pictype = content[desc_start_pos - 1]
                     # latin1 and utf-8 are 1 byte
                     termination = b'\x00' if encoding in {b'\x00', b'\x03'} else b'\x00\x00'
                     desc_length = self._index_utf16(content[desc_start_pos:], termination)
                     desc_end_pos = desc_start_pos + desc_length + len(termination)
-                    self._image_data = content[desc_end_pos:]
+                    description = self._decode_string(content[desc_start_pos:desc_end_pos])
+                    image = TagImage(content[desc_end_pos:])
+                    if description:
+                        image.description = description
+                    if 0 <= pictype <= len(self._IMAGE_TYPES):
+                        pictype = 0  # fall back to 'other' type
+                    self._set_field('images.' + self._IMAGE_TYPES[pictype], image)
             elif frame_id not in self._DISALLOWED_FRAME_IDS:
                 # unknown, try to add to extra dict
                 if self._parse_tags:
@@ -1095,8 +1191,9 @@ class _Ogg(TinyTag):
 
                 if key_lowercase == "metadata_block_picture" and self._load_image:
                     if DEBUG:
-                        print('Found Vorbis Image', key, value[:64])
-                    self._image_data = _Flac._parse_image(io.BytesIO(base64.b64decode(value)))
+                        print('Found Vorbis TagImage', key, value[:64])
+                    fieldname, fieldvalue = _Flac._parse_image(io.BytesIO(base64.b64decode(value)))
+                    self._set_field(fieldname, fieldvalue)
                 else:
                     if DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
@@ -1303,7 +1400,8 @@ class _Flac(TinyTag):
                 oggtag._parse_vorbis_comment(fh)
                 self._update(oggtag)
             elif block_type == self.METADATA_PICTURE and self._load_image:
-                self._image_data = self._parse_image(fh)
+                fieldname, value = self._parse_image(fh)
+                self._set_field(fieldname, value)
             elif block_type >= 127:
                 break  # invalid block type
             else:
@@ -1319,14 +1417,20 @@ class _Flac(TinyTag):
         self._tags_parsed = True
 
     @staticmethod
-    def _parse_image(fh: BinaryIO) -> bytes:
+    def _parse_image(fh: BinaryIO) -> tuple[str, TagImage]:
         # https://xiph.org/flac/format.html#metadata_block_picture
-        _pic_type, mime_len = struct.unpack('>2I', fh.read(8))
+        pic_type, mime_len = struct.unpack('>2I', fh.read(8))
         fh.read(mime_len)
         description_len = struct.unpack('>I', fh.read(4))[0]
-        fh.read(description_len)
+        description = fh.read(description_len).decode('utf-8')
         _width, _height, _depth, _colors, pic_len = struct.unpack('>5I', fh.read(20))
-        return fh.read(pic_len)
+        if 0 <= pic_type <= len(_ID3._IMAGE_TYPES):
+            pic_type = 0  # fall back to 'other' type
+        field_name = 'images.' + _ID3._IMAGE_TYPES[pic_type]
+        image = TagImage(fh.read(pic_len))
+        if description:
+            image.description = description
+        return field_name, image
 
 
 class _Wma(TinyTag):
