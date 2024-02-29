@@ -438,13 +438,13 @@ testfiles = dict([
          'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll',
          'bitrate': 64.04, 'filesize': 5800, 'track': 1, 'albumartist': 'Foo Fighters',
          'artist': 'Foo Fighters', 'duration': 83.406, 'year': '1997',
-         'genre': 'Alternative'}),
+         'genre': 'Alternative', 'channels': 2}),
     ('samples/lossless.wma',
         {'extra': {}, 'samplerate': 44100, 'bitrate': 667.296, 'filesize': 2500, 'bitdepth': 16,
-         'duration': 43.133}),
+         'duration': 43.133, 'channels': 2}),
     ('samples/wma_invalid_track_number.wma',
         {'extra': {'encodingsettings': 'Lavf60.16.100'}, 'filesize': 3940, 'bitrate': 128.0,
-         'duration': 2.1409999999999996, 'samplerate': 44100}),
+         'duration': 2.1409999999999996, 'samplerate': 44100, 'channels': 1}),
 
     # ALAC/M4A/MP4
     ('samples/test.m4a',

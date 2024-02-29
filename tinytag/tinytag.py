@@ -1442,7 +1442,7 @@ class _Wma(TinyTag):
                 already_read = 0
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
                     codec_id_format_tag = self._bytes_to_int_le(fh.read(2))
-                    _channels = self._bytes_to_int_le(fh.read(2))
+                    self.channels = self._bytes_to_int_le(fh.read(2))
                     self.samplerate = self._bytes_to_int_le(fh.read(4))
                     avg_bytes_per_second = self._bytes_to_int_le(fh.read(4))
                     self.bitrate = avg_bytes_per_second * 8 / 1000
