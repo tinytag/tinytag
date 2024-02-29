@@ -393,7 +393,7 @@ testfiles = dict([
          'artist': 'artist\x00群星',
          'title': 'title\x00A 梦 哆啦 机器猫 短信铃声', 'track': 1, 'bitrate': 1143.72468, 'channels': 1,
          'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'bitdepth': 16,
-         'year': '2018', 'comment': 'comment'}),
+         'year': '2018', 'comment': 'comment', 'disc': 0}),
     ('samples/with_padded_id3_header.flac',
         {'extra': {}, 'filesize': 16070, 'album': 'album', 'artist': 'artist',
          'bitrate': 283.4748, 'channels': 1,

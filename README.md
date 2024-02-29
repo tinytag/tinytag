@@ -110,15 +110,18 @@ If you need to receive an image of a specific type, including its description, u
 
     tag.images        # image types and their data
 
-The following possible image types exist:
+The following common image types exist:
 
-    other
-    icon
-    other_icon
     front_cover
     back_cover
     leaflet
     media
+    other
+
+The following less common image types are provided in an `extra` dict:
+
+    icon
+    other_icon
     lead_artist
     artist
     conductor
@@ -139,15 +142,22 @@ The following image attributes are available:
     data           # image data as bytes
     description    # image description as string
 
-To retrieve e.g. a `bright_colored_fish` image:
+To receive a common image, e.g. `front_cover`:
 
     from tinytag import TinyTag, TagImage, TagImages
 
     tag: TinyTag = TinyTag.get('/some/music.ogg')
     images: TagImages = tag.images
-    image: TagImage = images.bright_colored_fish
+    image: TagImage = images.front_cover
     data: bytes = image.data
     description: str = image.description
+
+To receive an extra image, e.g. `bright_colored_fish`:
+
+    image = tag.images.extra.get('bright_colored_fish')
+    if image is not None:
+        data = image.data
+        description = image.description
 
 ### Encoding
 
