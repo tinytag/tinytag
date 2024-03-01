@@ -47,6 +47,8 @@ Alternatively you can use tinytag directly on the command line:
 
 Check `python -m tinytag --help` for all CLI options, for example other output formats.
 
+Support for changing/writing metadata will not be added, use another library for this.
+
 ### Supported Files
 
 To receive a tuple of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
