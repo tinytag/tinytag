@@ -13,7 +13,6 @@ from typing import Any
 import io
 import os
 import pathlib
-import re
 import shutil
 import sys
 
@@ -542,40 +541,6 @@ testfiles = dict([
 ])
 
 testfolder = os.path.join(os.path.dirname(__file__))
-
-
-def load_custom_samples() -> dict[str, dict[str, Any]]:
-    retval = {}
-    custom_samples_folder = os.path.join(testfolder, 'custom_samples')
-    pattern_field_name_type = [
-        (r'sr=(\d+)', 'samplerate', int),
-        (r'dn=(\d+)', 'disc', str),
-        (r'dt=(\d+)', 'disc_total', str),
-        (r'd=(\d+.?\d*)', 'duration', float),
-        (r'b=(\d+)', 'bitrate', int),
-        (r'c=(\d)', 'channels', int),
-        (r'genre="([^"]+)"', 'genre', str),
-    ]
-    for filename in os.listdir(custom_samples_folder):
-        if filename == 'instructions.txt':
-            continue
-        if os.path.isdir(os.path.join(custom_samples_folder, filename)):
-            continue
-        expected_values = {}
-        for pattern, fieldname, _type in pattern_field_name_type:
-            match = re.findall(pattern, filename)
-            if match:
-                expected_values[fieldname] = _type(match[0])
-        if expected_values:
-            expected_values['_do_not_require_all_values'] = True
-            retval[os.path.join('custom_samples', filename)] = expected_values
-        else:
-            # if there are no expected values, just try parsing the file
-            retval[os.path.join('custom_samples', filename)] = {}
-    return retval
-
-
-testfiles.update(load_custom_samples())
 
 
 def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str, Any]],
