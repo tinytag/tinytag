@@ -311,15 +311,16 @@ class TagImages:
         self.leaflet: TagImage = image
         self.media: TagImage = image
         self.other: TagImage = image
-        self.extra: dict[str, bytes | str] = {}
+        self.extra: dict[str, TagImage] = {}
 
     def __repr__(self) -> str:
         return str(vars(self))
 
 
 class TagImage:
-    def __init__(self, data: bytes | None = None) -> None:
+    def __init__(self, data: bytes | None = None, mime_type: str | None = None) -> None:
         self.data = data
+        self.mime_type = mime_type
         self.description: str | None = None
 
     def __repr__(self) -> str:
@@ -369,8 +370,8 @@ class _MP4(TinyTag):
                         2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
                         3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
                         # 16: duration in millis
-                        13: TagImage,                                  # JPEG
-                        14: TagImage,                                  # PNG
+                        13: lambda x: TagImage(x, 'image/jpeg'),    # JPEG
+                        14: lambda x: TagImage(x, 'image/png'),     # PNG
                         21: cls._unpack_integer,                    # BE Signed int
                         22: cls._unpack_integer_unsigned,           # BE Unsigned int
                         # 23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
@@ -671,6 +672,11 @@ class _ID3(TinyTag):
         'Neoclassical', 'Audiobook', 'Audio Theatre', 'Neue Deutsche Welle',
         'Podcast', 'Indie Rock', 'G-Funk', 'Dubstep', 'Garage Rock', 'Psybient',
     )
+    _ID3V2_2_IMAGE_FORMATS = {
+        'bmp': 'image/bmp',
+        'jpg': 'image/jpeg',
+        'png': 'image/png',
+    }
     _IMAGE_TYPES = (
         'other',
         'extra.icon',
@@ -975,9 +981,15 @@ class _ID3(TinyTag):
                     # See section 4.14: http://id3.org/id3v2.4.0-frames
                     encoding = content[0:1]
                     if frame_id == 'PIC':  # ID3 v2.2:
+                        imgformat = self._decode_string(content[1:4]).lower()
+                        mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
                         desc_start_pos = 1 + 3 + 1  # skip encoding (1), imgformat (3), pictype(1)
                     else:  # ID3 v2.3+
-                        desc_start_pos = content.index(b'\x00', 1) + 1 + 1  # skip mtype, pictype(1)
+                        mime_type_end_pos = content.index(b'\x00', 1)
+                        mime_type = self._decode_string(content[1:mime_type_end_pos]).lower()
+                        if mime_type in self._ID3V2_2_IMAGE_FORMATS:  # ID3 v2.2 format in v2.3...
+                            mime_type = self._ID3V2_2_IMAGE_FORMATS[mime_type]
+                        desc_start_pos = mime_type_end_pos + 1 + 1  # skip mtype, pictype(1)
                     pictype = content[desc_start_pos - 1]
                     # latin1 and utf-8 are 1 byte
                     termination = b'\x00' if encoding in {b'\x00', b'\x03'} else b'\x00\x00'
@@ -987,7 +999,9 @@ class _ID3(TinyTag):
                     image = TagImage(content[desc_end_pos:])
                     if description:
                         image.description = description
-                    if 0 <= pictype <= len(self._IMAGE_TYPES):
+                    if mime_type:
+                        image.mime_type = mime_type
+                    if pictype < 0 or pictype > len(self._IMAGE_TYPES):
                         pictype = 0  # fall back to 'other' type
                     self._set_image_field(self._IMAGE_TYPES[pictype], image)
             elif frame_id not in self._DISALLOWED_FRAME_IDS:
@@ -1411,17 +1425,19 @@ class _Flac(TinyTag):
     @classmethod
     def _parse_image(cls, fh: BinaryIO) -> tuple[str, TagImage]:
         # https://xiph.org/flac/format.html#metadata_block_picture
-        pic_type, mime_len = struct.unpack('>2I', fh.read(8))
-        fh.read(mime_len)
+        pic_type, mime_type_len = struct.unpack('>2I', fh.read(8))
+        mime_type = fh.read(mime_type_len).decode('utf-8')
         description_len = struct.unpack('>I', fh.read(4))[0]
         description = fh.read(description_len).decode('utf-8')
         _width, _height, _depth, _colors, pic_len = struct.unpack('>5I', fh.read(20))
-        if 0 <= pic_type <= len(_ID3._IMAGE_TYPES):
+        if pic_type < 0 or pic_type > len(_ID3._IMAGE_TYPES):
             pic_type = 0  # fall back to 'other' type
         field_name = _ID3._IMAGE_TYPES[pic_type]
         image = TagImage(fh.read(pic_len))
         if description:
             image.description = description
+        if mime_type:
+            image.mime_type = mime_type
         return field_name, image
 
 

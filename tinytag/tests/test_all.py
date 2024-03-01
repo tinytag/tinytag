@@ -738,19 +738,34 @@ def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
     ('samples/12oz.mp3', 2210),
     ('samples/iso8859_with_image.m4a', 21963),
     ('samples/flac_with_image.flac', 73246),
-    ('samples/ogg_with_image.ogg', 1220),
     ('samples/wav_with_image.wav', 4627),
     ('samples/aiff_with_image.aiff', 21963),
 ])
 def test_image_loading(path: str, expected_size: int) -> None:
     tag = TinyTag.get(os.path.join(testfolder, path), image=True)
+    image = tag.images.front_cover
+    if image.data is None:
+        image = tag.images.other
     image_data = tag.get_image()
     assert image_data is not None
+    assert image_data == image.data
     image_size = len(image_data)
     assert image_size == expected_size, \
            f'Image is {image_size} bytes but should be {expected_size} bytes'
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), \
            'The image data must start with a jpeg header'
+    assert image.mime_type == 'image/jpeg'
+
+
+@pytest.mark.parametrize('path', [
+    'samples/ogg_with_image.ogg',
+])
+def test_image_loading_extra(path: str) -> None:
+    tag = TinyTag.get(os.path.join(testfolder, path), image=True)
+    image = tag.images.extra['bright_colored_fish']
+    assert image.data is not None
+    assert image.mime_type == 'image/jpeg'
+    assert len(image.data) == 1220
 
 
 @pytest.mark.xfail(raises=TinyTagException)

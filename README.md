@@ -140,6 +140,7 @@ The following less common image types are provided in an `extra` dict:
 The following image attributes are available:
 
     data           # image data as bytes
+    mime_type      # image MIME type as string
     description    # image description as string
 
 To receive a common image, e.g. `front_cover`:
