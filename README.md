@@ -136,6 +136,7 @@ The following less common image types are provided in an `extra` dict:
     illustration
     band_logo
     publisher_logo
+    unknown
 
 The following image attributes are available:
 
