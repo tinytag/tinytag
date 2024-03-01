@@ -393,7 +393,7 @@ testfiles = dict([
          'artist': 'artist\x00群星',
          'title': 'title\x00A 梦 哆啦 机器猫 短信铃声', 'track': 1, 'bitrate': 1143.72468, 'channels': 1,
          'duration': 0.45351473922902497, 'genre': 'genre', 'samplerate': 44100, 'bitdepth': 16,
-         'year': '2018', 'comment': 'comment'}),
+         'year': '2018', 'comment': 'comment', 'disc': 0}),
     ('samples/with_padded_id3_header.flac',
         {'extra': {}, 'filesize': 16070, 'album': 'album', 'artist': 'artist',
          'bitrate': 283.4748, 'channels': 1,
@@ -614,10 +614,10 @@ def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str,
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -626,13 +626,13 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
     excluded_attrs = {"bitdepth", "bitrate", "channels", "duration", "samplerate"}
     tag = TinyTag.get(filename, tags=True, duration=False)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     expected = {
         key: val for key, val in expected.items() if key not in excluded_attrs
     }
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -641,14 +641,14 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None
+        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
     }
     expected = {
         key: val for key, val in expected.items() if key in allowed_attrs
     }
     expected["extra"] = {}
     compare_tag(results, expected, filename)
-    assert tag._image_data is None
+    assert tag.images.front_cover.data is None
 
 
 def test_pathlib_compatibility() -> None:
