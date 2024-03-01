@@ -186,6 +186,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 - **BREAKING:** Remove 'audio_offset' attribute
 - **BREAKING:** TinyTagException no longer inherits LookupError
 - **BREAKING:** TinyTag subclasses are now private
+- **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
 - Support multiple fields with the same name (separated with a null character)
 - Provide access to custom metadata fields through the 'extra' dict
