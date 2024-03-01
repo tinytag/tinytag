@@ -700,6 +700,7 @@ class _ID3(TinyTag):
         'extra.band_logo',
         'extra.publisher_logo',
     )
+    _UNKNOWN_IMAGE_TYPE = 'extra.unknown'
 
     # see this page for the magic values used in mp3:
     # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
@@ -914,6 +915,19 @@ class _ID3(TinyTag):
             return True
         return False
 
+    @classmethod
+    def _create_tag_image(cls, data: bytes, pic_type: int, mime_type: str | None = None,
+                          description: str | None = None) -> tuple[str, TagImage]:
+        image = TagImage(data)
+        if mime_type:
+            image.mime_type = mime_type
+        if description:
+            image.description = description
+        field_name = cls._UNKNOWN_IMAGE_TYPE
+        if 0 <= pic_type <= len(cls._IMAGE_TYPES):
+            field_name = cls._IMAGE_TYPES[pic_type]
+        return field_name, image
+
     @staticmethod
     def _index_utf16(s: bytes, search: bytes) -> int:
         for i in range(0, len(s), len(search)):
@@ -990,20 +1004,15 @@ class _ID3(TinyTag):
                         if mime_type in self._ID3V2_2_IMAGE_FORMATS:  # ID3 v2.2 format in v2.3...
                             mime_type = self._ID3V2_2_IMAGE_FORMATS[mime_type]
                         desc_start_pos = mime_type_end_pos + 1 + 1  # skip mtype, pictype(1)
-                    pictype = content[desc_start_pos - 1]
+                    pic_type = content[desc_start_pos - 1]
                     # latin1 and utf-8 are 1 byte
                     termination = b'\x00' if encoding in {b'\x00', b'\x03'} else b'\x00\x00'
                     desc_length = self._index_utf16(content[desc_start_pos:], termination)
                     desc_end_pos = desc_start_pos + desc_length + len(termination)
                     description = self._decode_string(content[desc_start_pos:desc_end_pos])
-                    image = TagImage(content[desc_end_pos:])
-                    if description:
-                        image.description = description
-                    if mime_type:
-                        image.mime_type = mime_type
-                    if pictype < 0 or pictype > len(self._IMAGE_TYPES):
-                        pictype = 0  # fall back to 'other' type
-                    self._set_image_field(self._IMAGE_TYPES[pictype], image)
+                    field_name, image = self._create_tag_image(
+                        content[desc_end_pos:], pic_type, mime_type, description)
+                    self._set_image_field(field_name, image)
             elif frame_id not in self._DISALLOWED_FRAME_IDS:
                 # unknown, try to add to extra dict
                 if self._parse_tags:
@@ -1430,15 +1439,7 @@ class _Flac(TinyTag):
         description_len = struct.unpack('>I', fh.read(4))[0]
         description = fh.read(description_len).decode('utf-8')
         _width, _height, _depth, _colors, pic_len = struct.unpack('>5I', fh.read(20))
-        if pic_type < 0 or pic_type > len(_ID3._IMAGE_TYPES):
-            pic_type = 0  # fall back to 'other' type
-        field_name = _ID3._IMAGE_TYPES[pic_type]
-        image = TagImage(fh.read(pic_len))
-        if description:
-            image.description = description
-        if mime_type:
-            image.mime_type = mime_type
-        return field_name, image
+        return _ID3._create_tag_image(fh.read(pic_len), pic_type, mime_type, description)
 
 
 class _Wma(TinyTag):
