@@ -740,11 +740,10 @@ def test_mp3_utf_8_invalid_string_raises_exception() -> None:
 
 
 def test_mp3_utf_8_invalid_string_can_be_ignored() -> None:
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'),
-                      ignore_errors=True)
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
     # the title used to be Gran dia, but I replaced the first byte with 0xFF,
     # which should be ignored here
-    assert tag.title == 'ran día'
+    assert tag.title == '�ran día'
 
 
 @pytest.mark.parametrize("testfile,expected", [

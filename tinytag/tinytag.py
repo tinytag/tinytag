@@ -89,7 +89,6 @@ class TinyTag:
         self._filehandler: BinaryIO | None = None
         self._filename: bytes | str | PathLike[Any] | None = None  # for debugging
         self._default_encoding: str | None = None  # allow override for some file formats
-        self._ignore_errors = False
         self._parse_duration = True
         self._parse_tags = True
         self._load_image = False
@@ -101,7 +100,6 @@ class TinyTag:
             tags: bool = True,
             duration: bool = True,
             image: bool = False,
-            ignore_errors: bool = False,
             encoding: str | None = None,
             file_obj: BinaryIO | None = None) -> TinyTag:
         """Create a tag object for a file path or a file-like object."""
@@ -119,7 +117,6 @@ class TinyTag:
             tag._filehandler = file_obj
             tag._filename = filename
             tag._default_encoding = encoding
-            tag._ignore_errors = ignore_errors
             tag.filesize = filesize
             if filesize > 0:
                 try:
@@ -849,7 +846,7 @@ class _ID3(TinyTag):
         extended = False
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = struct.unpack('3sBBB4B', fh.read(10))
-        tag = header[0].decode('ISO-8859-1')
+        tag = header[0].decode('ISO-8859-1', 'replace')
         # check if there is an ID3v2 tag at the beginning of the file
         if tag == 'ID3':
             major, _rev = header[1:3]
@@ -884,7 +881,7 @@ class _ID3(TinyTag):
             return
 
         def asciidecode(x: bytes) -> str:
-            return self._unpad(x.decode(self._default_encoding or 'latin1'))
+            return self._unpad(x.decode(self._default_encoding or 'latin1', 'replace'))
         # Only set fields that were not set by ID3v2 tags, as ID3v1
         # tags are more likely to be outdated or have encoding issues
         fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
@@ -1058,8 +1055,7 @@ class _ID3(TinyTag):
             encoding = default_encoding  # wild guess
         if language and bytestr[:3].isalpha():
             bytestr = bytestr[3:]  # remove language
-        errors = 'ignore' if self._ignore_errors else 'strict'
-        return self._unpad(bytestr.decode(encoding, errors))
+        return self._unpad(bytestr.decode(encoding, 'replace'))
 
     @staticmethod
     def _calc_size(bytestr: tuple[int, ...], bits_per_byte: int) -> int:
@@ -1179,7 +1175,7 @@ class _Ogg(TinyTag):
             elif check_speex_second_packet:
                 if self._parse_tags:
                     length = struct.unpack('I', walker.read(4))[0]  # starts with a comment string
-                    comment = walker.read(length).decode('UTF-8')
+                    comment = walker.read(length).decode('utf-8', 'replace')
                     self._set_field('comment', comment)
                     self._parse_vorbis_comment(walker, contains_vendor=False)  # other tags
                 check_speex_second_packet = False
@@ -1199,7 +1195,7 @@ class _Ogg(TinyTag):
         elements = struct.unpack('I', fh.read(4))[0]
         for _i in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
-            keyvalpair = fh.read(length).decode('utf-8', 'ignore')
+            keyvalpair = fh.read(length).decode('utf-8', 'replace')
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
                 key_lowercase = key.lower()
@@ -1324,7 +1320,7 @@ class _Wave(TinyTag):
                         data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self._RIFF_MAPPING.get(field)
                         if fieldname:
-                            value = data.decode('utf-8')
+                            value = data.decode('utf-8', 'replace')
                             if fieldname == 'track':
                                 if value.isdecimal():
                                     self._set_field(fieldname, int(value))
@@ -1435,9 +1431,9 @@ class _Flac(TinyTag):
     def _parse_image(cls, fh: BinaryIO) -> tuple[str, TagImage]:
         # https://xiph.org/flac/format.html#metadata_block_picture
         pic_type, mime_type_len = struct.unpack('>2I', fh.read(8))
-        mime_type = fh.read(mime_type_len).decode('utf-8')
+        mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
         description_len = struct.unpack('>I', fh.read(4))[0]
-        description = fh.read(description_len).decode('utf-8')
+        description = fh.read(description_len).decode('utf-8', 'replace')
         _width, _height, _depth, _colors, pic_len = struct.unpack('>5I', fh.read(20))
         return _ID3._create_tag_image(fh.read(pic_len), pic_type, mime_type, description)
 
@@ -1475,7 +1471,7 @@ class _Wma(TinyTag):
             self._parse_tag(fh)
 
     def _decode_string(self, bytestring: bytes) -> str:
-        return self._unpad(bytestring.decode('utf-16'))
+        return self._unpad(bytestring.decode('utf-16', 'replace'))
 
     def _decode_ext_desc(self, value_type: int, value: bytes) -> int | str | None:
         """ decode _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
@@ -1622,7 +1618,7 @@ class _Aiff(TinyTag):
             sub_chunk_id, sub_chunk_size = struct.unpack('>4sI', chunk_header)
             sub_chunk_size += sub_chunk_size % 2  # IFF chunks are padded to an even number of bytes
             if sub_chunk_id in self._AIFF_MAPPING and self._parse_tags:
-                value = self._unpad(fh.read(sub_chunk_size).decode('utf-8'))
+                value = self._unpad(fh.read(sub_chunk_size).decode('utf-8', 'replace'))
                 self._set_field(self._AIFF_MAPPING[sub_chunk_id], value)
             elif sub_chunk_id == b'COMM' and self._parse_duration:
                 channels, num_frames, bitdepth = struct.unpack('>hLh', fh.read(8))
