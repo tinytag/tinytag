@@ -179,6 +179,25 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 ## Changelog
 
+### 2.0.0  (Unreleased)
+
+- **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
+- **BREAKING:** Move 'composer' field to 'extra' dict
+- **BREAKING:** Remove 'audio_offset' attribute
+- **BREAKING:** TinyTagException no longer inherits LookupError
+- **BREAKING:** TinyTag subclasses are now private
+- **BREAKING:** Remove support for Python 2
+- Support multiple fields with the same name (separated with a null character)
+- Provide access to custom metadata fields through the 'extra' dict
+- Provide access to all available images
+- Add more standard 'extra' fields
+- FLAC: Apply ID3 tags after Vorbis
+- OGG/WMA: set missing 'channels' field
+- WMA: set missing 'extra.copyright' field
+- WMA: raise exception if file is invalid
+- Add type hints to codebase
+- Various optimizations
+
 ### 1.10.1  (2023-10-26)
 
 - Update 'extra' fields with data from other tags #188
