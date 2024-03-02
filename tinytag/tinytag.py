@@ -243,24 +243,42 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: str | int | float) -> None:
-        is_str = isinstance(value, str)
-        if is_str and not value:
-            # don't set empty value
-            return
+    def _parse_string_field(self, fieldname: str, old_value: Any | None, value: str) -> str | None:
+        if fieldname in {'artist', 'genre'}:
+            # First artist/genre goes in tag.artist/genre, others in tag.extra.other_artists/genres
+            values = value.split('\x00')
+            value = values[0]
+            start_pos = 0 if old_value else 1
+            if len(values) > 1:
+                self._set_field(self._EXTRA_PREFIX + f'other_{fieldname}s', values[start_pos:])
+            elif old_value and value != old_value:
+                self._set_field(self._EXTRA_PREFIX + f'other_{fieldname}s', [value])
+                return None
+        if old_value or not value:
+            return None
+        return value
+
+    def _set_field(self, fieldname: str, value: str | int | float | list[str] | None) -> None:
         write_dest = self.__dict__
+        original_fieldname = fieldname
         if fieldname.startswith(self._EXTRA_PREFIX):
-            fieldname = fieldname[len(self._EXTRA_PREFIX):]
             write_dest = self.extra
+            fieldname = fieldname[len(self._EXTRA_PREFIX):]
         old_value = write_dest.get(fieldname)
-        if is_str:
-            if old_value and old_value != value:
-                # Combine same field with a null character
-                value = old_value + '\x00' + value
+        if isinstance(value, str):
+            value = self._parse_string_field(original_fieldname, old_value, value)
+            if not value:
+                return
+        elif isinstance(value, list):
+            if not isinstance(old_value, list):
+                old_value = []
+            value = old_value + [i for i in value if i and i not in old_value]
+            if not value:
+                return
         elif not value and old_value:
             return
         if DEBUG:
-            print(f'Setting field "{fieldname}" to "{value!r}"')
+            print(f'Setting field "{original_fieldname}" to "{value!r}"')
         write_dest[fieldname] = value
 
     def _set_image_field(self, fieldname: str, value: bytes | str | TagImage) -> None:
@@ -280,8 +298,10 @@ class TinyTag:
 
     def _update(self, other: TinyTag) -> None:
         # update the values of this tag with the values from another tag
+        excluded_attrs = {'filesize', 'extra', 'images'}
         for standard_key, standard_value in other.__dict__.items():
-            if (not standard_key.startswith('_') and standard_key != 'filesize'
+            if (not standard_key.startswith('_')
+                    and standard_key not in excluded_attrs
                     and standard_value is not None):
                 self._set_field(standard_key, standard_value)
         for extra_key, extra_value in other.extra.items():

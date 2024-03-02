@@ -83,15 +83,14 @@ List of common attributes tinytag provides:
     tag.track_total   # total number of tracks
     tag.year          # year or date as string
 
-If multiple fields with the same name are provided, the values are separated with a null character:
-
-    tag.artist == 'artist 1\x00artist 2\x00artist 3'
-
 For non-common fields and fields specific to certain file formats, use `extra`:
 
     tag.extra         # a dict of additional data
 
 The following standard `extra` field names are used when file formats provide relevant data:
+
+    other_artists     # additional artists as list
+    other_genres      # additional genres as list
 
     bpm
     composer
@@ -206,7 +205,6 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 - **BREAKING:** Remove 'ignore_errors' parameter for TinyTag.get()
 - **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
-- Support multiple fields with the same name (separated with a null character)
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images
 - Add more standard 'extra' fields
