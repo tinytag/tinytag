@@ -16,7 +16,7 @@ tinytag is a library for reading music meta data of most common audio files in p
 
 ## Features
 
-  * Read tags, length and images of audio files
+  * Read tags, stream info and images of audio files
   * Supported formats:
     * MP3 / MP2 / MP1 (ID3 v1, v1.1, v2.2, v2.3+)
     * M4A (AAC / ALAC)
@@ -25,6 +25,7 @@ tinytag is a library for reading music meta data of most common audio files in p
     * FLAC
     * WMA
     * AIFF / AIFF-C
+  * Same API for all formats
   * Pure Python, no dependencies
   * Supports Python 3.7 or higher
   * High test coverage
