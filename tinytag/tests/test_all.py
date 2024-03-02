@@ -237,6 +237,11 @@ testfiles = dict([
     ('samples/vbr_xing_header_short.mp3',
         {'filesize': 432, 'bitrate': 24.0, 'channels': 1, 'duration': 0.144,
          'extra': {}, 'samplerate': 8000}),
+    ('samples/id3_multiple_artists.mp3',
+        {'filesize': 2007, 'bitrate': 57.39124999999999, 'channels': 1,
+         'duration': 0.1306122448979592,
+         'extra': {'other_artists': ['artist2', 'artist3']},
+         'samplerate': 44100, 'artist': 'artist1', 'genre': 'something 1'}),
 
     # OGG
     ('samples/empty.ogg',

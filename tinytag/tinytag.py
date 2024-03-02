@@ -273,8 +273,6 @@ class TinyTag:
             if not isinstance(old_value, list):
                 old_value = []
             value = old_value + [i for i in value if i and i not in old_value]
-            if not value:
-                return
         elif not value and old_value:
             return
         if DEBUG:
