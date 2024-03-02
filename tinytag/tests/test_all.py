@@ -594,7 +594,7 @@ def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str,
         if val is not None and key not in ('filename', 'images')
     }
     compare_tag(results, expected, filename)
-    assert tag.images.front_cover.data is None
+    assert tag.get_image() is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -610,7 +610,7 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
         key: val for key, val in expected.items() if key not in excluded_attrs
     }
     compare_tag(results, expected, filename)
-    assert tag.images.front_cover.data is None
+    assert tag.get_image() is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -627,7 +627,7 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     }
     expected["extra"] = {}
     compare_tag(results, expected, filename)
-    assert tag.images.front_cover.data is None
+    assert tag.get_image() is None
 
 
 def test_pathlib_compatibility() -> None:
