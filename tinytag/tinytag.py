@@ -79,25 +79,25 @@ class TinyTag:
     _magic_bytes_mapping: dict[bytes, type[TinyTag]] | None = None
 
     def __init__(self) -> None:
-        self.album: str | None = None
-        self.albumartist: str | None = None
         self.artist: str | None = None
-        self.bitrate: float | None = None
-        self.channels: int | None = None
-        self.comment: str | None = None
+        self.albumartist: str | None = None
+        self.album: str | None = None
         self.disc: int | None = None
         self.disc_total: int | None = None
-        self.duration: float | None = None
-        self.extra: dict[str, str | float | int] = {}
-        self.filesize = 0
-        self.genre: str | None = None
-        self.images = TagImages()
-        self.samplerate: int | None = None
-        self.bitdepth: int | None = None
         self.title: str | None = None
         self.track: int | None = None
         self.track_total: int | None = None
+        self.genre: str | None = None
         self.year: str | None = None
+        self.comment: str | None = None
+        self.duration: float | None = None
+        self.filesize = 0
+        self.channels: int | None = None
+        self.bitrate: float | None = None
+        self.bitdepth: int | None = None
+        self.samplerate: int | None = None
+        self.extra: dict[str, str | float | int] = {}
+        self.images = TagImages()
         self._filehandler: BinaryIO | None = None
         self._filename: bytes | str | PathLike[Any] | None = None  # for debugging
         self._default_encoding: str | None = None  # allow override for some file formats
@@ -158,11 +158,11 @@ class TinyTag:
         return cls._get_parser_for_filename(filename) is not None
 
     def __repr__(self) -> str:
-        return str(self._as_dict())
+        return str(vars(self))
 
     def _as_dict(self) -> dict[str, Any]:
         return {
-            k: v for k, v in sorted(self.__dict__.items())
+            k: v for k, v in self.__dict__.items()
             if not k.startswith('_') and k != 'images'
         }
 
