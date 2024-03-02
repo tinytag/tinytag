@@ -106,7 +106,7 @@ The following standard `extra` field names are used when file formats provide re
 
 Any other `extra` field names are not guaranteed to be consistent across audio formats.
 
-Additionally, you can also get images from ID3 tags. To receive an image most likely suitable as the front cover:
+Additionally, you can also get images from ID3 tags. To receive any available image, prioritizing the front cover:
 
     tag: TinyTag = TinyTag.get('/some/music.mp3', image=True)
     image_data: bytes = tag.get_image()

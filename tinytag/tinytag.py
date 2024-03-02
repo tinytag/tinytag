@@ -129,16 +129,15 @@ class TinyTag:
                 file_obj.close()
 
     def get_image(self) -> bytes | None:
-        """Return the closest equivalent to a cover image as bytes."""
-        front_cover = self.images.front_cover.data  # check the obvious location
-        if front_cover is not None:
-            return front_cover
-        other = self.images.other.data  # cover images are sometimes stored here
-        if other is not None:
-            return other
-        back_cover = self.images.back_cover.data  # last resort, maybe there's something here...
-        if back_cover is not None:
-            return back_cover
+        """Return a cover image as bytes.
+        If not present, fall back to any other available image.
+        """
+        for value in self.images.__dict__.values():
+            if isinstance(value, TagImage) and value.data is not None:
+                return value.data
+        for extra_value in self.images.extra.values():
+            if extra_value.data is not None:
+                return extra_value.data
         return None
 
     @classmethod

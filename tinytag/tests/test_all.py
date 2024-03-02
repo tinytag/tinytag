@@ -729,7 +729,7 @@ def test_image_loading_extra(path: str) -> None:
     tag = TinyTag.get(os.path.join(testfolder, path), image=True)
     image = tag.images.extra['bright_colored_fish']
     assert image.data is not None
-    assert tag.get_image() is None  # only present for cover-like images
+    assert tag.get_image() == image.data
     assert image.mime_type == 'image/jpeg'
     assert len(image.data) == 1220
 
