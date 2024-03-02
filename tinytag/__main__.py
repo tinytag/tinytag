@@ -86,10 +86,10 @@ def _run() -> int:
                 if len(filenames) > 1:
                     actual_save_image_path, ext = splitext(actual_save_image_path)
                     actual_save_image_path += f'{i:05d}{ext}'
-                image = tag.get_image()
-                if image:
+                image_data = tag.images.any.data
+                if image_data:
                     with open(actual_save_image_path, 'wb') as file_handle:
-                        file_handle.write(image)
+                        file_handle.write(image_data)
             header_printed = _print_tag(tag, formatting, header_printed)
         except (OSError, TinyTagException) as exc:
             sys.stderr.write(f'{filename}: {exc}\n')

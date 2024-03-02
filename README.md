@@ -114,13 +114,16 @@ Any other `extra` field names are not guaranteed to be consistent across audio f
 Additionally, you can also get images from ID3 tags. To receive any available image, prioritizing the front cover:
 
     tag: TinyTag = TinyTag.get('/some/music.mp3', image=True)
-    image_data: bytes = tag.get_image()
+    image: TagImage = tag.images.any
+    data: bytes = image.data
+    name: str = image.name
+    description: str = image.description
 
-If you need to receive an image of a specific type, including its description, use `images`:
+If you need to receive an image of a specific kind, including its description, use `images`:
 
-    tag.images        # image types and their data
+    tag.images        # available embedded images
 
-The following common image types exist:
+The following common images are available:
 
     front_cover
     back_cover
@@ -128,7 +131,7 @@ The following common image types exist:
     media
     other
 
-The following less common image types are provided in an `extra` dict:
+The following less common images are provided in an `extra` dict when present:
 
     icon
     other_icon
@@ -151,6 +154,7 @@ The following less common image types are provided in an `extra` dict:
 The following image attributes are available:
 
     data           # image data as bytes
+    name           # image name/kind as string
     mime_type      # image MIME type as string
     description    # image description as string
 
@@ -198,6 +202,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 ### 2.0.0  (Unreleased)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
+- **BREAKING:** Remove 'get_image()' method in favor of 'images.any' property
 - **BREAKING:** Move 'composer' field to 'extra' dict
 - **BREAKING:** Remove 'audio_offset' attribute
 - **BREAKING:** TinyTagException no longer inherits LookupError

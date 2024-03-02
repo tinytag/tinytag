@@ -594,7 +594,7 @@ def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str,
         if val is not None and key not in ('filename', 'images')
     }
     compare_tag(results, expected, filename)
-    assert tag.get_image() is None
+    assert tag.images.any.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -610,7 +610,7 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
         key: val for key, val in expected.items() if key not in excluded_attrs
     }
     compare_tag(results, expected, filename)
-    assert tag.get_image() is None
+    assert tag.images.any.data is None
 
 
 @pytest.mark.parametrize("testfile,expected", testfiles.items())
@@ -627,7 +627,7 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     }
     expected["extra"] = {}
     compare_tag(results, expected, filename)
-    assert tag.get_image() is None
+    assert tag.images.any.data is None
 
 
 def test_pathlib_compatibility() -> None:
@@ -725,7 +725,7 @@ def test_image_loading(path: str, expected_size: int) -> None:
     image = tag.images.front_cover
     if image.data is None:
         image = tag.images.other
-    image_data = tag.get_image()
+    image_data = tag.images.any.data
     assert image_data is not None
     assert image_data == image.data
     image_size = len(image_data)
@@ -734,6 +734,7 @@ def test_image_loading(path: str, expected_size: int) -> None:
     assert image_data.startswith(b'\xff\xd8\xff\xe0'), \
            'The image data must start with a jpeg header'
     assert image.mime_type == 'image/jpeg'
+    assert image.name in {'front_cover', 'other'}
 
 
 @pytest.mark.parametrize('path', [
@@ -743,8 +744,9 @@ def test_image_loading_extra(path: str) -> None:
     tag = TinyTag.get(os.path.join(testfolder, path), image=True)
     image = tag.images.extra['bright_colored_fish']
     assert image.data is not None
-    assert tag.get_image() == image.data
+    assert tag.images.any.data == image.data
     assert image.mime_type == 'image/jpeg'
+    assert image.name == 'extra.bright_colored_fish'
     assert len(image.data) == 1220
 
 
@@ -792,9 +794,11 @@ def test_to_str() -> None:
         "'extra': {'encoded_by': 'iTunes v4.6', 'itunnorm': ' 0000044E 00000061 00009B67 000044C3 "
         "00022478 00022182 00007FCC 00007E5C 0002245E 0002214E', 'itunes_cddb_1': '9D09130B+"
         "174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+163829', "
-        "'itunes_cddb_tracknumber': '3'}, 'images': {'front_cover': {'data': None, "
-        "'mime_type': None, 'description': None}, 'back_cover': {'data': None, 'mime_type': None, "
-        "'description': None}, 'leaflet': {'data': None, 'mime_type': None, 'description': None}, "
-        "'media': {'data': None, 'mime_type': None, 'description': None}, 'other': {'data': None, "
-        "'mime_type': None, 'description': None}, 'extra': {}}"
+        "'itunes_cddb_tracknumber': '3'}, 'images': {'front_cover': {'name': 'front_cover', "
+        "'data': None, 'mime_type': None, 'description': None}, 'back_cover': {'name': "
+        "'back_cover', 'data': None, 'mime_type': None, 'description': None}, 'leaflet': "
+        "{'name': 'leaflet', 'data': None, 'mime_type': None, 'description': None}, "
+        "'media': {'name': 'media', 'data': None, 'mime_type': None, 'description': None}, "
+        "'other': {'name': 'other', 'data': None, 'mime_type': None, 'description': None}, "
+        "'extra': {}}"
     ) in str(tag)

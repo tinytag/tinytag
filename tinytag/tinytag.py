@@ -140,18 +140,6 @@ class TinyTag:
             if should_close_file:
                 file_obj.close()
 
-    def get_image(self) -> bytes | None:
-        """Return a cover image as bytes.
-        If not present, fall back to any other available image.
-        """
-        for value in self.images.__dict__.values():
-            if isinstance(value, TagImage) and value.data is not None:
-                return value.data
-        for extra_value in self.images.extra.values():
-            if extra_value.data is not None:
-                return extra_value.data
-        return None
-
     @classmethod
     def is_supported(cls, filename: bytes | str | PathLike[Any]) -> bool:
         """Check if a specific file is supported based on its file extension."""
@@ -328,13 +316,25 @@ class TinyTag:
 class TagImages:
     """A class containing images embedded in an audio file."""
     def __init__(self) -> None:
-        image = TagImage()
-        self.front_cover: TagImage = image
-        self.back_cover: TagImage = image
-        self.leaflet: TagImage = image
-        self.media: TagImage = image
-        self.other: TagImage = image
+        self.front_cover = TagImage('front_cover')
+        self.back_cover = TagImage('back_cover')
+        self.leaflet = TagImage('leaflet')
+        self.media = TagImage('media')
+        self.other = TagImage('other')
         self.extra: dict[str, TagImage] = {}
+
+    @property
+    def any(self) -> TagImage:
+        """Return a cover image.
+        If not present, fall back to any other available image.
+        """
+        for value in self.__dict__.values():
+            if isinstance(value, TagImage) and value.data is not None:
+                return value
+        for extra_value in self.extra.values():
+            if extra_value.data is not None:
+                return extra_value
+        return self.front_cover
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -342,7 +342,8 @@ class TagImages:
 
 class TagImage:
     """A class representing an image embedded in an audio file."""
-    def __init__(self, data: bytes | None = None, mime_type: str | None = None) -> None:
+    def __init__(self, name: str, data: bytes | None = None, mime_type: str | None = None) -> None:
+        self.name = name
         self.data = data
         self.mime_type = mime_type
         self.description: str | None = None
@@ -403,8 +404,8 @@ class _MP4(TinyTag):
                         2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
                         3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
                         # 16: duration in millis
-                        13: lambda x: TagImage(x, 'image/jpeg'),    # JPEG
-                        14: lambda x: TagImage(x, 'image/png'),     # PNG
+                        13: lambda x: TagImage('front_cover', x, 'image/jpeg'),  # JPEG
+                        14: lambda x: TagImage('front_cover', x, 'image/png'),   # PNG
                         21: cls._unpack_integer,                    # BE Signed int
                         22: cls._unpack_integer_unsigned,           # BE Unsigned int
                         # 23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
@@ -961,14 +962,14 @@ class _ID3(TinyTag):
     @classmethod
     def _create_tag_image(cls, data: bytes, pic_type: int, mime_type: str | None = None,
                           description: str | None = None) -> tuple[str, TagImage]:
-        image = TagImage(data)
+        field_name = cls._UNKNOWN_IMAGE_TYPE
+        if 0 <= pic_type <= len(cls._IMAGE_TYPES):
+            field_name = cls._IMAGE_TYPES[pic_type]
+        image = TagImage(field_name, data)
         if mime_type:
             image.mime_type = mime_type
         if description:
             image.description = description
-        field_name = cls._UNKNOWN_IMAGE_TYPE
-        if 0 <= pic_type <= len(cls._IMAGE_TYPES):
-            field_name = cls._IMAGE_TYPES[pic_type]
         return field_name, image
 
     @staticmethod
