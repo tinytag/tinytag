@@ -345,12 +345,13 @@ class _MP4(TinyTag):
         atom_decoder_by_type: dict[
             int, Callable[[bytes], int | str | bytes | TagImage]] | None = None
         _CUSTOM_FIELD_NAME_MAPPING = {
-            'conductor': 'conductor',
-            'discsubtitle': 'set_subtitle',
-            'initialkey': 'initial_key',
-            'isrc': 'isrc',
-            'language': 'language',
-            'lyricist': 'lyricist',
+            'conductor': 'extra.conductor',
+            'discsubtitle': 'extra.set_subtitle',
+            'initialkey': 'extra.initial_key',
+            'isrc': 'extra.isrc',
+            'language': 'extra.language',
+            'lyricist': 'extra.lyricist',
+            'media': 'extra.media',
         }
 
         @classmethod
@@ -448,10 +449,8 @@ class _MP4(TinyTag):
                 if atom_type == b'name':
                     atom_value = fh.read(atom_size)[4:].lower()
                     field_name = atom_value.decode('utf-8', 'replace')
-                    field_name = (
-                        TinyTag._EXTRA_PREFIX
-                        + cls._CUSTOM_FIELD_NAME_MAPPING.get(field_name, field_name)
-                    )
+                    field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
+                        field_name, TinyTag._EXTRA_PREFIX + field_name)
                 elif atom_type == b'data':
                     data_atom = fh.read(atom_size)
                 else:
@@ -540,6 +539,7 @@ class _MP4(TinyTag):
         b'\xa9mvn': {b'data': _Parser._make_data_atom_parser('movement')},
         b'\xa9nam': {b'data': _Parser._make_data_atom_parser('title')},
         b'\xa9pub': {b'data': _Parser._make_data_atom_parser('extra.publisher')},
+        b'\xa9too': {b'data': _Parser._make_data_atom_parser('extra.encoded_by')},
         b'\xa9wrt': {b'data': _Parser._make_data_atom_parser('extra.composer')},
         b'aART': {b'data': _Parser._make_data_atom_parser('albumartist')},
         b'cprt': {b'data': _Parser._make_data_atom_parser('extra.copyright')},
@@ -632,16 +632,19 @@ class _ID3(TinyTag):
         'TPE2': 'albumartist', 'TP2': 'albumartist',
         'TCOM': 'extra.composer', 'TCM': 'extra.composer',
         'WOAR': 'extra.url', 'WAR': 'extra.url',
-        'TSRC': 'extra.isrc',
+        'TSRC': 'extra.isrc', 'TRC': 'extra.isrc',
         'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
-        'TBPM': 'extra.bpm',
-        'TKEY': 'extra.initial_key',
+        'TBPM': 'extra.bpm', 'TBP': 'extra.bpm',
+        'TKEY': 'extra.initial_key', 'TKE': 'extra.initial_key',
         'TLAN': 'extra.language', 'TLA': 'extra.language',
         'TPUB': 'extra.publisher', 'TPB': 'extra.publisher',
         'USLT': 'extra.lyrics', 'ULT': 'extra.lyrics',
         'TPE3': 'extra.conductor', 'TP3': 'extra.conductor',
         'TEXT': 'extra.lyricist', 'TXT': 'extra.lyricist',
         'TSST': 'extra.set_subtitle',
+        'TENC': 'extra.encoded_by', 'TEN': 'extra.encoded_by',
+        'TSSE': 'extra.encoder_settings', 'TSS': 'extra.encoder_settings',
+        'TMED': 'extra.media', 'TMT': 'extra.media',
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -1121,6 +1124,9 @@ class _Ogg(TinyTag):
         'setsubtitle': 'extra.set_subtitle',
         'initialkey': 'extra.initial_key',
         'key': 'extra.initial_key',
+        'encodedby': 'extra.encoded_by',
+        'encodersettings': 'extra.encoder_settings',
+        'media': 'extra.media',
     }
 
     def __init__(self) -> None:
@@ -1301,6 +1307,8 @@ class _Wave(TinyTag):
         b'IBSU': 'extra.url',
         b'YEAR': 'year',
         b'IWRI': 'extra.lyricist',
+        b'IENC': 'extra.encoded_by',
+        b'IMED': 'extra.media',
     }
 
     def _determine_duration(self, fh: BinaryIO) -> None:
@@ -1491,6 +1499,9 @@ class _Wma(TinyTag):
         'WM/Conductor': 'extra.conductor',
         'WM/Writer': 'extra.lyricist',
         'WM/SetSubTitle': 'extra.set_subtitle',
+        'WM/EncodedBy': 'extra.encoded_by',
+        'WM/EncodingSettings': 'extra.encoder_settings',
+        'WM/Media': 'extra.media',
     }
     _ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
     _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT = (b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00'

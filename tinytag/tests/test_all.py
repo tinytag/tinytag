@@ -40,13 +40,14 @@ testfiles = dict([
         {'extra': {}, 'bitrate': 186.04383278145696, 'channels': 1, 'samplerate': 44100,
          'duration': 3.944489795918367, 'filesize': 91731}),
     ('samples/vbr_xing_header_2channel.mp3',
-        {'extra': {'tsse': 'LAME 32bits version 3.99.5 (http://lame.sf.net)', 'tlen': '249976'},
+        {'extra': {'encoder_settings': 'LAME 32bits version 3.99.5 (http://lame.sf.net)',
+                   'tlen': '249976'},
          'filesize': 2000, 'album': "The Harpers' Masque",
          'artist': 'Knodel and Valencia', 'bitrate': 46.276128290848305,
          'channels': 2, 'duration': 250.04408163265308, 'samplerate': 22050,
          'title': 'Lochaber No More', 'year': '1992'}),
     ('samples/id3v22-test.mp3',
-        {'extra': {'ten': 'iTunes v4.6',
+        {'extra': {'encoded_by': 'iTunes v4.6',
                    'itunnorm': (' 0000044E 00000061 00009B67 000044C3 00022478 00022182 '
                                 '00007FCC 00007E5C 0002245E 0002214E'),
                    'itunes_cddb_1': ('9D09130B+174405+11+150+14097+27391+43983+65786+84877+'
@@ -76,8 +77,8 @@ testfiles = dict([
                    'ufid': 'http://musicbrainz.org\x00cf639964-eabb-4c40-9673-c2117e456ea5',
                    'publisher': '4AD', 'tdat': '1105',
                    'wxxx': 'WIKIPEDIA_RELEASE\x00http://en.wikipedia.org/wiki/High_Violet',
-                   'tmed': 'Digital', 'tlen': '203733',
-                   'tsse': 'LAME 32bits version 3.98.4 (http://www.mp3dev.org/)'},
+                   'media': 'Digital', 'tlen': '203733',
+                   'encoder_settings': 'LAME 32bits version 3.98.4 (http://www.mp3dev.org/)'},
          'track_total': 11, 'track': 7, 'artist': 'The National',
          'year': '2010', 'album': 'High Violet', 'title': 'Lemonworld', 'filesize': 20480,
          'genre': 'Indie', 'comment': 'Track 7'}),
@@ -107,11 +108,11 @@ testfiles = dict([
         {'extra': {}, 'title': '52-girls', 'filesize': 2048, 'track': 6, 'album': 'party mix',
          'artist': 'The B52s', 'genre': 'Rock', 'year': '1981'}),
     ('samples/id3v22_image.mp3',
-        {'extra': {'rva': '\x10', 'tbp': '131'}, 'title': 'Kids (MGMT Cover) ', 'filesize': 35924,
+        {'extra': {'rva': '\x10', 'bpm': '131'}, 'title': 'Kids (MGMT Cover) ', 'filesize': 35924,
          'album': 'winniecooper.net ', 'artist': 'The Kooks', 'year': '2008',
          'genre': '.'}),
     ('samples/id3v22.TCO.genre.mp3',
-        {'extra': {'ten': 'iTunes 11.0.4',
+        {'extra': {'encoded_by': 'iTunes 11.0.4',
                    'itunnorm': (' 000019F0 00001E2A 00009F9A 0000C689 000312A1 00030C1A 0000902E '
                                 '00008D36 00020882 000321D6'),
                    'itunsmpb': (' 00000000 00000210 000007B9 00000000008FB737 00000000 008242F1 '
@@ -121,7 +122,7 @@ testfiles = dict([
          'genre': 'Pop', 'title': 'Applause'}),
     ('samples/id3_comment_utf_16_with_bom.mp3',
         {'extra': {'copyright': '(c) 2008 nin', 'isrc': 'USTC40852229', 'bpm': '60',
-                   'url': 'www.nin.com', 'tenc': 'LAME 3.97'},
+                   'url': 'www.nin.com', 'encoded_by': 'LAME 3.97'},
          'filesize': 19980,
          'album': 'Ghosts I-IV', 'albumartist': 'Nine Inch Nails', 'artist': 'Nine Inch Nails',
          'disc': 1, 'disc_total': 2, 'title': '1 Ghosts I', 'track': 1, 'track_total': 36,
@@ -146,7 +147,7 @@ testfiles = dict([
          'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': 1,
          'year': '1992'}),
     ('samples/nicotinetestdata.mp3',
-        {'extra': {'tsse': 'Lavf58.20.100'}, 'filesize': 80919, 'channels': 2,
+        {'extra': {'encoder_settings': 'Lavf58.20.100'}, 'filesize': 80919, 'channels': 2,
          'duration': 5.067755102040817, 'samplerate': 44100, 'bitrate': 127.6701030927835}),
     ('samples/chinese_id3.mp3',
         {'extra': {}, 'filesize': 1000, 'album': '½ÇÂäÖ®¸è', 'albumartist': 'ËÕÔÆ',
@@ -154,7 +155,7 @@ testfiles = dict([
          'duration': 0.052244897959183675, 'genre': 'ÐÝÏÐÒôÀÖ', 'samplerate': 44100,
          'title': '½ÇÂäÖ®¸è', 'track': 1}),
     ('samples/cut_off_titles.mp3',
-        {'extra': {'tsse': 'Lavf54.29.104'}, 'filesize': 1000, 'album': 'ERB',
+        {'extra': {'encoder_settings': 'Lavf54.29.104'}, 'filesize': 1000, 'album': 'ERB',
          'artist': 'Epic Rap Battles Of History',
          'bitrate': 192.0, 'channels': 2, 'duration': 0.052244897959183675,
          'samplerate': 44100, 'title': 'Tony Hawk VS Wayne Gretzky'}),
@@ -175,7 +176,7 @@ testfiles = dict([
                    'isrc': 'USVI20400513', 'lyrics': 'Don\'t fret, precious',
                    'replaygain_track_gain': '-3.95 dB', 'replaygain_track_peak': '0.999969',
                    'replaygain_album_gain': '-8.26 dB', 'publisher': 'Virgin Records America',
-                   'composer': 'Billy Howerdel/Maynard James Keenan', 'tmed': 'CD',
+                   'composer': 'Billy Howerdel/Maynard James Keenan', 'media': 'CD',
                    'tso2': 'Perfect Circle, A',
                    'ufid': 'http://musicbrainz.org\x00d2b8f0e6-735a-42ee-adf0-7eca4e65cd72',
                    'tsop': 'Perfect Circle, A', 'tory': '2004', 'tdat': '0211',
@@ -402,10 +403,10 @@ testfiles = dict([
         {'extra': {'mcdi': ('2\x01\x05\x00\x10\x01\x00\x00\x00\x00\x00\x00\x10\x02\x00\x00\x00W5'
                             '\x00\x10\x03\x00\x00\x00\x90\x0c\x00\x10\x04\x00\x00\x00ä7\x00\x10'
                             '\x05\x00\x00\x013«\x00\x10ª\x00\x00\x01\x8c\xa0'),
-                   'tlen': '297666', 'tenc': 'Exact Audio Copy   (Sicherer Modus)',
-                   'tsse': ('flac.exe -T "artist=Unbekannter Künstler" -T "title=Track01" -T '
-                            '"album=Unbekannter Titel" -T "date=" -T "tracknumber=01" -T '
-                            '"genre=" -5')},
+                   'tlen': '297666', 'encoded_by': 'Exact Audio Copy   (Sicherer Modus)',
+                   'encoder_settings': ('flac.exe -T "artist=Unbekannter Künstler" -T '
+                                        '"title=Track01" -T "album=Unbekannter Titel" -T '
+                                        '"date=" -T "tracknumber=01" -T "genre=" -5')},
          'filesize': 19522, 'album': 'album\x00Unbekannter Titel',
          'artist': 'artist\x00Unbekannter Künstler', 'bitrate': 344.36807999999996,
          'channels': 1, 'disc': 1, 'disc_total': 1,
@@ -442,7 +443,7 @@ testfiles = dict([
         {'extra': {}, 'samplerate': 44100, 'bitrate': 667.296, 'filesize': 2500, 'bitdepth': 16,
          'duration': 43.133, 'channels': 2}),
     ('samples/wma_invalid_track_number.wma',
-        {'extra': {'encodingsettings': 'Lavf60.16.100'}, 'filesize': 3940, 'bitrate': 128.0,
+        {'extra': {'encoder_settings': 'Lavf60.16.100'}, 'filesize': 3940, 'bitrate': 128.0,
          'duration': 2.1409999999999996, 'samplerate': 44100, 'channels': 1}),
 
     # ALAC/M4A/MP4
@@ -452,7 +453,8 @@ testfiles = dict([
                    'itunnorm': (' 00000358 0000032E 000020AE 000020D9 0003A228 00032A28 00007E20 '
                                 '00007E90 00007BFD 00009293'),
                    'itunes_cddb_ids': '11++', 'ufidhttp://www.cddb.com/id3/taginfo1.html':
-                   '3CD3N48Q241232290U3387DD249F72E6B082B283425ADB9B0F324P1', 'bpm': 0},
+                   '3CD3N48Q241232290U3387DD249F72E6B082B283425ADB9B0F324P1', 'bpm': 0,
+                   'encoded_by': 'iTunes 10.5'},
          'samplerate': 44100, 'duration': 314.97868480725623, 'bitrate': 256.0, 'channels': 2,
          'genre': 'Pop', 'year': '2011', 'title': 'Nothing', 'album': 'Only Our Hearts To Lose',
          'track_total': 11, 'track': 11, 'artist': 'Marian', 'filesize': 61432}),
@@ -498,7 +500,7 @@ testfiles = dict([
         'channels': 2,
         'comment': 'test comment',
         'duration': 2.36,
-        'extra': {'description': 'test description'},
+        'extra': {'description': 'test description', 'encoded_by': 'Lavf59.27.100'},
         'samplerate': 44100}),
     ('samples/mpeg4_xa9des.m4a', {
         'filesize': 2639,
@@ -506,7 +508,9 @@ testfiles = dict([
         'duration': 727.1066666666667,
         'extra': {'description': 'test description'}}),
     ('samples/test3.m4a',
-        {'extra': {'publisher': 'test7', 'bpm': 99999, 'composer': 'test8'}, 'artist': 'test1',
+        {'extra': {'publisher': 'test7', 'bpm': 99999, 'composer': 'test8',
+                   'encoded_by': 'Lavf60.3.100'},
+         'artist': 'test1',
          'filesize': 6260, 'samplerate': 8000, 'duration': 1.294, 'channels': 1,
          'bitrate': 27.887}),
 
@@ -778,7 +782,7 @@ def test_to_str() -> None:
         "'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
         "'title': 'cosmic american', 'track': 3, 'track_total': 11, 'genre': None, "
         "'year': '2004', 'comment': 'Waterbug Records, www.anaismitchell.com', "
-        "'extra': {'ten': 'iTunes v4.6', 'itunnorm': ' 0000044E 00000061 00009B67 000044C3 "
+        "'extra': {'encoded_by': 'iTunes v4.6', 'itunnorm': ' 0000044E 00000061 00009B67 000044C3 "
         "00022478 00022182 00007FCC 00007E5C 0002245E 0002214E', 'itunes_cddb_1': '9D09130B+"
         "174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+163829', "
         "'itunes_cddb_tracknumber': '3'}, 'images': {'front_cover': {'data': None, "

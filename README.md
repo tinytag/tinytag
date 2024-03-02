@@ -95,11 +95,14 @@ The following standard `extra` field names are used when file formats provide re
     conductor
     copyright
     director
+    encoded_by
+    encoder_settings
     initial_key
     isrc
     language
     lyricist
     lyrics
+    media
     publisher
     set_subtitle
     url
