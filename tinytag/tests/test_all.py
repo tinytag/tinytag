@@ -644,10 +644,10 @@ def test_binary_path_compatibility() -> None:
     assert not os.path.exists(binary_file_path)
 
 
-@pytest.mark.xfail(raises=TinyTagException)
 def test_unsupported_extension() -> None:
     bogus_file = os.path.join(testfolder, 'samples/there_is_no_such_ext.bogus')
-    TinyTag.get(bogus_file)
+    with pytest.raises(TinyTagException):
+        TinyTag.get(bogus_file)
 
 
 def test_override_encoding() -> None:
@@ -657,22 +657,22 @@ def test_override_encoding() -> None:
     assert tag.album == '角落之歌'
 
 
-@pytest.mark.xfail(raises=TinyTagException)
 def test_unsubclassed_tinytag_load() -> None:
     tag = TinyTag()
     tag._load(tags=True, duration=True)
+    assert not tag._tags_parsed
 
 
-@pytest.mark.xfail(raises=NotImplementedError)
 def test_unsubclassed_tinytag_duration() -> None:
     tag = TinyTag()
-    tag._determine_duration(None)  # type: ignore
+    with pytest.raises(NotImplementedError):
+        tag._determine_duration(None)  # type: ignore
 
 
-@pytest.mark.xfail(raises=NotImplementedError)
 def test_unsubclassed_tinytag_parse_tag() -> None:
     tag = TinyTag()
-    tag._parse_tag(None)  # type: ignore
+    with pytest.raises(NotImplementedError):
+        tag._parse_tag(None)  # type: ignore
 
 
 def test_mp3_length_estimation() -> None:
@@ -690,9 +690,9 @@ def test_mp3_length_estimation() -> None:
     ('samples/flac1.5sStereo.flac', _Wma),
     ('samples/ilbm.aiff', _Aiff),
 ])
-@pytest.mark.xfail(raises=TinyTagException)
 def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
-    cls.get(os.path.join(testfolder, path))
+    with pytest.raises(TinyTagException):
+        cls.get(os.path.join(testfolder, path))
 
 
 @pytest.mark.parametrize('path,expected_size', [
@@ -734,12 +734,7 @@ def test_image_loading_extra(path: str) -> None:
     assert len(image.data) == 1220
 
 
-@pytest.mark.xfail(raises=TinyTagException)
-def test_mp3_utf_8_invalid_string_raises_exception() -> None:
-    TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
-
-
-def test_mp3_utf_8_invalid_string_can_be_ignored() -> None:
+def test_mp3_utf_8_invalid_string() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/utf-8-id3v2-invalid-string.mp3'))
     # the title used to be Gran dia, but I replaced the first byte with 0xFF,
     # which should be ignored here
@@ -766,9 +761,9 @@ def test_detect_magic_headers(testfile: str, expected: type[TinyTag]) -> None:
 
 
 def test_show_hint_for_wrong_usage() -> None:
-    with pytest.raises(TinyTagException) as exc_info:
+    with pytest.raises(ValueError) as exc_info:
         TinyTag.get()
-    assert exc_info.type == TinyTagException
+    assert exc_info.type == ValueError
     assert exc_info.value.args[0] == 'Either filename or file_obj argument is required'
 
 

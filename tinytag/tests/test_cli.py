@@ -33,9 +33,9 @@ def file_size(filename: str) -> int:
     return os.stat(filename).st_size
 
 
-@pytest.mark.xfail(raises=CalledProcessError)
 def test_wrong_params() -> None:
-    assert 'tinytag [options] <filename' in run_cli('-lol')
+    with pytest.raises(CalledProcessError):
+        assert 'tinytag [options] <filename' in run_cli('-lol')
 
 
 def test_print_help() -> None:
@@ -108,9 +108,9 @@ def test_meta_data_output_format_tabularcsv() -> None:
     assert set(header.split(',')) == tinytag_attributes
 
 
-@pytest.mark.xfail(raises=CalledProcessError)
 def test_fail_on_unsupported_file() -> None:
-    run_cli(bogus_file)
+    with pytest.raises(CalledProcessError):
+        run_cli(bogus_file)
 
 
 def test_fail_skip_unsupported_file_long_opt() -> None:

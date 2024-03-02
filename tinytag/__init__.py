@@ -1,2 +1,8 @@
-# pylint: disable=missing-module-docstring
-from .tinytag import TinyTag, TagImage, TagImages, TinyTagException
+"""Audio file metadata reader"""
+
+from .tinytag import (
+    ParseError, TinyTag, TagImage, TagImages, TinyTagException, UnsupportedFormatError
+)
+__all__ = [
+    "ParseError", "TinyTag", "TagImage", "TagImages", "TinyTagException", "UnsupportedFormatError"
+]

@@ -181,6 +181,12 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
     TinyTag.get(file_obj=your_file_obj)
 
+### Exceptions
+
+    TinyTagException        # Base class for exceptions
+    ParseError              # Parsing an audio file failed
+    UnsupportedFormatError  # File format is not supported
+
 
 ## Changelog
 

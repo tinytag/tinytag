@@ -1,4 +1,4 @@
-# tinytag - an audio meta info reader
+# tinytag - an audio file metadata reader
 # Copyright (c) 2014-2023 Tom Wallroth
 # Copyright (c) 2021-2024 Mat (mathiascode)
 #
@@ -27,7 +27,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# pylint: disable=missing-module-docstring,missing-class-docstring
+"""Audio file metadata reader"""
+
 # pylint: disable=invalid-name,protected-access
 # pylint: disable=too-many-lines,too-many-arguments,too-many-boolean-expressions
 # pylint: disable=too-many-branches,too-many-instance-attributes,too-many-locals
@@ -47,14 +48,25 @@ import os
 import re
 import struct
 
+
 DEBUG = bool(os.environ.get('DEBUG'))  # some of the parsers can print debug info
 
 
 class TinyTagException(Exception):
-    pass
+    """Base class for exceptions."""
+
+
+class ParseError(TinyTagException):
+    """Parsing an audio file failed."""
+
+
+class UnsupportedFormatError(TinyTagException):
+    """File format is not supported."""
 
 
 class TinyTag:
+    """A class containing audio file metadata."""
+
     SUPPORTED_FILE_EXTENSIONS = (
         '.mp1', '.mp2', '.mp3',
         '.oga', '.ogg', '.opus', '.spx',
@@ -102,12 +114,12 @@ class TinyTag:
             image: bool = False,
             encoding: str | None = None,
             file_obj: BinaryIO | None = None) -> TinyTag:
-        """Create a tag object for a file path or a file-like object."""
+        """Return a tag object for an audio file."""
         should_close_file = file_obj is None
         if filename and should_close_file:
             file_obj = open(filename, 'rb')  # pylint: disable=consider-using-with
         if file_obj is None:
-            raise TinyTagException('Either filename or file_obj argument is required')
+            raise ValueError('Either filename or file_obj argument is required')
         try:
             file_obj.seek(0, os.SEEK_END)
             filesize = file_obj.tell()
@@ -122,7 +134,7 @@ class TinyTag:
                 try:
                     tag._load(tags=tags, duration=duration, image=image)
                 except Exception as exc:
-                    raise TinyTagException(f'Failed to parse file: {exc}') from exc
+                    raise ParseError(exc) from exc
             return tag
         finally:
             if should_close_file:
@@ -142,7 +154,7 @@ class TinyTag:
 
     @classmethod
     def is_supported(cls, filename: bytes | str | PathLike[Any]) -> bool:
-        """Check if a specific file is supported based on the file extension."""
+        """Check if a specific file is supported based on its file extension."""
         return cls._get_parser_for_filename(filename) is not None
 
     def __repr__(self) -> str:
@@ -219,14 +231,14 @@ class TinyTag:
             parser_class = cls._get_parser_for_file_handle(filehandle)
             if parser_class is not None:
                 return parser_class
-        raise TinyTagException('No tag reader found to support filetype')
+        raise UnsupportedFormatError('No tag reader found to support file type')
 
     def _load(self, tags: bool, duration: bool, image: bool = False) -> None:
         self._parse_tags = tags
         self._parse_duration = duration
         self._load_image = image
-        if not self._filehandler:
-            raise TinyTagException('No file object set')
+        if self._filehandler is None:
+            return
         if tags:
             self._parse_tag(self._filehandler)
         if duration:
@@ -235,7 +247,6 @@ class TinyTag:
             self._determine_duration(self._filehandler)
 
     def _set_field(self, fieldname: str, value: str | int | float) -> None:
-        """convenience function to set fields of the tinytag by name"""
         is_str = isinstance(value, str)
         if is_str and not value:
             # don't set empty value
@@ -300,6 +311,7 @@ class TinyTag:
 
 
 class TagImages:
+    """A class containing images embedded in an audio file."""
     def __init__(self) -> None:
         image = TagImage()
         self.front_cover: TagImage = image
@@ -314,6 +326,7 @@ class TagImages:
 
 
 class TagImage:
+    """A class representing an image embedded in an audio file."""
     def __init__(self, data: bytes | None = None, mime_type: str | None = None) -> None:
         self.data = data
         self.mime_type = mime_type
@@ -1251,7 +1264,7 @@ class _Ogg(TinyTag):
             oggs, version, _flags, pos, _serial, _pageseq, _crc, segments = header
             self._max_samplenum = max(self._max_samplenum, pos)
             if oggs != b'OggS' or version != 0:
-                raise TinyTagException('Invalid OGG file')
+                raise ParseError('Invalid OGG header')
             segsizes = struct.unpack('B' * segments, fh.read(segments))
             total = 0
             for segsize in segsizes:  # read all segments
@@ -1302,7 +1315,7 @@ class _Wave(TinyTag):
         # and: https://en.wikipedia.org/wiki/WAV
         riff, _size, fformat = struct.unpack('4sI4s', fh.read(12))
         if riff != b'RIFF' or fformat != b'WAVE':
-            raise TinyTagException('Invalid WAV file')
+            raise ParseError('Invalid WAV header')
         if self._parse_duration:
             self.bitdepth = 16  # assume 16bit depth (CD quality)
         chunk_header = fh.read(8)
@@ -1383,7 +1396,7 @@ class _Flac(TinyTag):
             id3._parse_id3v2(fh)
             header = fh.read(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
-            raise TinyTagException('Invalid FLAC file')
+            raise ParseError('Invalid FLAC header')
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
         while len(header_data) == 4:
@@ -1511,7 +1524,7 @@ class _Wma(TinyTag):
         # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
         if (header[:16] != b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'  # 128 bit GUID
                 or header[-1:] != b'\x02'):
-            raise TinyTagException('Invalid WMA file')
+            raise ParseError('Invalid WMA header')
         while True:
             object_id = fh.read(16)
             object_size = self._bytes_to_int_le(fh.read(8))
@@ -1636,7 +1649,7 @@ class _Aiff(TinyTag):
     def _parse_tag(self, fh: BinaryIO) -> None:
         chunk_id, _size, form = struct.unpack('>4sI4s', fh.read(12))
         if chunk_id != b'FORM' or form not in (b'AIFC', b'AIFF'):
-            raise TinyTagException('Invalid AIFF file')
+            raise ParseError('Invalid AIFF header')
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
             sub_chunk_id, sub_chunk_size = struct.unpack('>4sI', chunk_header)
