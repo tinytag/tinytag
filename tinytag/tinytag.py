@@ -79,6 +79,13 @@ class TinyTag:
     _magic_bytes_mapping: dict[bytes, type[TinyTag]] | None = None
 
     def __init__(self) -> None:
+        self.filename: bytes | str | PathLike[Any] | None = None
+        self.filesize = 0
+        self.duration: float | None = None
+        self.channels: int | None = None
+        self.bitrate: float | None = None
+        self.bitdepth: int | None = None
+        self.samplerate: int | None = None
         self.artist: str | None = None
         self.albumartist: str | None = None
         self.album: str | None = None
@@ -90,16 +97,9 @@ class TinyTag:
         self.genre: str | None = None
         self.year: str | None = None
         self.comment: str | None = None
-        self.duration: float | None = None
-        self.filesize = 0
-        self.channels: int | None = None
-        self.bitrate: float | None = None
-        self.bitdepth: int | None = None
-        self.samplerate: int | None = None
         self.extra: dict[str, str | float | int] = {}
         self.images = TagImages()
         self._filehandler: BinaryIO | None = None
-        self._filename: bytes | str | PathLike[Any] | None = None  # for debugging
         self._default_encoding: str | None = None  # allow override for some file formats
         self._parse_duration = True
         self._parse_tags = True
@@ -127,8 +127,8 @@ class TinyTag:
             parser_class = cls._get_parser_class(filename, file_obj)
             tag = parser_class()
             tag._filehandler = file_obj
-            tag._filename = filename
             tag._default_encoding = encoding
+            tag.filename = filename
             tag.filesize = filesize
             if filesize > 0:
                 try:

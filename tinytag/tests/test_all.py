@@ -579,7 +579,8 @@ def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str,
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
+        key: val for key, val in tag._as_dict().items()
+        if val is not None and key not in ('filename', 'images')
     }
     compare_tag(results, expected, filename)
     assert tag.images.front_cover.data is None
@@ -591,7 +592,8 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
     excluded_attrs = {"bitdepth", "bitrate", "channels", "duration", "samplerate"}
     tag = TinyTag.get(filename, tags=True, duration=False)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
+        key: val for key, val in tag._as_dict().items()
+        if val is not None and key not in ('filename', 'images')
     }
     expected = {
         key: val for key, val in expected.items() if key not in excluded_attrs
@@ -606,7 +608,8 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False, duration=True)
     results = {
-        key: val for key, val in tag._as_dict().items() if val is not None and key != 'images'
+        key: val for key, val in tag._as_dict().items()
+        if val is not None and key not in ('filename', 'images')
     }
     expected = {
         key: val for key, val in expected.items() if key in allowed_attrs
@@ -769,17 +772,18 @@ def test_show_hint_for_wrong_usage() -> None:
 
 def test_to_str() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
-    assert str(tag).startswith(
-        "{'artist': 'Anais Mitchell', 'albumartist': None, 'album': 'Hymns for the Exiled', "
-        "'disc': None, 'disc_total': None, 'title': 'cosmic american', 'track': 3, "
-        "'track_total': 11, 'genre': None, 'year': '2004', 'comment': 'Waterbug Records, "
-        "www.anaismitchell.com', 'duration': 0.13836297152858082, 'filesize': 5120, "
-        "'channels': 2, 'bitrate': 160.0, 'bitdepth': None, 'samplerate': 44100, "
+    assert (
+        "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, 'bitrate': 160.0, "
+        "'bitdepth': None, 'samplerate': 44100, 'artist': 'Anais Mitchell', 'albumartist': None, "
+        "'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
+        "'title': 'cosmic american', 'track': 3, 'track_total': 11, 'genre': None, "
+        "'year': '2004', 'comment': 'Waterbug Records, www.anaismitchell.com', "
         "'extra': {'ten': 'iTunes v4.6', 'itunnorm': ' 0000044E 00000061 00009B67 000044C3 "
-        "00022478 00022182 00007FCC 00007E5C 0002245E 0002214E', 'itunes_cddb_1': "
-        "'9D09130B+174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+"
-        "163829', 'itunes_cddb_tracknumber': '3'}, 'images': {'front_cover': {'data': None, "
-        "'mime_type': None, 'description': None}, 'back_cover': {'data': None, "
-        "'mime_type': None, 'description': None}, 'leaflet': {'data': None, 'mime_type': None, "
-        "'description': None}, 'media': {'data': None, 'mime_type': None, 'description': None}, "
-        "'other': {'data': None, 'mime_type': None, 'description': None}, 'extra': {}}, ")
+        "00022478 00022182 00007FCC 00007E5C 0002245E 0002214E', 'itunes_cddb_1': '9D09130B+"
+        "174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+163829', "
+        "'itunes_cddb_tracknumber': '3'}, 'images': {'front_cover': {'data': None, "
+        "'mime_type': None, 'description': None}, 'back_cover': {'data': None, 'mime_type': None, "
+        "'description': None}, 'leaflet': {'data': None, 'mime_type': None, 'description': None}, "
+        "'media': {'data': None, 'mime_type': None, 'description': None}, 'other': {'data': None, "
+        "'mime_type': None, 'description': None}, 'extra': {}}, "
+    ) in str(tag)
