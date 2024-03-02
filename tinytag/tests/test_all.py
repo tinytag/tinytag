@@ -754,6 +754,12 @@ def test_image_loading_extra(path: str) -> None:
     assert image.mime_type == 'image/jpeg'
     assert image.name == 'extra.bright_colored_fish'
     assert len(image.data) == 1220
+    assert str(image) == (
+        "{'name': 'extra.bright_colored_fish', 'data': b'\\xff\\xd8\\xff\\xe0\\x00"
+        "\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
+        "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
+        "'description': None}"
+    )
 
 
 def test_mp3_utf_8_invalid_string() -> None:
