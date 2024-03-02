@@ -785,5 +785,5 @@ def test_to_str() -> None:
         "'mime_type': None, 'description': None}, 'back_cover': {'data': None, 'mime_type': None, "
         "'description': None}, 'leaflet': {'data': None, 'mime_type': None, 'description': None}, "
         "'media': {'data': None, 'mime_type': None, 'description': None}, 'other': {'data': None, "
-        "'mime_type': None, 'description': None}, 'extra': {}}, "
+        "'mime_type': None, 'description': None}, 'extra': {}}"
     ) in str(tag)

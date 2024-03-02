@@ -158,13 +158,10 @@ class TinyTag:
         return cls._get_parser_for_filename(filename) is not None
 
     def __repr__(self) -> str:
-        return str(vars(self))
+        return str(self._as_dict())
 
     def _as_dict(self) -> dict[str, Any]:
-        return {
-            k: v for k, v in self.__dict__.items()
-            if not k.startswith('_') and k != 'images'
-        }
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
     @classmethod
     def _get_parser_for_filename(
