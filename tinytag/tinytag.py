@@ -335,6 +335,14 @@ class _MP4(TinyTag):
     class _Parser:
         atom_decoder_by_type: dict[
             int, Callable[[bytes], int | str | bytes | TagImage]] | None = None
+        _CUSTOM_FIELD_NAME_MAPPING = {
+            'conductor': 'conductor',
+            'discsubtitle': 'set_subtitle',
+            'initialkey': 'initial_key',
+            'isrc': 'isrc',
+            'language': 'language',
+            'lyricist': 'lyricist',
+        }
 
         @classmethod
         def _unpack_integer(cls, value: bytes, signed: bool = True) -> int:
@@ -430,7 +438,11 @@ class _MP4(TinyTag):
                 atom_type = atom_header[4:]
                 if atom_type == b'name':
                     atom_value = fh.read(atom_size)[4:].lower()
-                    field_name = TinyTag._EXTRA_PREFIX + atom_value.decode('utf-8', 'replace')
+                    field_name = atom_value.decode('utf-8', 'replace')
+                    field_name = (
+                        TinyTag._EXTRA_PREFIX
+                        + cls._CUSTOM_FIELD_NAME_MAPPING.get(field_name, field_name)
+                    )
                 elif atom_type == b'data':
                     data_atom = fh.read(atom_size)
                 else:
@@ -508,6 +520,7 @@ class _MP4(TinyTag):
         b'\xa9ART': {b'data': _Parser._make_data_atom_parser('artist')},
         b'\xa9alb': {b'data': _Parser._make_data_atom_parser('album')},
         b'\xa9cmt': {b'data': _Parser._make_data_atom_parser('comment')},
+        b'\xa9con': {b'data': _Parser._make_data_atom_parser('extra.conductor')},
         # need test-data for this
         # b'cpil':   {b'data': _Parser._make_data_atom_parser('extra.compilation')},
         b'\xa9day': {b'data': _Parser._make_data_atom_parser('year')},
@@ -617,6 +630,9 @@ class _ID3(TinyTag):
         'TLAN': 'extra.language', 'TLA': 'extra.language',
         'TPUB': 'extra.publisher', 'TPB': 'extra.publisher',
         'USLT': 'extra.lyrics', 'ULT': 'extra.lyrics',
+        'TPE3': 'extra.conductor', 'TP3': 'extra.conductor',
+        'TEXT': 'extra.lyricist', 'TXT': 'extra.lyricist',
+        'TSST': 'extra.set_subtitle',
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -1090,6 +1106,12 @@ class _Ogg(TinyTag):
         'language': 'extra.language',
         'director': 'extra.director',
         'website': 'extra.url',
+        'conductor': 'extra.conductor',
+        'lyricist': 'extra.lyricist',
+        'discsubtitle': 'extra.set_subtitle',
+        'setsubtitle': 'extra.set_subtitle',
+        'initialkey': 'extra.initial_key',
+        'key': 'extra.initial_key',
     }
 
     def __init__(self) -> None:
@@ -1267,10 +1289,9 @@ class _Wave(TinyTag):
         b'IPRT': 'track',
         b'ITRK': 'track',
         b'TRCK': 'track',
-        b'PRT1': 'track',
-        b'PRT2': 'track_number',
         b'IBSU': 'extra.url',
         b'YEAR': 'year',
+        b'IWRI': 'extra.lyricist',
     }
 
     def _determine_duration(self, fh: BinaryIO) -> None:
@@ -1457,6 +1478,10 @@ class _Wma(TinyTag):
         'WM/Lyrics': 'extra.lyrics',
         'WM/Language': 'extra.language',
         'WM/AuthorURL': 'extra.url',
+        'WM/ISRC': 'extra.isrc',
+        'WM/Conductor': 'extra.conductor',
+        'WM/Writer': 'extra.lyricist',
+        'WM/SetSubTitle': 'extra.set_subtitle',
     }
     _ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
     _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT = (b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00'

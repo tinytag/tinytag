@@ -92,13 +92,16 @@ The following standard `extra` field names are used when file formats provide re
 
     bpm
     composer
+    conductor
     copyright
     director
     initial_key
     isrc
     language
+    lyricist
     lyrics
     publisher
+    set_subtitle
     url
 
 Any other `extra` field names are not guaranteed to be consistent across audio formats.
