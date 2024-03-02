@@ -1,17 +1,19 @@
 # tinytag 
 
-tinytag is a library for reading music meta data of most common audio files in pure Python
+tinytag is a Python library for reading audio file metadata
 
 [![Build Status](https://github.com/devsnd/tinytag/actions/workflows/tests.yml/badge.svg)](https://github.com/devsnd/tinytag/actions?query=workflow:%22Tests%22)
-[![Build status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
+[![Build Status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
 [![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.svg)](https://coveralls.io/r/devsnd/tinytag)
-[![PyPI version](https://badge.fury.io/py/tinytag.svg)](https://pypi.org/project/tinytag/)
+[![PyPI Version](https://badge.fury.io/py/tinytag.svg)](https://pypi.org/project/tinytag/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/tinytag.svg)](https://pypistats.org/packages/tinytag)
 
 
 ## Install
 
-```pip install tinytag```
+```
+python3 -m pip install tinytag
+```
 
 
 ## Features
@@ -20,7 +22,7 @@ tinytag is a library for reading music meta data of most common audio files in p
   * Supported formats:
     * MP3 / MP2 / MP1 (ID3 v1, v1.1, v2.2, v2.3+)
     * M4A (AAC / ALAC)
-    * Wave / RIFF
+    * WAVE / WAV
     * OGG (FLAC / Opus / Speex / Vorbis)
     * FLAC
     * WMA
