@@ -267,14 +267,18 @@ class TinyTag:
             print(f'Setting field "{original_fieldname}" to "{value!r}"')
         write_dest[fieldname] = value
 
-    def _set_image_field(self, fieldname: str, value: bytes | str | TagImage) -> None:
+    def _set_image_field(self, fieldname: str, value: TagImage) -> None:
         write_dest = self.images.__dict__
         if fieldname.startswith(self._EXTRA_PREFIX):
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
             write_dest = self.images.extra
+        old_values = write_dest.get(fieldname)
+        values = [value]
+        if old_values is not None:
+            values = old_values + values
         if DEBUG:
             print(f'Setting image field "{fieldname}"')
-        write_dest[fieldname] = value
+        write_dest[fieldname] = values
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         raise NotImplementedError
@@ -292,10 +296,12 @@ class TinyTag:
                 self._set_field(standard_key, standard_value)
         for extra_key, extra_value in other.extra.items():
             self._set_field(self._EXTRA_PREFIX + extra_key, extra_value)
-        for image_key, image_value in other.images.__dict__.items():
-            self._set_image_field(image_key, image_value)
-        for image_extra_key, image_extra_value in other.images.extra.items():
-            self._set_image_field(self._EXTRA_PREFIX + image_extra_key, image_extra_value)
+        for image_key, images in other.images._as_dict().items():
+            for image in images:
+                self._set_image_field(image_key, image)
+        for image_extra_key, images_extra in other.images.extra.items():
+            for image_extra in images_extra:
+                self._set_image_field(self._EXTRA_PREFIX + image_extra_key, image_extra)
 
     @staticmethod
     def _bytes_to_int_le(b: bytes) -> int:
@@ -316,33 +322,39 @@ class TinyTag:
 class TagImages:
     """A class containing images embedded in an audio file."""
     def __init__(self) -> None:
-        self.front_cover = TagImage('front_cover')
-        self.back_cover = TagImage('back_cover')
-        self.leaflet = TagImage('leaflet')
-        self.media = TagImage('media')
-        self.other = TagImage('other')
-        self.extra: dict[str, TagImage] = {}
+        self.front_cover: list[TagImage] = []
+        self.back_cover: list[TagImage] = []
+        self.leaflet: list[TagImage] = []
+        self.media: list[TagImage] = []
+        self.other: list[TagImage] = []
+        self.extra: dict[str, list[TagImage]] = {}
 
     @property
-    def any(self) -> TagImage:
+    def any(self) -> TagImage | None:
         """Return a cover image.
         If not present, fall back to any other available image.
         """
-        for value in self.__dict__.values():
-            if isinstance(value, TagImage) and value.data is not None:
-                return value
-        for extra_value in self.extra.values():
-            if extra_value.data is not None:
-                return extra_value
-        return self.front_cover
+        for image_list in self._as_dict().values():
+            for image in image_list:
+                return image
+        for extra_image_list in self.extra.values():
+            for extra_image in extra_image_list:
+                return extra_image
+        return None
 
     def __repr__(self) -> str:
         return str(vars(self))
 
+    def _as_dict(self) -> dict[str, list[TagImage]]:
+        return {
+            k: v for k, v in self.__dict__.items()
+            if not k.startswith('_') and k != 'extra'
+        }
+
 
 class TagImage:
     """A class representing an image embedded in an audio file."""
-    def __init__(self, name: str, data: bytes | None = None, mime_type: str | None = None) -> None:
+    def __init__(self, name: str, data: bytes, mime_type: str | None = None) -> None:
         self.name = name
         self.data = data
         self.mime_type = mime_type

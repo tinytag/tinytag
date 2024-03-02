@@ -114,10 +114,12 @@ Any other `extra` field names are not guaranteed to be consistent across audio f
 Additionally, you can also get images from ID3 tags. To receive any available image, prioritizing the front cover:
 
     tag: TinyTag = TinyTag.get('/some/music.mp3', image=True)
-    image: TagImage = tag.images.any
-    data: bytes = image.data
-    name: str = image.name
-    description: str = image.description
+    image: TagImage | None = tag.images.any
+
+    if image is not None:
+        data: bytes = image.data
+        name: str = image.name
+        description: str = image.description
 
 If you need to receive an image of a specific kind, including its description, use `images`:
 
@@ -164,14 +166,19 @@ To receive a common image, e.g. `front_cover`:
 
     tag: TinyTag = TinyTag.get('/some/music.ogg')
     images: TagImages = tag.images
-    image: TagImage = images.front_cover
-    data: bytes = image.data
-    description: str = image.description
+    front_cover_images: list[TagImage] = images.front_cover
+
+    if front_cover_images:
+        image: TagImage = front_cover_images[0]  # Use first image
+        data: bytes = image.data
+        description: str = image.description
 
 To receive an extra image, e.g. `bright_colored_fish`:
 
-    image = tag.images.extra.get('bright_colored_fish')
-    if image is not None:
+    fish_images = tag.images.extra.get('bright_colored_fish')
+
+    if fish_images:
+        image = fish_images[0]  # Use first image
         data = image.data
         description = image.description
 
