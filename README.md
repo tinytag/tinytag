@@ -209,14 +209,14 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 ### 2.0.0  (Unreleased)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
-- **BREAKING:** Remove 'get_image()' method in favor of 'images.any' property
-- **BREAKING:** Move 'composer' field to 'extra' dict
-- **BREAKING:** Remove 'audio_offset' attribute
 - **BREAKING:** TinyTagException no longer inherits LookupError
 - **BREAKING:** TinyTag subclasses are now private
-- **BREAKING:** Remove 'ignore_errors' parameter for TinyTag.get()
 - **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
+- Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
+- Mark 'audio_offset' attribute as obsolete
+- Deprecate 'composer' attribute in favor of 'extra.composer'
+- Deprecate 'get_image()' method in favor of 'images.any' property
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images
 - Add more standard 'extra' fields

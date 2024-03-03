@@ -795,6 +795,19 @@ def test_show_hint_for_wrong_usage() -> None:
     assert exc_info.value.args[0] == 'Either filename or file_obj argument is required'
 
 
+def test_deprecations() -> None:
+    file_path = os.path.join(testfolder, 'samples/id3v24-long-title.mp3')
+    with pytest.warns(DeprecationWarning):
+        tag = TinyTag.get(filename=file_path, image=True, ignore_errors=True)
+    with pytest.warns(DeprecationWarning):
+        assert tag.composer == tag.extra.get('composer')
+    with pytest.warns(DeprecationWarning):
+        assert tag.audio_offset is None
+    with pytest.warns(DeprecationWarning):
+        assert tag.images.any is not None
+        assert tag.get_image() == tag.images.any.data
+
+
 def test_to_str() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
     assert (

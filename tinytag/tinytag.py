@@ -41,6 +41,7 @@ from functools import reduce
 from os import PathLike
 from sys import stderr
 from typing import Any, BinaryIO
+from warnings import warn
 
 import base64
 import io
@@ -113,13 +114,17 @@ class TinyTag:
             duration: bool = True,
             image: bool = False,
             encoding: str | None = None,
-            file_obj: BinaryIO | None = None) -> TinyTag:
+            file_obj: BinaryIO | None = None,
+            **kwargs: Any) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
         if filename and should_close_file:
             file_obj = open(filename, 'rb')  # pylint: disable=consider-using-with
         if file_obj is None:
             raise ValueError('Either filename or file_obj argument is required')
+        if 'ignore_errors' in kwargs:
+            warn('ignore_errors argument is obsolete, and will be removed in a future '
+                 '2.x release', DeprecationWarning, stacklevel=2)
         try:
             file_obj.seek(0, os.SEEK_END)
             filesize = file_obj.tell()
@@ -317,6 +322,27 @@ class TinyTag:
     def _unpad(s: str) -> str:
         # strings in mp3 and asf *may* be terminated with a zero byte at the end
         return s.strip('\x00')
+
+    def get_image(self) -> bytes | None:
+        """Deprecated, use images.any instead."""
+        warn('get_image() is deprecated, and will be removed in a future 2.x release. '
+             'Use images.any instead.', DeprecationWarning, stacklevel=2)
+        image = self.images.any
+        return image.data if image is not None else None
+
+    @property
+    def audio_offset(self) -> None:
+        """Obsolete."""
+        warn('audio_offset attribute is obsolete, and will be '
+             'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
+
+    @property
+    def composer(self) -> str | None:
+        """Deprecated, use extra.composer instead."""
+        warn('composer attribute is deprecated, and will be removed in a future 2.x release. '
+             'Use extra.composer instead.', DeprecationWarning, stacklevel=2)
+        composer = self.extra.get('composer')
+        return composer if isinstance(composer, str) else None
 
 
 class TagImages:
