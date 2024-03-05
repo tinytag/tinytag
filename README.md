@@ -2,11 +2,14 @@
 
 tinytag is a Python library for reading audio file metadata
 
-[![Build Status](https://github.com/devsnd/tinytag/actions/workflows/tests.yml/badge.svg)](https://github.com/devsnd/tinytag/actions?query=workflow:%22Tests%22)
-[![Build Status](https://ci.appveyor.com/api/projects/status/w9y2kg97869g1edj?svg=true)](https://ci.appveyor.com/project/devsnd/tinytag)
-[![Coverage Status](https://coveralls.io/repos/devsnd/tinytag/badge.svg)](https://coveralls.io/r/devsnd/tinytag)
-[![PyPI Version](https://badge.fury.io/py/tinytag.svg)](https://pypi.org/project/tinytag/)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/tinytag.svg)](https://pypistats.org/packages/tinytag)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/devsnd/tinytag/tests.yml
+)](https://github.com/devsnd/tinytag/actions?query=workflow:%22Tests%22)
+[![Coverage Status](https://img.shields.io/coverallsCoverage/github/devsnd/tinytag
+)](https://coveralls.io/r/devsnd/tinytag)
+[![PyPI Version](https://img.shields.io/pypi/v/tinytag
+)](https://pypi.org/project/tinytag/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/tinytag
+)](https://pypistats.org/packages/tinytag)
 
 
 ## Install
