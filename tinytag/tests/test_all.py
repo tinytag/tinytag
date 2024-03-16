@@ -146,7 +146,7 @@ testfiles = dict([
          'extra': {'love rating': 'L', 'publisher': 'Century Media', 'popm': 'MusicBee\x00Ä'},
          'genre': 'Power Metal', 'title': 'Time What Is Time', 'track': 1,
          'year': '1992'}),
-    ('samples/nicotinetestdata.mp3',
+    ('samples/non_ascii_filename_äää.mp3',
         {'extra': {'encoder_settings': 'Lavf58.20.100'}, 'filesize': 80919, 'channels': 2,
          'duration': 5.067755102040817, 'samplerate': 44100, 'bitrate': 127.6701030927835}),
     ('samples/chinese_id3.mp3',

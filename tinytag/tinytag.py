@@ -76,7 +76,7 @@ class TinyTag:
         '.aiff', '.aifc', '.aif', '.afc'
     )
     _EXTRA_PREFIX = 'extra.'
-    _file_extension_mapping: dict[tuple[bytes, ...], type[TinyTag]] | None = None
+    _file_extension_mapping: dict[tuple[str, ...], type[TinyTag]] | None = None
     _magic_bytes_mapping: dict[bytes, type[TinyTag]] | None = None
 
     def __init__(self) -> None:
@@ -161,21 +161,17 @@ class TinyTag:
             cls, filename: bytes | str | PathLike[Any]) -> type[TinyTag] | None:
         if cls._file_extension_mapping is None:
             cls._file_extension_mapping = {
-                (b'.mp1', b'.mp2', b'.mp3'): _ID3,
-                (b'.oga', b'.ogg', b'.opus', b'.spx'): _Ogg,
-                (b'.wav',): _Wave,
-                (b'.flac',): _Flac,
-                (b'.wma',): _Wma,
-                (b'.m4b', b'.m4a', b'.m4r', b'.m4v', b'.mp4', b'.aax', b'.aaxc'): _MP4,
-                (b'.aiff', b'.aifc', b'.aif', b'.afc'): _Aiff,
+                ('.mp1', '.mp2', '.mp3'): _ID3,
+                ('.oga', '.ogg', '.opus', '.spx'): _Ogg,
+                ('.wav',): _Wave,
+                ('.flac',): _Flac,
+                ('.wma',): _Wma,
+                ('.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc'): _MP4,
+                ('.aiff', '.aifc', '.aif', '.afc'): _Aiff,
             }
-        filename = os.fspath(filename).lower()
-        if isinstance(filename, str):
-            filename_bytes = filename.encode('ascii')
-        else:
-            filename_bytes = filename
+        filename = os.fsdecode(filename).lower()
         for ext, tagclass in cls._file_extension_mapping.items():
-            if filename_bytes.endswith(ext):
+            if filename.endswith(ext):
                 return tagclass
         return None
 
