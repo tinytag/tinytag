@@ -36,15 +36,13 @@ python3 -m pip install tinytag
   * High test coverage
   * A few hundred lines of code (just include it in your project!)
 
-## Usage
-
-tinytag only provides the minimum needed for _reading_ metadata, and presents it in a simple format.
-It can determine track number, total tracks, title, artist, album, year, duration and more.
+tinytag only provides the minimum needed for _reading_ meta-data.
+It can determine track number, total tracks, title, artist, album, year, duration and any more.
 
     from tinytag import TinyTag
     tag = TinyTag.get('/some/music.mp3')
-    print(f'This track is by {tag.artist}.')
-    print(f'It is {tag.duration:.2f} seconds long.')
+    print('This track is by %s.' % tag.artist)
+    print('It is %f seconds long.' % tag.duration)
     
 Alternatively you can use tinytag directly on the command line:
 
@@ -53,28 +51,24 @@ Alternatively you can use tinytag directly on the command line:
 
 Check `python -m tinytag --help` for all CLI options, for example other output formats.
 
-Support for changing/writing metadata will not be added, use another library for this.
-
-### Supported Files
-
-To receive a tuple of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
+To receive a list of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
 
     TinyTag.SUPPORTED_FILE_EXTENSIONS
 
-Alternatively, check if a file is supported by providing its path:
+Alternatively, check if a file is supported:
 
     is_supported = TinyTag.is_supported('/some/music.mp3')
 
-### Attributes
-
-List of common attributes tinytag provides:
+List of possible attributes you can get with TinyTag:
 
     tag.album         # album as string
     tag.albumartist   # album artist as string
     tag.artist        # artist name as string
+    tag.audio_offset  # number of bytes before audio data begins
     tag.bitdepth      # bit depth for lossless audio
     tag.bitrate       # bitrate in kBits/s
     tag.comment       # file comment as string
+    tag.composer      # composer as string 
     tag.disc          # disc number
     tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
@@ -82,110 +76,21 @@ List of common attributes tinytag provides:
     tag.genre         # genre as string
     tag.samplerate    # samples per second
     tag.title         # title of the song
-    tag.track         # track number
-    tag.track_total   # total number of tracks
+    tag.track         # track number as string
+    tag.track_total   # total number of tracks as string
     tag.year          # year or date as string
 
-For non-common fields and fields specific to certain file formats, use `extra`:
+For non-common fields and fields specific to single file formats, use `extra`:
 
     tag.extra         # a dict of additional data
 
-The following standard `extra` field names are used when file formats provide relevant data:
+The `extra` dict currently *may* contain the following data:
+   `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
 
-    other_artists     # additional artists as list
-    other_genres      # additional genres as list
+Additionally you can also get cover images from ID3 tags:
 
-    bpm
-    composer
-    conductor
-    copyright
-    director
-    encoded_by
-    encoder_settings
-    initial_key
-    isrc
-    language
-    lyricist
-    lyrics
-    media
-    publisher
-    set_subtitle
-    url
-
-Any other `extra` field names are not guaranteed to be consistent across audio formats.
-
-Additionally, you can also get images from ID3 tags. To receive any available image, prioritizing the front cover:
-
-    tag: TinyTag = TinyTag.get('/some/music.mp3', image=True)
-    image: TagImage | None = tag.images.any
-
-    if image is not None:
-        data: bytes = image.data
-        name: str = image.name
-        description: str = image.description
-
-If you need to receive an image of a specific kind, including its description, use `images`:
-
-    tag.images        # available embedded images
-
-The following common images are available:
-
-    front_cover
-    back_cover
-    leaflet
-    media
-    other
-
-The following less common images are provided in an `extra` dict when present:
-
-    icon
-    other_icon
-    lead_artist
-    artist
-    conductor
-    band
-    composer
-    lyricist
-    recording_location
-    during_recording
-    during_performance
-    video
-    bright_colored_fish
-    illustration
-    band_logo
-    publisher_logo
-    unknown
-
-The following image attributes are available:
-
-    data           # image data as bytes
-    name           # image name/kind as string
-    mime_type      # image MIME type as string
-    description    # image description as string
-
-To receive a common image, e.g. `front_cover`:
-
-    from tinytag import TinyTag, TagImage, TagImages
-
-    tag: TinyTag = TinyTag.get('/some/music.ogg')
-    images: TagImages = tag.images
-    front_cover_images: list[TagImage] = images.front_cover
-
-    if front_cover_images:
-        image: TagImage = front_cover_images[0]  # Use first image
-        data: bytes = image.data
-        description: str = image.description
-
-To receive an extra image, e.g. `bright_colored_fish`:
-
-    fish_images = tag.images.extra.get('bright_colored_fish')
-
-    if fish_images:
-        image = fish_images[0]  # Use first image
-        data = image.data
-        description = image.description
-
-### Encoding
+    tag = TinyTag.get('/some/music.mp3', image=True)
+    image_data = tag.get_image()
 
 To open files using a specific encoding, you can use the `encoding` parameter.
 This parameter is however only used for formats where the encoding isn't explicitly
@@ -193,18 +98,10 @@ specified.
 
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 
-### File-like Objects
-
 To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 `file_obj` keyword argument:
 
     TinyTag.get(file_obj=your_file_obj)
-
-### Exceptions
-
-    TinyTagException        # Base class for exceptions
-    ParseError              # Parsing an audio file failed
-    UnsupportedFormatError  # File format is not supported
 
 
 ## Changelog
