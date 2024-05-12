@@ -50,7 +50,7 @@ import re
 import struct
 
 
-DEBUG = bool(os.environ.get('DEBUG'))  # some of the parsers can print debug info
+DEBUG = bool(os.environ.get('TINYTAG_DEBUG'))  # some of the parsers can print debug info
 
 
 class TinyTagException(Exception):

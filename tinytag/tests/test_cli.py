@@ -22,10 +22,10 @@ tinytag_attributes = {'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
 
 
 def run_cli(args: str) -> str:
-    debug_env = str(os.environ.pop("DEBUG", None))
+    debug_env = str(os.environ.pop("TINYTAG_DEBUG", None))
     output = check_output(f'{sys.executable} -m tinytag ' + args, cwd=project_folder, shell=True)
     if debug_env:
-        os.environ["DEBUG"] = debug_env
+        os.environ["TINYTAG_DEBUG"] = debug_env
     return output.decode('utf-8')
 
 
