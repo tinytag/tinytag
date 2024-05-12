@@ -48,7 +48,7 @@ jobs:
       - name: Unit tests
         run: python -m pytest --cov
         env:
-          DEBUG: true
+          TINYTAG_DEBUG: true
 
       - name: Build package
         run: python -m build
