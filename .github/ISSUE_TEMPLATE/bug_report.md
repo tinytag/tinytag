@@ -1,9 +1,7 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: "[BUG] INSERT TITLE HERE"
+about: Something is broken or doesn't work as expected
 labels: bug
-assignees: ''
 
 ---
 
@@ -20,5 +18,5 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Sample File**
+**Sample file**
 Please provide a sample file that shows the behavior that you have described in this report. You can use any upload site (such as wetransfer) and provide the link here.
