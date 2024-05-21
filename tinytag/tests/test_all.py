@@ -96,9 +96,8 @@ testfiles = dict([
          'bitrate': 32.0, 'duration': 1.0438932496075353}),
     ('samples/id3v24-long-title.mp3',
         {'extra':
-         {'copyright': '2013 Marathon Artists under exclsuive license from Courtney Barnett',
-          'composer': 'Courtney Barnett'},
-         'track': 1, 'disc_total': 1,
+         {'copyright': '2013 Marathon Artists under exclsuive license from Courtney Barnett'},
+         'track': 1, 'disc_total': 1, 'composer': 'Courtney Barnett',
          'album': 'The Double EP: A Sea of Split Peas', 'filesize': 10000,
          'track_total': 12, 'genre': 'AlternRock',
          'title': 'Out of the Woodwork', 'artist': 'Courtney Barnett',
@@ -176,15 +175,14 @@ testfiles = dict([
                    'isrc': 'USVI20400513', 'lyrics': 'Don\'t fret, precious',
                    'replaygain_track_gain': '-3.95 dB', 'replaygain_track_peak': '0.999969',
                    'replaygain_album_gain': '-8.26 dB', 'publisher': 'Virgin Records America',
-                   'composer': 'Billy Howerdel/Maynard James Keenan', 'media': 'CD',
-                   'tso2': 'Perfect Circle, A',
+                   'media': 'CD', 'tso2': 'Perfect Circle, A',
                    'ufid': 'http://musicbrainz.org\x00d2b8f0e6-735a-42ee-adf0-7eca4e65cd72',
                    'tsop': 'Perfect Circle, A', 'tory': '2004', 'tdat': '0211',
                    'ipls': ('producer\x00Billy Howerdel\x00producer\x00Maynard James Keenan'
                             '\x00engineer\x00Billy Howerdel\x00engineer\x00Critter')},
          'filesize': 6943, 'album': 'eMOTIVe', 'albumartist': 'A Perfect Circle',
-         'artist': 'A Perfect Circle', 'bitrate': 192.0, 'channels': 2,
-         'duration': 0.13198711063372717, 'genre': 'Rock',
+         'artist': 'A Perfect Circle', 'composer': 'Billy Howerdel/Maynard James Keenan',
+         'bitrate': 192.0, 'channels': 2, 'duration': 0.13198711063372717, 'genre': 'Rock',
          'samplerate': 44100, 'title': 'Counting Bodies Like Sheep to the Rhythm of the War Drums',
          'track': 10, 'comment': '                            ', 'disc': 1, 'disc_total': 1,
          'track_total': 12, 'year': '2004'}),
@@ -265,8 +263,8 @@ testfiles = dict([
         {'extra': {}, 'filesize': 18648, 'bitrate': 80.0,
          'duration': 2.132358276643991, 'samplerate': 44100, 'channels': 1}),
     ('samples/composer.ogg',
-        {'extra': {'composer': 'some composer'}, 'filesize': 4480,
-         'album': 'An Album', 'artist': 'An Artist',
+        {'extra': {}, 'filesize': 4480,
+         'album': 'An Album', 'artist': 'An Artist', 'composer': 'some composer',
          'bitrate': 112.0, 'duration': 3.684716553287982, 'channels': 2,
          'genre': 'Some Genre', 'samplerate': 44100, 'title': 'A Title', 'track': 2,
          'year': '2007', 'comment': 'A Comment'}),
@@ -382,13 +380,13 @@ testfiles = dict([
                    'organization': 'Sony Music Records (SRCP-371)',
                    'ripper': 'Exact Audio Copy 0.99pb5',
                    'replaygain_album_gain': '-8.68 dB', 'replaygain_album_peak': '1.000000',
-                   'replaygain_track_gain': '-9.61 dB', 'replaygain_track_peak': '1.000000',
-                   'composer': 'Boom Boom Satellites (Lyrics)'},
+                   'replaygain_track_gain': '-9.61 dB', 'replaygain_track_peak': '1.000000'},
          'channels': 2, 'album': 'Appleseed Original Soundtrack', 'year': '2004',
          'duration': 261.68, 'title': 'DIVE FOR YOU', 'track': 1, 'track_total': 11,
          'artist': 'Boom Boom Satellites', 'filesize': 10240, 'bitrate': 0.31305411189238763,
          'disc': 1, 'genre': 'Anime Soundtrack', 'samplerate': 44100, 'bitdepth': 16,
-         'disc_total': 2, 'comment': 'Original Soundtrack'}),
+         'disc_total': 2, 'comment': 'Original Soundtrack',
+         'composer': 'Boom Boom Satellites (Lyrics)'}),
     ('samples/106-invalid-streaminfo.flac',
         {'extra': {}, 'filesize': 4692}),
     ('samples/106-short-picture-block-size.flac',
@@ -441,11 +439,11 @@ testfiles = dict([
                    'mediaprimaryclassid': '{D1607DBC-E323-4BE2-86A1-48A42A28441E}',
                    'encodingtime': 128861118183900000, 'wmfsdkversion': '11.0.5721.5145',
                    'wmfsdkneeded': '0.0.0.0000', 'isvbr': 1, 'peakvalue': 30369,
-                   'averagelevel': 7291, 'composer': 'Foo Fighters'},
+                   'averagelevel': 7291},
          'samplerate': 44100, 'album': 'The Colour and the Shape', 'title': 'Doll',
          'bitrate': 64.04, 'filesize': 5800, 'track': 1, 'albumartist': 'Foo Fighters',
          'artist': 'Foo Fighters', 'duration': 83.406, 'year': '1997',
-         'genre': 'Alternative', 'channels': 2}),
+         'genre': 'Alternative', 'composer': 'Foo Fighters', 'channels': 2}),
     ('samples/lossless.wma',
         {'extra': {}, 'samplerate': 44100, 'bitrate': 667.296, 'filesize': 2500, 'bitdepth': 16,
          'duration': 43.133, 'channels': 2}),
@@ -476,14 +474,14 @@ testfiles = dict([
                                 '/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>'
                                 'asset-info</key>\n\t<dict>\n\t\t<key>flavor</key>\n\t\t<string>'
                                 '2:256</string>\n\t</dict>\n</dict>\n</plist>\n'),
-                   'tool': 144255989988720642,
-                   'composer': "Millie Jackson - Get It Out 'cha System - 1978"},
+                   'tool': 144255989988720642},
          'bitrate': 256.0, 'track': 1,
          'albumartist': "Millie Jackson - Get It Out 'cha System - 1978",
          'duration': 167.78739229024944, 'filesize': 223365, 'channels': 2, 'year': '1978',
          'artist': 'Millie Jackson', 'track_total': 9, 'disc_total': 1, 'genre': 'R&B/Soul',
          'album': "Get It Out 'cha System", 'samplerate': 44100, 'disc': 1,
          'title': 'Go Out and Get Some',
+         'composer': "Millie Jackson - Get It Out 'cha System - 1978",
          'comment': "Millie Jackson - Get It Out 'cha System - 1978"}),
     ('samples/iso8859_with_image.m4a',
         {'extra': {}, 'artist': 'Major Lazer', 'filesize': 57017,
@@ -494,8 +492,9 @@ testfiles = dict([
          'comment': '? 2016 Mad Decent'}),
     ('samples/alac_file.m4a',
         {'extra': {'copyright': '© Hyperion Records Ltd, London', 'lyrics': 'Album notes:',
-         'upc': '0034571177380', 'composer': 'Clementi, Muzio (1752-1832)'},
+         'upc': '0034571177380'},
          'artist': 'Howard Shelley', 'filesize': 20000,
+         'composer': 'Clementi, Muzio (1752-1832)',
          'title': 'Clementi: Piano Sonata in D major, Op 25 No 6 - Movement 2: Un poco andante',
          'album': 'Clementi: The Complete Piano Sonatas, Vol. 4', 'year': '2009', 'track': 14,
          'track_total': 27, 'disc': 1, 'disc_total': 1, 'samplerate': 44100,
@@ -515,9 +514,8 @@ testfiles = dict([
         'duration': 727.1066666666667,
         'extra': {'description': 'test description'}}),
     ('samples/test3.m4a',
-        {'extra': {'publisher': 'test7', 'bpm': 99999, 'composer': 'test8',
-                   'encoded_by': 'Lavf60.3.100'},
-         'artist': 'test1',
+        {'extra': {'publisher': 'test7', 'bpm': 99999, 'encoded_by': 'Lavf60.3.100'},
+         'artist': 'test1', 'composer': 'test8',
          'filesize': 6260, 'samplerate': 8000, 'duration': 1.294, 'channels': 1,
          'bitrate': 27.887}),
 
@@ -800,8 +798,6 @@ def test_deprecations() -> None:
     with pytest.warns(DeprecationWarning):
         tag = TinyTag.get(filename=file_path, image=True, ignore_errors=True)
     with pytest.warns(DeprecationWarning):
-        assert tag.composer == tag.extra.get('composer')
-    with pytest.warns(DeprecationWarning):
         assert tag.audio_offset is None
     with pytest.warns(DeprecationWarning):
         assert tag.images.any is not None
@@ -813,7 +809,7 @@ def test_to_str() -> None:
     assert (
         "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, 'bitrate': 160.0, "
         "'bitdepth': None, 'samplerate': 44100, 'artist': 'Anais Mitchell', 'albumartist': None, "
-        "'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
+        "'composer': None, 'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
         "'title': 'cosmic american', 'track': 3, 'track_total': 11, 'genre': None, "
         "'year': '2004', 'comment': 'Waterbug Records, www.anaismitchell.com', "
         "'extra': {'encoded_by': 'iTunes v4.6', 'itunnorm': ' 0000044E 00000061 00009B67 000044C3 "

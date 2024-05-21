@@ -115,7 +115,6 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 - **BREAKING:** Remove support for Python 2
 - Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
 - Mark 'audio_offset' attribute as obsolete
-- Deprecate 'composer' attribute in favor of 'extra.composer'
 - Deprecate 'get_image()' method in favor of 'images.any' property
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images

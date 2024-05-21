@@ -89,6 +89,7 @@ class TinyTag:
         self.samplerate: int | None = None
         self.artist: str | None = None
         self.albumartist: str | None = None
+        self.composer: str | None = None
         self.album: str | None = None
         self.disc: int | None = None
         self.disc_total: int | None = None
@@ -331,14 +332,6 @@ class TinyTag:
         """Obsolete."""
         warn('audio_offset attribute is obsolete, and will be '
              'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
-
-    @property
-    def composer(self) -> str | None:
-        """Deprecated, use extra.composer instead."""
-        warn('composer attribute is deprecated, and will be removed in a future 2.x release. '
-             'Use extra.composer instead.', DeprecationWarning, stacklevel=2)
-        composer = self.extra.get('composer')
-        return composer if isinstance(composer, str) else None
 
 
 class TagImages:
@@ -593,7 +586,7 @@ class _MP4(TinyTag):
         b'\xa9nam': {b'data': _Parser._make_data_atom_parser('title')},
         b'\xa9pub': {b'data': _Parser._make_data_atom_parser('extra.publisher')},
         b'\xa9too': {b'data': _Parser._make_data_atom_parser('extra.encoded_by')},
-        b'\xa9wrt': {b'data': _Parser._make_data_atom_parser('extra.composer')},
+        b'\xa9wrt': {b'data': _Parser._make_data_atom_parser('composer')},
         b'aART': {b'data': _Parser._make_data_atom_parser('albumartist')},
         b'cprt': {b'data': _Parser._make_data_atom_parser('extra.copyright')},
         b'desc': {b'data': _Parser._make_data_atom_parser('extra.description')},
@@ -683,7 +676,7 @@ class _ID3(TinyTag):
         'TCON': 'genre', 'TCO': 'genre',
         'TPOS': 'disc', 'TPA': 'disc',
         'TPE2': 'albumartist', 'TP2': 'albumartist',
-        'TCOM': 'extra.composer', 'TCM': 'extra.composer',
+        'TCOM': 'composer', 'TCM': 'composer',
         'WOAR': 'extra.url', 'WAR': 'extra.url',
         'TSRC': 'extra.isrc', 'TRC': 'extra.isrc',
         'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
@@ -1162,7 +1155,7 @@ class _Ogg(TinyTag):
         'description': 'comment',
         'comment': 'comment',
         'comments': 'comment',
-        'composer': 'extra.composer',
+        'composer': 'composer',
         'bpm': 'extra.bpm',
         'copyright': 'extra.copyright',
         'isrc': 'extra.isrc',
@@ -1347,7 +1340,7 @@ class _Wave(TinyTag):
         b'IART': 'artist',
         b'IBPM': 'extra.bpm',
         b'ICMT': 'comment',
-        b'IMUS': 'extra.composer',
+        b'IMUS': 'composer',
         b'ICOP': 'extra.copyright',
         b'ICRD': 'year',
         b'IGNR': 'genre',
@@ -1541,7 +1534,7 @@ class _Wma(TinyTag):
         'WM/AlbumArtist': 'albumartist',
         'WM/Genre': 'genre',
         'WM/AlbumTitle': 'album',
-        'WM/Composer': 'extra.composer',
+        'WM/Composer': 'composer',
         'WM/Publisher': 'extra.publisher',
         'WM/BeatsPerMinute': 'extra.bpm',
         'WM/InitialKey': 'extra.initial_key',
