@@ -11,11 +11,11 @@ jobs:
         os: [ubuntu-latest, macos-13, windows-latest]
         python: [
           '3.7', '3.8', '3.9', '3.10', '3.11', '3.12', 'pypy-3.7', 'pypy-3.8', 'pypy-3.9',
-          'pypy-3.10', 'graalpy-23'
+          'pypy-3.10', 'graalpy-24'
         ]
         exclude:
           - os: windows-latest
-            python: 'graalpy-23'
+            python: 'graalpy-24'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
         run: python -m pycodestyle
 
       - name: Linting
-        if: matrix.python != 'graalpy-23'
+        if: matrix.python != 'graalpy-24'
         run: python -m pylint --recursive=y .
 
       - name: Typing
