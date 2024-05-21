@@ -830,6 +830,7 @@ class _ID3(TinyTag):
 
         max_estimation_frames = (_ID3._MAX_ESTIMATION_SEC * 44100) // _ID3._SAMPLES_PER_FRAME
         frame_size_accu = 0
+        audio_offset = 0
         header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
