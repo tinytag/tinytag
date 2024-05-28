@@ -391,6 +391,7 @@ class _MP4(TinyTag):
         atom_decoder_by_type: dict[
             int, Callable[[bytes], int | str | bytes | TagImage]] | None = None
         _CUSTOM_FIELD_NAME_MAPPING = {
+            'artists': 'artist',
             'conductor': 'extra.conductor',
             'discsubtitle': 'extra.set_subtitle',
             'initialkey': 'extra.initial_key',
@@ -398,6 +399,12 @@ class _MP4(TinyTag):
             'language': 'extra.language',
             'lyricist': 'extra.lyricist',
             'media': 'extra.media',
+            'website': 'extra.url',
+            'originaldate': 'extra.original_date',
+            'originalyear': 'extra.original_year',
+            'license': 'extra.license',
+            'barcode': 'extra.barcode',
+            'catalognumber': 'extra.catalog_number',
         }
 
         @classmethod
@@ -691,6 +698,17 @@ class _ID3(TinyTag):
         'TENC': 'extra.encoded_by', 'TEN': 'extra.encoded_by',
         'TSSE': 'extra.encoder_settings', 'TSS': 'extra.encoder_settings',
         'TMED': 'extra.media', 'TMT': 'extra.media',
+        'TDOR': 'extra.original_date',
+        'TORY': 'extra.original_year', 'TOR': 'extra.original_year',
+        'WCOP': 'extra.license',
+    }
+    _ID3_MAPPING_CUSTOM = {
+        'artists': 'artist',
+        'director': 'extra.director',
+        'license': 'extra.license',
+        'originalyear': 'extra.original_year',
+        'barcode': 'extra.barcode',
+        'catalognumber': 'extra.catalog_number',
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -982,8 +1000,11 @@ class _ID3(TinyTag):
 
     def __parse_custom_field(self, content: str) -> bool:
         custom_field_name, separator, value = content.partition('\x00')
-        if custom_field_name and separator:
-            self._set_field(self._EXTRA_PREFIX + custom_field_name.lower(), value.lstrip('\ufeff'))
+        custom_field_name_lower = custom_field_name.lower()
+        if custom_field_name_lower and separator:
+            field_name = self._ID3_MAPPING_CUSTOM.get(
+                custom_field_name_lower, self._EXTRA_PREFIX + custom_field_name_lower)
+            self._set_field(field_name, value.lstrip('\ufeff'))
             return True
         return False
 
@@ -1144,6 +1165,7 @@ class _Ogg(TinyTag):
         'albumartist': 'albumartist',
         'title': 'title',
         'artist': 'artist',
+        'artists': 'artist',
         'author': 'artist',
         'date': 'year',
         'tracknumber': 'track',
@@ -1174,6 +1196,11 @@ class _Ogg(TinyTag):
         'encodedby': 'extra.encoded_by',
         'encodersettings': 'extra.encoder_settings',
         'media': 'extra.media',
+        'originaldate': 'extra.original_date',
+        'originalyear': 'extra.original_year',
+        'license': 'extra.license',
+        'barcode': 'extra.barcode',
+        'catalognumber': 'extra.catalog_number',
     }
 
     def __init__(self) -> None:
@@ -1529,6 +1556,7 @@ class _Wma(TinyTag):
     # and (japanese, but none the less helpful)
     # http://uguisu.skr.jp/Windows/format_asf.html
     _ASF_MAPPING = {
+        'WM/ARTISTS': 'artist',
         'WM/TrackNumber': 'track',
         'WM/PartOfSet': 'disc',
         'WM/Year': 'year',
@@ -1541,6 +1569,7 @@ class _Wma(TinyTag):
         'WM/InitialKey': 'extra.initial_key',
         'WM/Lyrics': 'extra.lyrics',
         'WM/Language': 'extra.language',
+        'WM/Director': 'extra.director',
         'WM/AuthorURL': 'extra.url',
         'WM/ISRC': 'extra.isrc',
         'WM/Conductor': 'extra.conductor',
@@ -1549,6 +1578,10 @@ class _Wma(TinyTag):
         'WM/EncodedBy': 'extra.encoded_by',
         'WM/EncodingSettings': 'extra.encoder_settings',
         'WM/Media': 'extra.media',
+        'WM/OriginalReleaseTime': 'extra.original_date',
+        'WM/OriginalReleaseYear': 'extra.original_year',
+        'WM/Barcode': 'extra.barcode',
+        'WM/CatalogNo': 'extra.catalog_number',
     }
     _ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
     _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT = (b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00'
