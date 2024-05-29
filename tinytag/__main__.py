@@ -1,7 +1,9 @@
 # pylint: disable=missing-module-docstring,protected-access
 
 from __future__ import annotations
+from io import StringIO
 from os.path import splitext
+import csv
 import json
 import os
 import sys
@@ -47,20 +49,26 @@ def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> b
     data = tag.as_dict(flatten=True)
     del data['images']
     if formatting == 'json':
-        print(json.dumps(data))
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return header_printed
+    if formatting not in {'csv', 'tsv', 'tabularcsv'}:
         return header_printed
     for field, value in data.items():
         if isinstance(value, str):
             data[field] = value.replace('\x00', ';')  # use a more friendly separator for output
-    if formatting == 'csv':
-        print('\n'.join(f'{field},{value!r}' for field, value in data.items()))
-    elif formatting == 'tsv':
-        print('\n'.join(f'{field}\t{value!r}' for field, value in data.items()))
-    elif formatting == 'tabularcsv':
+    csv_file = StringIO()
+    delimiter = '\t' if formatting == 'tsv' else ','
+    writer = csv.writer(csv_file, delimiter=delimiter, lineterminator='\n')
+    if formatting == 'tabularcsv':
         if not header_printed:
-            print(','.join(field for field, value in data.items()))
+            writer.writerow(data.keys())
             header_printed = True
-        print(','.join(f'"{value!r}"' for field, value in data.items()))
+        writer.writerow(data.values())
+        value = csv_file.getvalue().strip()
+    else:
+        writer.writerows(data.items())
+        value = csv_file.getvalue()
+    print(value)
     return header_printed
 
 

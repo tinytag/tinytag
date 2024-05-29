@@ -24,8 +24,7 @@ from tinytag.tinytag import TinyTag, TinyTagException, _ID3, _Ogg, _Wave, _Flac,
 testfiles = dict([
     # MP3
     ('samples/vbri.mp3',
-        {'extra': {},
-         'channels': 2, 'samplerate': 44100,
+        {'extra': {}, 'channels': 2, 'samplerate': 44100,
          'duration': 0.47020408163265304, 'album': 'I Can Walk On Water I Can Fly', 'year': '2007',
          'title': 'I Can Walk On Water I Can Fly', 'artist': 'Basshunter', 'track': 1,
          'filesize': 8192, 'genre': 'Dance',
