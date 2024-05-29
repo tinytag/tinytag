@@ -560,10 +560,12 @@ testfiles = dict([
 testfolder = os.path.join(os.path.dirname(__file__))
 
 
-def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str, Any]],
+def compare_tag(results: dict[str, Any],
+                expected: dict[str, Any],
                 file: str, prev_path: str | None = None) -> None:
-    def compare_values(path: str, result_val: int | float | str | dict[str, Any],
-                       expected_val: int | float | str | dict[str, Any]) -> bool:
+    def compare_values(path: str,
+                       result_val: str | int | float,
+                       expected_val: str | int | float) -> bool:
         # lets not copy *all* the lyrics inside the fixture
         if (path == 'extra.lyrics'
                 and isinstance(expected_val, list) and isinstance(result_val, list)):
@@ -572,7 +574,7 @@ def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str
             return result_val == pytest.approx(expected_val)
         return result_val == expected_val
 
-    def error_fmt(value: int | float | str | dict[str, Any]) -> str:
+    def error_fmt(value: str | int | float) -> str:
         return f'{repr(value)} ({type(value)})'
 
     assert isinstance(results, dict)
@@ -595,10 +597,9 @@ def compare_tag(results: dict[str, dict[str, Any]], expected: dict[str, dict[str
 def test_file_reading_tags_duration(testfile: str, expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(testfolder, testfile)
     tag = TinyTag.get(filename, tags=True, duration=True)
-    results = {
-        key: val for key, val in tag._as_dict().items()
-        if val is not None and key not in ('filename', 'images')
-    }
+    results = tag.as_dict(flatten=False)
+    for attr_name in ('filename', 'images'):
+        del results[attr_name]
     compare_tag(results, expected, filename)
     assert tag.images.any is None
 
@@ -608,10 +609,9 @@ def test_file_reading_tags(testfile: str, expected: dict[str, dict[str, Any]]) -
     filename = os.path.join(testfolder, testfile)
     excluded_attrs = {"bitdepth", "bitrate", "channels", "duration", "samplerate"}
     tag = TinyTag.get(filename, tags=True, duration=False)
-    results = {
-        key: val for key, val in tag._as_dict().items()
-        if val is not None and key not in ('filename', 'images')
-    }
+    results = tag.as_dict(flatten=False)
+    for attr_name in ('filename', 'images'):
+        del results[attr_name]
     expected = {
         key: val for key, val in expected.items() if key not in excluded_attrs
     }
@@ -624,14 +624,12 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
     filename = os.path.join(testfolder, testfile)
     allowed_attrs = {"bitdepth", "bitrate", "channels", "duration", "filesize", "samplerate"}
     tag = TinyTag.get(filename, tags=False, duration=True)
-    results = {
-        key: val for key, val in tag._as_dict().items()
-        if val is not None and key not in ('filename', 'images')
-    }
+    results = tag.as_dict(flatten=False)
+    for attr_name in ('filename', 'extra', 'images'):
+        del results[attr_name]
     expected = {
         key: val for key, val in expected.items() if key in allowed_attrs
     }
-    expected["extra"] = {}
     compare_tag(results, expected, filename)
     assert tag.images.any is None
 
@@ -816,13 +814,27 @@ def test_to_str() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
     assert (
         "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, 'bitrate': 160.0, "
-        "'bitdepth': None, 'samplerate': 44100, 'artist': 'Anais Mitchell', 'albumartist': None, "
-        "'composer': None, 'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
-        "'title': 'cosmic american', 'track': 3, 'track_total': 11, 'genre': None, "
+        "'samplerate': 44100, 'artist': 'Anais Mitchell', "
+        "'album': 'Hymns for the Exiled', "
+        "'title': 'cosmic american', 'track': 3, 'track_total': 11, "
         "'year': '2004', 'comment': 'Waterbug Records, www.anaismitchell.com', "
         "'extra': {'encoded_by': ['iTunes v4.6'], 'itunnorm': [' 0000044E 00000061 00009B67 "
         "000044C3 00022478 00022182 00007FCC 00007E5C 0002245E 0002214E'], 'itunes_cddb_1': "
         "['9D09130B+174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+"
-        "163829'], 'itunes_cddb_tracknumber': ['3']}, 'images': {'front_cover': [], "
-        "'back_cover': [], 'leaflet': [], 'media': [], 'other': [], 'extra': {}}"
+        "163829'], 'itunes_cddb_tracknumber': ['3']}, 'images': {'extra': {}}"
     ) in str(tag)
+
+
+def test_to_str_flatten() -> None:
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
+    assert (
+        "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, 'bitrate': 160.0, "
+        "'samplerate': 44100, 'artist': ['Anais Mitchell'], "
+        "'album': ['Hymns for the Exiled'], "
+        "'title': ['cosmic american'], 'track': 3, 'track_total': 11, "
+        "'year': ['2004'], 'comment': ['Waterbug Records, www.anaismitchell.com'], "
+        "'encoded_by': ['iTunes v4.6'], 'itunnorm': [' 0000044E 00000061 00009B67 "
+        "000044C3 00022478 00022182 00007FCC 00007E5C 0002245E 0002214E'], 'itunes_cddb_1': "
+        "['9D09130B+174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+"
+        "163829'], 'itunes_cddb_tracknumber': ['3'], 'images': {}"
+    ) in str(tag.as_dict(flatten=True))
