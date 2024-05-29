@@ -108,6 +108,11 @@ def test_meta_data_output_format_tabularcsv() -> None:
     assert set(header.split(',')).issubset(tinytag_attributes)
 
 
+def test_meta_data_output_format_invalid() -> None:
+    output = run_cli('-f invalid ' + mp3_with_image)
+    assert not output
+
+
 def test_fail_on_unsupported_file() -> None:
     with pytest.raises(CalledProcessError):
         run_cli(bogus_file)

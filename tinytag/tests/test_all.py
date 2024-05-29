@@ -439,7 +439,7 @@ testfiles = dict([
 
     # WMA
     ('samples/test2.wma',
-        {'extra': {'track': ['0'],
+        {'extra': {'_track': ['0'],
                    'mediaprimaryclassid': ['{D1607DBC-E323-4BE2-86A1-48A42A28441E}'],
                    'encodingtime': ['128861118183900000'], 'wmfsdkversion': ['11.0.5721.5145'],
                    'wmfsdkneeded': ['0.0.0.0000'], 'isvbr': ['1'], 'peakvalue': ['30369'],
@@ -763,6 +763,12 @@ def test_image_loading_extra(path: str) -> None:
         "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
         "'description': None}"
     )
+    assert str(tag.images) == (
+        "{'extra': {'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
+        "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
+        "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}}"
+    )
 
 
 def test_mp3_utf_8_invalid_string() -> None:
@@ -825,15 +831,10 @@ def test_to_str() -> None:
 
 
 def test_to_str_flatten() -> None:
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3_multiple_artists.mp3'))
     assert (
-        "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, 'bitrate': 160.0, "
-        "'samplerate': 44100, 'artist': ['Anais Mitchell'], "
-        "'album': ['Hymns for the Exiled'], "
-        "'title': ['cosmic american'], 'track': 3, 'track_total': 11, "
-        "'year': ['2004'], 'comment': ['Waterbug Records, www.anaismitchell.com'], "
-        "'encoded_by': ['iTunes v4.6'], 'itunnorm': [' 0000044E 00000061 00009B67 "
-        "000044C3 00022478 00022182 00007FCC 00007E5C 0002245E 0002214E'], 'itunes_cddb_1': "
-        "['9D09130B+174405+11+150+14097+27391+43983+65786+84877+99399+113226+132452+146426+"
-        "163829'], 'itunes_cddb_tracknumber': ['3'], 'images': {}"
+        "'filesize': 2007, 'duration': 0.1306122448979592, 'channels': 1, "
+        "'bitrate': 57.39124999999999, 'samplerate': 44100, 'artist': "
+        "['artist1', 'artist2', 'artist3', 'artist4', 'artist5', 'artist6', 'artist7'], "
+        "'genre': ['something 1'], 'images': {}"
     ) in str(tag.as_dict(flatten=True))

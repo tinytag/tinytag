@@ -259,9 +259,12 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: str | int | float) -> None:
+    def _set_field(self, fieldname: str, value: str | int | float,
+                   check_conflict: bool = True) -> None:
         if fieldname.startswith(self._EXTRA_PREFIX):
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
+            if check_conflict and fieldname in self.__dict__:
+                fieldname = '_' + fieldname
             extra_values = self.extra.get(fieldname, [])
             if not isinstance(value, str) or value in extra_values:
                 return
@@ -275,14 +278,11 @@ class TinyTag:
         if isinstance(new_value, str):
             # First value goes in tag, others in tag.extra
             values = new_value.split('\x00')
-            new_value = values[0]
-            start_pos = 0 if old_value else 1
-            if len(values) > 1:
-                for i_value in values[start_pos:]:
-                    self._set_field(self._EXTRA_PREFIX + fieldname, i_value)
-            elif old_value and new_value != old_value:
-                self._set_field(self._EXTRA_PREFIX + fieldname, new_value)
-                return
+            for index, i_value in enumerate(values):
+                if index or old_value and i_value != old_value:
+                    self._set_field(self._EXTRA_PREFIX + fieldname, i_value, check_conflict=False)
+                    continue
+                new_value = i_value
             if old_value:
                 return
         elif not new_value and old_value:
@@ -300,17 +300,18 @@ class TinyTag:
 
     def _update(self, other: TinyTag) -> None:
         # update the values of this tag with the values from another tag
-        for key, value in other.as_dict(flatten=False).items():
-            if isinstance(value, dict):
-                if key != 'extra':
-                    continue
-                for extra_key, extra_values in value.items():
-                    for extra_value in extra_values:
-                        if isinstance(extra_value, str):
-                            self._set_field(self._EXTRA_PREFIX + extra_key, extra_value)
+        for key, value in other.__dict__.items():
+            if key.startswith('_'):
                 continue
-            if value is not None and not isinstance(value, list):
+            if value is None:
+                continue
+            if not isinstance(value, dict):
                 self._set_field(key, value)
+        for extra_key, extra_values in other.extra.items():
+            for extra_value in extra_values:
+                if isinstance(extra_value, str):
+                    self._set_field(
+                        self._EXTRA_PREFIX + extra_key, extra_value, check_conflict=False)
         self.images._update(other.images)
 
     @staticmethod
@@ -362,17 +363,22 @@ class TagImages:
         """Return a cover image.
         If not present, fall back to any other available image.
         """
-        for image_list in self.as_dict(flatten=True).values():
-            for image in image_list:
+        images: dict[str, list[TagImage]] = self.__dict__
+        for image_list in images.values():
+            if isinstance(image_list, list):
+                for image in image_list:
+                    return image
+        for extra_image_list in self.extra.values():
+            for image in extra_image_list:
                 return image
         return None
 
-    def as_dict(self, flatten: bool = True) -> dict[str, list[TagImage]]:
+    def as_dict(self, flatten: bool = True) -> dict[
+        str, list[TagImage] | dict[str, list[TagImage]]
+    ]:
         """Return a dictionary representation of the tag images."""
-        images: dict[str, list[TagImage]] = {}
+        images: dict[str, list[TagImage] | dict[str, list[TagImage]]] = {}
         for key, value in self.__dict__.items():
-            if key.startswith('_'):
-                continue
             if flatten and key == 'extra':
                 for extra_key, extra_values in value.items():
                     if extra_key in images:
@@ -398,14 +404,13 @@ class TagImages:
         write_dest[fieldname] = values
 
     def _update(self, other: TagImages) -> None:
-        for key, value in other.as_dict(flatten=False).items():
-            if isinstance(value, dict):
-                for extra_key, extra_values in value.items():
-                    for image_extra in extra_values:
-                        self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
-                continue
-            for image in value:
-                self._set_field(key, image)
+        for key, value in other.__dict__.items():
+            if isinstance(value, list):
+                for image in value:
+                    self._set_field(key, image)
+        for extra_key, extra_values in other.extra.items():
+            for image_extra in extra_values:
+                self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
 
 
 class TagImage:
