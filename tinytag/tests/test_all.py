@@ -432,9 +432,9 @@ testfiles = dict([
          'duration': 0.1, 'samplerate': 44100, 'bitdepth': 16}),
     ('samples/flac_multiple_fields.flac',
         {'extra': {'artist': ['artist 2', 'artist 3'], 'genre': ['genre 2'],
-                   'album': ['album 2']},
-         'filesize': 235, 'album': 'album 1', 'artist': 'artist 1',
-         'bitrate': 18.8, 'channels': 1, 'duration': 0.1, 'genre': 'genre 1',
+                   'album': ['album 2'], 'url': ['https://example.com']},
+         'filesize': 266, 'album': 'album 1', 'artist': 'artist 1',
+         'bitrate': 21.28, 'channels': 1, 'duration': 0.1, 'genre': 'genre 1',
          'samplerate': 44100, 'bitdepth': 16}),
 
     # WMA
@@ -745,11 +745,8 @@ def test_image_loading(path: str, expected_size: int) -> None:
     assert image.mime_type == 'image/jpeg'
 
 
-@pytest.mark.parametrize('path', [
-    'samples/ogg_with_image.ogg',
-])
-def test_image_loading_extra(path: str) -> None:
-    tag = TinyTag.get(os.path.join(testfolder, path), image=True)
+def test_image_loading_extra() -> None:
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
     image = tag.images.extra['bright_colored_fish'][0]
     assert image.data is not None
     assert tag.images.any is not None
@@ -762,12 +759,6 @@ def test_image_loading_extra(path: str) -> None:
         "\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
         "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
         "'description': None}"
-    )
-    assert str(tag.images) == (
-        "{'extra': {'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
-        "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
-        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
-        "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}}"
     )
 
 
@@ -831,10 +822,30 @@ def test_to_str() -> None:
 
 
 def test_to_str_flatten() -> None:
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3_multiple_artists.mp3'))
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/flac_multiple_fields.flac'))
     assert (
-        "'filesize': 2007, 'duration': 0.1306122448979592, 'channels': 1, "
-        "'bitrate': 57.39124999999999, 'samplerate': 44100, 'artist': "
-        "['artist1', 'artist2', 'artist3', 'artist4', 'artist5', 'artist6', 'artist7'], "
-        "'genre': ['something 1'], 'images': {}"
+        "'filesize': 266, 'duration': 0.1, 'channels': 1, 'bitrate': 21.28, 'bitdepth': 16, "
+        "'samplerate': 44100, 'artist': ['artist 1', 'artist 2', 'artist 3'], "
+        "'album': ['album 1', 'album 2'], 'genre': ['genre 1', 'genre 2'], "
+        "'url': ['https://example.com'], 'images': {}"
     ) in str(tag.as_dict(flatten=True))
+
+
+def test_to_str_images() -> None:
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
+    assert str(tag.images) == (
+        "{'extra': {'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
+        "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
+        "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}}"
+    )
+
+
+def test_to_str_images_flatten() -> None:
+    tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
+    assert str(tag.images.as_dict(flatten=True)) == (
+        "{'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
+        "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
+        "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}"
+    )

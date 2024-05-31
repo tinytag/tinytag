@@ -40,7 +40,7 @@ from collections.abc import Callable, Iterator
 from functools import reduce
 from os import PathLike
 from sys import stderr
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Dict, List
 from warnings import warn
 
 import base64
@@ -99,7 +99,7 @@ class TinyTag:
         self.genre: str | None = None
         self.year: str | None = None
         self.comment: str | None = None
-        self.extra: dict[str, list[str]] = {}
+        self.extra = TagExtra()
         self.images = TagImages()
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # allow override for some file formats
@@ -107,6 +107,7 @@ class TinyTag:
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
+        self.__dict__: dict[str, str | int | float | TagExtra | TagImages]
 
     def __repr__(self) -> str:
         return str(self.as_dict(flatten=False))
@@ -156,29 +157,33 @@ class TinyTag:
 
     def as_dict(self, flatten: bool = True) -> dict[
         str,
-        str | int | float | list[str | TagImage] | dict[str, list[str | TagImage]]
+        str | int | float | TagExtra | list[str | TagImage]
+        | dict[str, list[TagImage] | TagImagesExtra]
     ]:
         """Return a dictionary representation of the tag."""
         fields: dict[
             str,
-            str | int | float | list[str | TagImage] | dict[str, list[str | TagImage]]
+            str | int | float | TagExtra | list[str | TagImage]
+            | dict[str, list[TagImage] | TagImagesExtra]
         ] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
                 continue
-            if flatten and key == 'extra':
+            if isinstance(value, TagImages):
+                fields[key] = value.as_dict(flatten)
+            elif not isinstance(value, TagExtra):
+                if value is None:
+                    continue
+                if flatten and key != 'filename' and isinstance(value, str):
+                    fields[key] = [value]
+                else:
+                    fields[key] = value
+            elif flatten:
                 for extra_key, extra_values in value.items():
-                    if extra_key in fields:
-                        fields[extra_key] += extra_values
-                    else:
-                        fields[extra_key] = extra_values
-                continue
-            if key == 'images':
-                value = value.as_dict(flatten)
-            if value is None:
-                continue
-            if flatten and key != 'filename' and isinstance(value, str):
-                fields[key] = [value]
+                    extra_fields = fields.get(extra_key)
+                    if not isinstance(extra_fields, list):
+                        extra_fields = fields[extra_key] = []
+                    extra_fields += extra_values
             else:
                 fields[key] = value
         return fields
@@ -303,16 +308,15 @@ class TinyTag:
         for key, value in other.__dict__.items():
             if key.startswith('_'):
                 continue
-            if value is None:
-                continue
-            if not isinstance(value, dict):
+            if isinstance(value, TagExtra):
+                for extra_key, extra_values in other.extra.items():
+                    for extra_value in extra_values:
+                        self._set_field(
+                            self._EXTRA_PREFIX + extra_key, extra_value, check_conflict=False)
+            elif isinstance(value, TagImages):
+                self.images._update(value)
+            elif value is not None:
                 self._set_field(key, value)
-        for extra_key, extra_values in other.extra.items():
-            for extra_value in extra_values:
-                if isinstance(extra_value, str):
-                    self._set_field(
-                        self._EXTRA_PREFIX + extra_key, extra_value, check_conflict=False)
-        self.images._update(other.images)
 
     @staticmethod
     def _bytes_to_int_le(b: bytes) -> int:
@@ -343,6 +347,10 @@ class TinyTag:
              'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
 
 
+class TagExtra(Dict[str, List[str]]):
+    """A dictionary containing additional fields of an audio file."""
+
+
 class TagImages:
     """A class containing images embedded in an audio file."""
     _EXTRA_PREFIX = 'extra.'
@@ -353,7 +361,8 @@ class TagImages:
         self.leaflet: list[TagImage] = []
         self.media: list[TagImage] = []
         self.other: list[TagImage] = []
-        self.extra: dict[str, list[TagImage]] = {}
+        self.extra = TagImagesExtra()
+        self.__dict__: dict[str, list[TagImage] | TagImagesExtra]
 
     def __repr__(self) -> str:
         return str(self.as_dict(flatten=False))
@@ -363,54 +372,62 @@ class TagImages:
         """Return a cover image.
         If not present, fall back to any other available image.
         """
-        images: dict[str, list[TagImage]] = self.__dict__
-        for image_list in images.values():
-            if isinstance(image_list, list):
-                for image in image_list:
-                    return image
-        for extra_image_list in self.extra.values():
-            for image in extra_image_list:
+        for value in self.__dict__.values():
+            if isinstance(value, TagImagesExtra):
+                for extra_images in value.values():
+                    for image in extra_images:
+                        return image
+                continue
+            for image in value:
                 return image
         return None
 
-    def as_dict(self, flatten: bool = True) -> dict[
-        str, list[TagImage] | dict[str, list[TagImage]]
-    ]:
+    def as_dict(self, flatten: bool = True) -> dict[str, list[TagImage] | TagImagesExtra]:
         """Return a dictionary representation of the tag images."""
-        images: dict[str, list[TagImage] | dict[str, list[TagImage]]] = {}
+        images: dict[str, list[TagImage] | TagImagesExtra] = {}
         for key, value in self.__dict__.items():
-            if flatten and key == 'extra':
+            if not isinstance(value, TagImagesExtra):
+                if value:
+                    images[key] = value
+            elif flatten:
                 for extra_key, extra_values in value.items():
-                    if extra_key in images:
-                        images[extra_key] += extra_values
-                    else:
-                        images[extra_key] = extra_values
-                continue
-            if value or key == 'extra':
+                    extra_images = images.get(extra_key)
+                    if not isinstance(extra_images, list):
+                        extra_images = images[extra_key] = []
+                    extra_images += extra_values
+            else:
                 images[key] = value
         return images
 
     def _set_field(self, fieldname: str, value: TagImage) -> None:
-        write_dest = self.__dict__
         if fieldname.startswith(self._EXTRA_PREFIX):
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
-            write_dest = self.extra
-        old_values = write_dest.get(fieldname)
-        values = [value]
-        if old_values is not None:
-            values = old_values + values
-        if DEBUG:
-            print(f'Setting image field "{fieldname}"')
-        write_dest[fieldname] = values
+            extra_values = self.extra.get(fieldname, [])
+            extra_values.append(value)
+            if DEBUG:
+                print(f'Setting extra image field "{fieldname}"')
+            self.extra[fieldname] = extra_values
+            return
+        values = self.__dict__.get(fieldname, [])
+        if isinstance(values, list):
+            values.append(value)
+            if DEBUG:
+                print(f'Setting image field "{fieldname}"')
+            self.__dict__[fieldname] = values
 
     def _update(self, other: TagImages) -> None:
         for key, value in other.__dict__.items():
-            if isinstance(value, list):
-                for image in value:
-                    self._set_field(key, image)
-        for extra_key, extra_values in other.extra.items():
-            for image_extra in extra_values:
-                self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
+            if isinstance(value, TagImagesExtra):
+                for extra_key, extra_values in value.items():
+                    for image_extra in extra_values:
+                        self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
+                continue
+            for image in value:
+                self._set_field(key, image)
+
+
+class TagImagesExtra(Dict[str, List["TagImage"]]):
+    """A dictionary containing additional images embedded in an audio file."""
 
 
 class TagImage:
