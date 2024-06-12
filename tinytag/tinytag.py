@@ -3,7 +3,7 @@
 # Copyright (c) 2021-2024 Mat (mathiascode)
 #
 # Sources on GitHub:
-# http://github.com/devsnd/tinytag/
+# http://github.com/tinytag/tinytag
 
 # MIT License
 
