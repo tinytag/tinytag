@@ -1,4 +1,6 @@
 include *.md
+include *.png
+include *.svg
 include *.toml
 include *.txt
 include LICENSE
