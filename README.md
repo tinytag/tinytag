@@ -4,8 +4,8 @@ tinytag is a Python library for reading audio file metadata
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/tinytag/tinytag/tests.yml
 )](https://github.com/tinytag/tinytag/actions?query=workflow:%22Tests%22)
-[![Coverage Status](https://img.shields.io/coverallsCoverage/github/devsnd/tinytag
-)](https://coveralls.io/r/devsnd/tinytag)
+[![Coverage Status](https://img.shields.io/coverallsCoverage/github/tinytag/tinytag
+)](https://coveralls.io/r/tinytag/tinytag)
 [![PyPI Version](https://img.shields.io/pypi/v/tinytag
 )](https://pypi.org/project/tinytag/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/tinytag
