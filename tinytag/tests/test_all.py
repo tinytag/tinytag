@@ -240,6 +240,9 @@ testfiles = dict([
          'extra': {'other_artists': ['artist2', 'artist3', 'artist4', 'artist5',
                                      'artist6', 'artist7']},
          'samplerate': 44100, 'artist': 'artist1', 'genre': 'something 1'}),
+    ('samples/id3_frames.mp3',
+        {'filesize': 27576, 'bitrate': 50.03636363636364, 'channels': 1,
+         'duration': 3.96, 'samplerate': 16000, 'extra': {}}),
 
     # OGG
     ('samples/empty.ogg',
