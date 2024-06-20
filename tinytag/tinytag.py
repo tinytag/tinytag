@@ -849,23 +849,24 @@ class _ID3(TinyTag):
         max_estimation_frames = (_ID3._MAX_ESTIMATION_SEC * 44100) // _ID3._SAMPLES_PER_FRAME
         frame_size_accu = 0
         audio_offset = 0
-        header_bytes = 4
         frames = 0  # count frames for determining mp3 duration
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
-        last_bitrates = []  # CBR mp3s (multiple frames with same bitrates)
+        last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
         # seek to first position after id3 tag (speedup for large header)
+        first_mpeg_id = None
         fh.seek(self._bytepos_after_id3v2)
         file_offset = fh.tell()
         walker = io.BytesIO(fh.read())
         while True:
             # reading through garbage until 11 '1' sync-bits are found
-            b = walker.read()
-            walker.seek(-len(b), os.SEEK_CUR)
-            if len(b) < 4:
+            header = walker.read(4)
+            header_len = len(header)
+            walker.seek(-header_len, os.SEEK_CUR)
+            if header_len < 4:
                 if frames:
                     self.bitrate = bitrate_accu / frames
                 break  # EOF
-            _sync, conf, bitrate_freq, rest = struct.unpack('BBBB', b[0:4])
+            _sync, conf, bitrate_freq, rest = struct.unpack('BBBB', header)
             br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
             sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
             padding = 1 if bitrate_freq & 0x02 > 0 else 0
@@ -873,46 +874,48 @@ class _ID3(TinyTag):
             layer_id = (conf >> 1) & 0x03
             channel_mode = (rest >> 6) & 0x03
             # check for eleven 1s, validate bitrate and sample rate
-            if (not b[:2] > b'\xFF\xE0' or br_id > 14 or br_id == 0 or sr_id == 3
-                    or layer_id == 0 or mpeg_id == 1):  # noqa
-                idx = b.find(b'\xFF', 1)  # invalid frame, find next sync header
+            if (not header[:2] > b'\xFF\xE0'
+                    or (first_mpeg_id is not None and first_mpeg_id != mpeg_id)
+                    or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0 or mpeg_id == 1):
+                idx = header.find(b'\xFF', 1)  # invalid frame, find next sync header
                 if idx == -1:
-                    idx = len(b)  # not found: jump over the current peek buffer
+                    idx = header_len  # not found: jump over the current peek buffer
                 walker.seek(max(idx, 1), os.SEEK_CUR)
                 continue
+            if first_mpeg_id is None:
+                first_mpeg_id = mpeg_id
             self.channels = self._CHANNELS_PER_CHANNEL_MODE[channel_mode]
             frame_bitrate = self._BITRATE_BY_VERSION_BY_LAYER[mpeg_id][layer_id][br_id]
             self.samplerate = samplerate = self._SAMPLE_RATES[mpeg_id][sr_id]
+            frame_length = (144000 * frame_bitrate) // samplerate + padding
             # There might be a xing header in the first frame that contains
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
             if frames == 0 and self._USE_XING_HEADER:
-                xing_header_offset = b.find(b'Xing')
+                walker_offset = walker.tell()
+                frame_content = walker.read(frame_length)
+                xing_header_offset = frame_content.find(b'Xing')
                 if xing_header_offset != -1:
-                    walker.seek(xing_header_offset, os.SEEK_CUR)
+                    walker.seek(walker_offset + xing_header_offset)
                     xframes, byte_count = self._parse_xing_header(walker)
                     if xframes > 0 and byte_count > 0:
                         # MPEG-2 Audio Layer III uses 576 samples per frame
                         samples_per_frame = 576 if mpeg_id <= 2 else self._SAMPLES_PER_FRAME
                         self.duration = duration = xframes * samples_per_frame / samplerate
-                        # self.duration = (xframes * self._SAMPLES_PER_FRAME / samplerate
-                        #                  / self.channels)  # noqa
                         self.bitrate = byte_count * 8 / duration / 1000
                         return
-                    continue
+                walker.seek(walker_offset)
 
             frames += 1  # it's most probably an mp3 frame
             bitrate_accu += frame_bitrate
             if frames == 1:
                 audio_offset = file_offset + walker.tell()
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
-                last_bitrates.append(frame_bitrate)
-            walker.seek(4, os.SEEK_CUR)  # jump over peeked bytes
+                last_bitrates.add(frame_bitrate)
 
-            frame_length = (144000 * frame_bitrate) // samplerate + padding
             frame_size_accu += frame_length
             # if bitrate does not change over time its probably CBR
-            is_cbr = (frames == self._CBR_DETECTION_FRAME_COUNT and len(set(last_bitrates)) == 1)
+            is_cbr = (frames == self._CBR_DETECTION_FRAME_COUNT and len(last_bitrates) == 1)
             if frames == max_estimation_frames or is_cbr:
                 # try to estimate duration
                 fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
@@ -924,7 +927,7 @@ class _ID3(TinyTag):
                 return
 
             if frame_length > 1:  # jump over current frame body
-                walker.seek(frame_length - header_bytes, os.SEEK_CUR)
+                walker.seek(frame_length, os.SEEK_CUR)
         if self.samplerate:
             self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
 
