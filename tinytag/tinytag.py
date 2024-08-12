@@ -40,7 +40,7 @@ from collections.abc import Callable, Iterator
 from functools import reduce
 from os import PathLike
 from sys import stderr
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Dict, List
 from warnings import warn
 
 import base64
@@ -99,7 +99,7 @@ class TinyTag:
         self.genre: str | None = None
         self.year: str | None = None
         self.comment: str | None = None
-        self.extra: dict[str, str | float | int] = {}
+        self.extra = TagExtra()
         self.images = TagImages()
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # allow override for some file formats
@@ -107,6 +107,10 @@ class TinyTag:
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
+        self.__dict__: dict[str, str | int | float | TagExtra | TagImages]
+
+    def __repr__(self) -> str:
+        return str(self.as_dict(flatten=False))
 
     @classmethod
     def get(cls,
@@ -151,11 +155,38 @@ class TinyTag:
         """Check if a specific file is supported based on its file extension."""
         return cls._get_parser_for_filename(filename) is not None
 
-    def __repr__(self) -> str:
-        return str(self._as_dict())
-
-    def _as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+    def as_dict(self, flatten: bool = True) -> dict[
+        str,
+        str | int | float | TagExtra | list[str | TagImage]
+        | dict[str, list[TagImage] | TagImagesExtra]
+    ]:
+        """Return a dictionary representation of the tag."""
+        fields: dict[
+            str,
+            str | int | float | TagExtra | list[str | TagImage]
+            | dict[str, list[TagImage] | TagImagesExtra]
+        ] = {}
+        for key, value in self.__dict__.items():
+            if key.startswith('_'):
+                continue
+            if isinstance(value, TagImages):
+                fields[key] = value.as_dict(flatten)
+            elif not isinstance(value, TagExtra):
+                if value is None:
+                    continue
+                if flatten and key != 'filename' and isinstance(value, str):
+                    fields[key] = [value]
+                else:
+                    fields[key] = value
+            elif flatten:
+                for extra_key, extra_values in value.items():
+                    extra_fields = fields.get(extra_key)
+                    if not isinstance(extra_fields, list):
+                        extra_fields = fields[extra_key] = []
+                    extra_fields += extra_values
+            else:
+                fields[key] = value
+        return fields
 
     @classmethod
     def _get_parser_for_filename(
@@ -233,54 +264,38 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _parse_string_field(self, fieldname: str, old_value: Any | None, value: str) -> str | None:
-        if fieldname in {'artist', 'genre'}:
-            # First artist/genre goes in tag.artist/genre, others in tag.extra.other_artists/genres
-            values = value.split('\x00')
-            value = values[0]
-            start_pos = 0 if old_value else 1
-            if len(values) > 1:
-                self._set_field(self._EXTRA_PREFIX + f'other_{fieldname}s', values[start_pos:])
-            elif old_value and value != old_value:
-                self._set_field(self._EXTRA_PREFIX + f'other_{fieldname}s', [value])
-                return None
-        if old_value or not value:
-            return None
-        return value
-
-    def _set_field(self, fieldname: str, value: str | int | float | list[str] | None) -> None:
-        write_dest = self.__dict__
-        original_fieldname = fieldname
+    def _set_field(self, fieldname: str, value: str | int | float,
+                   check_conflict: bool = True) -> None:
         if fieldname.startswith(self._EXTRA_PREFIX):
-            write_dest = self.extra
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
-        old_value = write_dest.get(fieldname)
-        if isinstance(value, str):
-            value = self._parse_string_field(original_fieldname, old_value, value)
-            if not value:
+            if check_conflict and fieldname in self.__dict__:
+                fieldname = '_' + fieldname
+            extra_values = self.extra.get(fieldname, [])
+            if not isinstance(value, str) or value in extra_values:
                 return
-        elif isinstance(value, list):
-            if not isinstance(old_value, list):
-                old_value = []
-            value = old_value + [i for i in value if i and i not in old_value]
-        elif not value and old_value:
+            extra_values.append(value)
+            if DEBUG:
+                print(f'Setting extra field "{fieldname}" to "{extra_values!r}"')
+            self.extra[fieldname] = extra_values
+            return
+        old_value = self.__dict__.get(fieldname)
+        new_value = value
+        if isinstance(new_value, str):
+            # First value goes in tag, others in tag.extra
+            values = new_value.split('\x00')
+            for index, i_value in enumerate(values):
+                if index or old_value and i_value != old_value:
+                    self._set_field(self._EXTRA_PREFIX + fieldname, i_value, check_conflict=False)
+                    continue
+                new_value = i_value
+            if old_value:
+                return
+        elif not new_value and old_value:
+            # Prioritize non-zero integer values
             return
         if DEBUG:
-            print(f'Setting field "{original_fieldname}" to "{value!r}"')
-        write_dest[fieldname] = value
-
-    def _set_image_field(self, fieldname: str, value: TagImage) -> None:
-        write_dest = self.images.__dict__
-        if fieldname.startswith(self._EXTRA_PREFIX):
-            fieldname = fieldname[len(self._EXTRA_PREFIX):]
-            write_dest = self.images.extra
-        old_values = write_dest.get(fieldname)
-        values = [value]
-        if old_values is not None:
-            values = old_values + values
-        if DEBUG:
-            print(f'Setting image field "{fieldname}"')
-        write_dest[fieldname] = values
+            print(f'Setting field "{fieldname}" to "{new_value!r}"')
+        self.__dict__[fieldname] = new_value
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         raise NotImplementedError
@@ -290,20 +305,18 @@ class TinyTag:
 
     def _update(self, other: TinyTag) -> None:
         # update the values of this tag with the values from another tag
-        excluded_attrs = {'filesize', 'extra', 'images'}
-        for standard_key, standard_value in other.__dict__.items():
-            if (not standard_key.startswith('_')
-                    and standard_key not in excluded_attrs
-                    and standard_value is not None):
-                self._set_field(standard_key, standard_value)
-        for extra_key, extra_value in other.extra.items():
-            self._set_field(self._EXTRA_PREFIX + extra_key, extra_value)
-        for image_key, images in other.images._as_dict().items():
-            for image in images:
-                self._set_image_field(image_key, image)
-        for image_extra_key, images_extra in other.images.extra.items():
-            for image_extra in images_extra:
-                self._set_image_field(self._EXTRA_PREFIX + image_extra_key, image_extra)
+        for key, value in other.__dict__.items():
+            if key.startswith('_'):
+                continue
+            if isinstance(value, TagExtra):
+                for extra_key, extra_values in other.extra.items():
+                    for extra_value in extra_values:
+                        self._set_field(
+                            self._EXTRA_PREFIX + extra_key, extra_value, check_conflict=False)
+            elif isinstance(value, TagImages):
+                self.images._update(value)
+            elif value is not None:
+                self._set_field(key, value)
 
     @staticmethod
     def _bytes_to_int_le(b: bytes) -> int:
@@ -334,37 +347,87 @@ class TinyTag:
              'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
 
 
+class TagExtra(Dict[str, List[str]]):
+    """A dictionary containing additional fields of an audio file."""
+
+
 class TagImages:
     """A class containing images embedded in an audio file."""
+    _EXTRA_PREFIX = 'extra.'
+
     def __init__(self) -> None:
         self.front_cover: list[TagImage] = []
         self.back_cover: list[TagImage] = []
         self.leaflet: list[TagImage] = []
         self.media: list[TagImage] = []
         self.other: list[TagImage] = []
-        self.extra: dict[str, list[TagImage]] = {}
+        self.extra = TagImagesExtra()
+        self.__dict__: dict[str, list[TagImage] | TagImagesExtra]
+
+    def __repr__(self) -> str:
+        return str(self.as_dict(flatten=False))
 
     @property
     def any(self) -> TagImage | None:
         """Return a cover image.
         If not present, fall back to any other available image.
         """
-        for image_list in self._as_dict().values():
-            for image in image_list:
+        for value in self.__dict__.values():
+            if isinstance(value, TagImagesExtra):
+                for extra_images in value.values():
+                    for image in extra_images:
+                        return image
+                continue
+            for image in value:
                 return image
-        for extra_image_list in self.extra.values():
-            for extra_image in extra_image_list:
-                return extra_image
         return None
 
-    def __repr__(self) -> str:
-        return str(vars(self))
+    def as_dict(self, flatten: bool = True) -> dict[str, list[TagImage] | TagImagesExtra]:
+        """Return a dictionary representation of the tag images."""
+        images: dict[str, list[TagImage] | TagImagesExtra] = {}
+        for key, value in self.__dict__.items():
+            if not isinstance(value, TagImagesExtra):
+                if value:
+                    images[key] = value
+            elif flatten:
+                for extra_key, extra_values in value.items():
+                    extra_images = images.get(extra_key)
+                    if not isinstance(extra_images, list):
+                        extra_images = images[extra_key] = []
+                    extra_images += extra_values
+            else:
+                images[key] = value
+        return images
 
-    def _as_dict(self) -> dict[str, list[TagImage]]:
-        return {
-            k: v for k, v in self.__dict__.items()
-            if not k.startswith('_') and k != 'extra'
-        }
+    def _set_field(self, fieldname: str, value: TagImage) -> None:
+        if fieldname.startswith(self._EXTRA_PREFIX):
+            fieldname = fieldname[len(self._EXTRA_PREFIX):]
+            extra_values = self.extra.get(fieldname, [])
+            extra_values.append(value)
+            if DEBUG:
+                print(f'Setting extra image field "{fieldname}"')
+            self.extra[fieldname] = extra_values
+            return
+        values = self.__dict__.get(fieldname, [])
+        if isinstance(values, list):
+            values.append(value)
+            if DEBUG:
+                print(f'Setting image field "{fieldname}"')
+            self.__dict__[fieldname] = values
+
+    def _update(self, other: TagImages) -> None:
+        for key, value in other.__dict__.items():
+            if isinstance(value, TagImagesExtra):
+                for extra_key, extra_values in value.items():
+                    for image_extra in extra_values:
+                        self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
+                continue
+            for image in value:
+                self._set_field(key, image)
+
+
+class TagImagesExtra(Dict[str, List["TagImage"]]):
+    """A dictionary containing additional images embedded in an audio file."""
 
 
 class TagImage:
@@ -408,7 +471,7 @@ class _MP4(TinyTag):
         }
 
         @classmethod
-        def _unpack_integer(cls, value: bytes, signed: bool = True) -> int:
+        def _unpack_integer(cls, value: bytes, signed: bool = True) -> str:
             value_length = len(value)
             result = -1
             if value_length == 1:
@@ -419,10 +482,10 @@ class _MP4(TinyTag):
                 result = struct.unpack('>i' if signed else '>I', value)[0]
             elif value_length == 8:
                 result = struct.unpack('>q' if signed else '>Q', value)[0]
-            return result
+            return str(result)
 
         @classmethod
-        def _unpack_integer_unsigned(cls, value: bytes) -> int:
+        def _unpack_integer_unsigned(cls, value: bytes) -> str:
             return cls._unpack_integer(value, signed=False)
 
         @classmethod
@@ -658,7 +721,7 @@ class _MP4(TinyTag):
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if fieldname.startswith('images.'):
                         if self._load_image:
-                            self._set_image_field(fieldname[len('images.'):], value)
+                            self.images._set_field(fieldname[len('images.'):], value)
                     elif fieldname:
                         self._set_field(fieldname, value)
             # if no action was specified using dict or callable, jump over atom
@@ -982,20 +1045,30 @@ class _ID3(TinyTag):
         # tags are more likely to be outdated or have encoding issues
         fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
         if not self.title:
-            self._set_field('title', asciidecode(fields[:30]))
+            value = asciidecode(fields[:30])
+            if value:
+                self._set_field('title', value)
         if not self.artist:
-            self._set_field('artist', asciidecode(fields[30:60]))
+            value = asciidecode(fields[30:60])
+            if value:
+                self._set_field('artist', value)
         if not self.album:
-            self._set_field('album', asciidecode(fields[60:90]))
+            value = asciidecode(fields[60:90])
+            if value:
+                self._set_field('album', value)
         if not self.year:
-            self._set_field('year', asciidecode(fields[90:94]))
+            value = asciidecode(fields[90:94])
+            if value:
+                self._set_field('year', value)
         comment = fields[94:124]
         if b'\x00\x00' < comment[-2:] < b'\x01\x00':
             if self.track is None:
                 self._set_field('track', ord(comment[-1:]))
             comment = comment[:-2]
         if not self.comment:
-            self._set_field('comment', asciidecode(comment))
+            value = asciidecode(comment)
+            if value:
+                self._set_field('comment', value)
         if not self.genre:
             genre_id = ord(fields[124:125])
             if genre_id < len(self._ID3V1_GENRES):
@@ -1004,10 +1077,11 @@ class _ID3(TinyTag):
     def __parse_custom_field(self, content: str) -> bool:
         custom_field_name, separator, value = content.partition('\x00')
         custom_field_name_lower = custom_field_name.lower()
-        if custom_field_name_lower and separator:
+        value = value.lstrip('\ufeff')
+        if custom_field_name_lower and separator and value:
             field_name = self._ID3_MAPPING_CUSTOM.get(
                 custom_field_name_lower, self._EXTRA_PREFIX + custom_field_name_lower)
-            self._set_field(field_name, value.lstrip('\ufeff'))
+            self._set_field(field_name, value)
             return True
         return False
 
@@ -1056,6 +1130,8 @@ class _ID3(TinyTag):
                     return frame_size
                 language = fieldname in {'comment', 'extra.lyrics'}
                 value = self._decode_string(content, language)
+                if not value:
+                    return frame_size
                 if fieldname == "comment":
                     # check if comment is a key-value pair (used by iTunes)
                     should_set_field = not self.__parse_custom_field(value)
@@ -1085,7 +1161,9 @@ class _ID3(TinyTag):
             elif frame_id in self._CUSTOM_FRAME_IDS:
                 # custom fields
                 if self._parse_tags:
-                    self.__parse_custom_field(self._decode_string(content))
+                    value = self._decode_string(content)
+                    if value:
+                        self.__parse_custom_field(value)
             elif frame_id in self._IMAGE_FRAME_IDS:
                 if self._load_image:
                     # See section 4.14: http://id3.org/id3v2.4.0-frames
@@ -1108,12 +1186,13 @@ class _ID3(TinyTag):
                     description = self._decode_string(content[desc_start_pos:desc_end_pos])
                     field_name, image = self._create_tag_image(
                         content[desc_end_pos:], pic_type, mime_type, description)
-                    self._set_image_field(field_name, image)
+                    self.images._set_field(field_name, image)
             elif frame_id not in self._DISALLOWED_FRAME_IDS:
                 # unknown, try to add to extra dict
                 if self._parse_tags:
-                    self._set_field(
-                        self._EXTRA_PREFIX + frame_id.lower(), self._decode_string(content))
+                    value = self._decode_string(content)
+                    if value:
+                        self._set_field(self._EXTRA_PREFIX + frame_id.lower(), value)
             return frame_size
         return 0
 
@@ -1318,7 +1397,7 @@ class _Ogg(TinyTag):
                     if DEBUG:
                         print('Found Vorbis TagImage', key, value[:64])
                     fieldname, fieldvalue = _Flac._parse_image(io.BytesIO(base64.b64decode(value)))
-                    self._set_image_field(fieldname, fieldvalue)
+                    self.images._set_field(fieldname, fieldvalue)
                 else:
                     if DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
@@ -1331,7 +1410,7 @@ class _Ogg(TinyTag):
                                 self._set_field(f'{fieldname}_total', int(total))
                         if value.isdecimal():
                             self._set_field(fieldname, int(value))
-                    else:
+                    elif value:
                         self._set_field(fieldname, value)
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[bytes]:
@@ -1527,7 +1606,7 @@ class _Flac(TinyTag):
                 self._update(oggtag)
             elif block_type == self.METADATA_PICTURE and self._load_image:
                 fieldname, value = self._parse_image(fh)
-                self._set_image_field(fieldname, value)
+                self.images._set_field(fieldname, value)
             elif block_type >= 127:
                 break  # invalid block type
             else:
@@ -1601,12 +1680,12 @@ class _Wma(TinyTag):
     def _decode_string(self, bytestring: bytes) -> str:
         return self._unpad(bytestring.decode('utf-16', 'replace'))
 
-    def _decode_ext_desc(self, value_type: int, value: bytes) -> int | str | None:
+    def _decode_ext_desc(self, value_type: int, value: bytes) -> str | None:
         """ decode _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
         if value_type == 0:  # Unicode string
             return self._decode_string(value)
         if 1 < value_type < 6:  # DWORD / QWORD / WORD
-            return self._bytes_to_int_le(value)
+            return str(self._bytes_to_int_le(value))
         return None
 
     def _parse_tag(self, fh: BinaryIO) -> None:
@@ -1636,8 +1715,9 @@ class _Wma(TinyTag):
                 }
                 for i_field_name, length in data_blocks.items():
                     bytestring = fh.read(length)
-                    if not i_field_name.startswith('_'):
-                        self._set_field(i_field_name, self._decode_string(bytestring))
+                    value = self._decode_string(bytestring)
+                    if not i_field_name.startswith('_') and value:
+                        self._set_field(i_field_name, value)
             elif object_id == self._ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 descriptor_count = self._bytes_to_int_le(fh.read(2))
@@ -1659,7 +1739,7 @@ class _Wma(TinyTag):
                         if field_name in {'track', 'disc'}:
                             if isinstance(field_value, int) or field_value.isdecimal():
                                 self._set_field(field_name, int(field_value))
-                        else:
+                        elif field_value:
                             self._set_field(field_name, field_value)
             elif object_id == self._ASF_FILE_PROPERTY_OBJECT and self._parse_duration:
                 fh.seek(40, os.SEEK_CUR)

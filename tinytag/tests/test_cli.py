@@ -76,14 +76,14 @@ def test_meta_data_output_default_json() -> None:
     output = run_cli(mp3_with_image)
     data = json.loads(output)
     assert data
-    assert set(data.keys()) == tinytag_attributes
+    assert set(data.keys()).issubset(tinytag_attributes)
 
 
 def test_meta_data_output_format_json() -> None:
     output = run_cli('-f json ' + mp3_with_image)
     data = json.loads(output)
     assert data
-    assert set(data.keys()) == tinytag_attributes
+    assert set(data.keys()).issubset(tinytag_attributes)
 
 
 def test_meta_data_output_format_csv() -> None:
@@ -91,7 +91,7 @@ def test_meta_data_output_format_csv() -> None:
     lines = [line for line in output.split(os.linesep) if line]
     assert all(',' in line for line in lines)
     attributes = set(line.split(',')[0] for line in lines)
-    assert set(attributes) == tinytag_attributes
+    assert set(attributes).issubset(tinytag_attributes)
 
 
 def test_meta_data_output_format_tsv() -> None:
@@ -99,13 +99,18 @@ def test_meta_data_output_format_tsv() -> None:
     lines = [line for line in output.split(os.linesep) if line]
     assert all('\t' in line for line in lines)
     attributes = set(line.split('\t')[0] for line in lines)
-    assert set(attributes) == tinytag_attributes
+    assert set(attributes).issubset(tinytag_attributes)
 
 
 def test_meta_data_output_format_tabularcsv() -> None:
     output = run_cli('-f tabularcsv ' + mp3_with_image)
     header, _line, _rest = output.split(os.linesep)
-    assert set(header.split(',')) == tinytag_attributes
+    assert set(header.split(',')).issubset(tinytag_attributes)
+
+
+def test_meta_data_output_format_invalid() -> None:
+    output = run_cli('-f invalid ' + mp3_with_image)
+    assert not output
 
 
 def test_fail_on_unsupported_file() -> None:
