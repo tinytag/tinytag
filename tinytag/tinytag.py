@@ -1091,7 +1091,10 @@ class _ID3(TinyTag):
         field_name = cls._UNKNOWN_IMAGE_TYPE
         if 0 <= pic_type <= len(cls._IMAGE_TYPES):
             field_name = cls._IMAGE_TYPES[pic_type]
-        image = TagImage(field_name, data)
+        name = field_name
+        if field_name.startswith(cls._EXTRA_PREFIX):
+            name = field_name[len(cls._EXTRA_PREFIX):]
+        image = TagImage(name, data)
         if mime_type:
             image.mime_type = mime_type
         if description:

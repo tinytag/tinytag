@@ -755,10 +755,10 @@ def test_image_loading_extra() -> None:
     assert tag.images.any is not None
     assert tag.images.any.data == image.data
     assert image.mime_type == 'image/jpeg'
-    assert image.name == 'extra.bright_colored_fish'
+    assert image.name == 'bright_colored_fish'
     assert len(image.data) == 1220
     assert str(image) == (
-        "{'name': 'extra.bright_colored_fish', 'data': b'\\xff\\xd8\\xff\\xe0\\x00"
+        "{'name': 'bright_colored_fish', 'data': b'\\xff\\xd8\\xff\\xe0\\x00"
         "\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
         "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
         "'description': None}"
@@ -837,7 +837,7 @@ def test_to_str_flatten() -> None:
 def test_to_str_images() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
     assert str(tag.images) == (
-        "{'extra': {'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
+        "{'extra': {'bright_colored_fish': [{'name': 'bright_colored_fish', "
         "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
         "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}}"
@@ -847,7 +847,7 @@ def test_to_str_images() -> None:
 def test_to_str_images_flatten() -> None:
     tag = TinyTag.get(os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
     assert str(tag.images.as_dict(flatten=True)) == (
-        "{'bright_colored_fish': [{'name': 'extra.bright_colored_fish', "
+        "{'bright_colored_fish': [{'name': 'bright_colored_fish', "
         "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
         "lcm..', 'mime_type': 'image/jpeg', 'description': None}]}"
