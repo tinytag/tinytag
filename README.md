@@ -34,41 +34,54 @@ python3 -m pip install tinytag
   * Pure Python, no dependencies
   * Supports Python 3.7 or higher
   * High test coverage
-  * A few hundred lines of code (just include it in your project!)
+  * Small, portable library
 
-tinytag only provides the minimum needed for _reading_ meta-data.
-It can determine track number, total tracks, title, artist, album, year, duration and any more.
+## Usage
+
+tinytag only provides the minimum needed for _reading_ metadata, and presents
+it in a simple format. It can determine track number, total tracks, title,
+artist, album, year, duration and more.
 
     from tinytag import TinyTag
-    tag = TinyTag.get('/some/music.mp3')
-    print('This track is by %s.' % tag.artist)
-    print('It is %f seconds long.' % tag.duration)
+    tag: TinyTag = TinyTag.get('/some/music.mp3')
+    print(f'This track is by {tag.artist}.')
+    print(f'It is {tag.duration:.2f} seconds long.')
     
 Alternatively you can use tinytag directly on the command line:
 
-    $ python -m tinytag --format csv /some/music.mp3
+    $ python3 -m tinytag --format csv /some/music.mp3
     > {"filename": "/some/music.mp3", "filesize": 30212227, "album": "Album", "albumartist": "Artist", "artist": "Artist", "audio_offset": null, "bitrate": 256, "channels": 2, "comment": null, "composer": null, "disc": "1", "disc_total": null, "duration": 10, "genre": null, "samplerate": 44100, "title": "Title", "track": "5", "track_total": null, "year": "2012"}
 
-Check `python -m tinytag --help` for all CLI options, for example other output formats.
+Check `python3 -m tinytag --help` for all CLI options, for example other
+output formats.
 
-To receive a list of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
+Support for changing/writing metadata will not be added, use another library
+for this.
+
+### Supported Files
+
+To receive a tuple of file extensions tinytag supports, use the
+`SUPPORTED_FILE_EXTENSIONS` constant:
 
     TinyTag.SUPPORTED_FILE_EXTENSIONS
 
-Alternatively, check if a file is supported:
+Alternatively, check if a file is supported by providing its path:
 
     is_supported = TinyTag.is_supported('/some/music.mp3')
 
-List of possible attributes you can get with TinyTag:
+### Common Metadata
+
+tinytag provides some common attributes, which always contain a single value.
+These are helpful when you need quick access to common metadata fields or
+audio properties.
 
     tag.album         # album as string
     tag.albumartist   # album artist as string
     tag.artist        # artist name as string
-    tag.audio_offset  # number of bytes before audio data begins
     tag.bitdepth      # bit depth for lossless audio
     tag.bitrate       # bitrate in kBits/s
     tag.comment       # file comment as string
-    tag.composer      # composer as string 
+    tag.composer      # composer as string
     tag.disc          # disc number
     tag.disc_total    # the total number of discs
     tag.duration      # duration of the song in seconds
@@ -76,32 +89,187 @@ List of possible attributes you can get with TinyTag:
     tag.genre         # genre as string
     tag.samplerate    # samples per second
     tag.title         # title of the song
-    tag.track         # track number as string
-    tag.track_total   # total number of tracks as string
+    tag.track         # track number
+    tag.track_total   # total number of tracks
     tag.year          # year or date as string
 
-For non-common fields and fields specific to single file formats, use `extra`:
+### Additional Metadata
 
-    tag.extra         # a dict of additional data
+For additional values of the same type, non-common metadata fields, or fields
+specific to certain file formats, use `extra`:
 
-The `extra` dict currently *may* contain the following data:
-   `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
+    tag.extra         # a dictionary of additional data
 
-Additionally you can also get cover images from ID3 tags:
+The following standard `extra` field names are available when files provide
+such metadata:
 
-    tag = TinyTag.get('/some/music.mp3', image=True)
-    image_data = tag.get_image()
+    barcode
+    bpm
+    catalog_number
+    conductor
+    copyright
+    director
+    encoded_by
+    encoder_settings
+    initial_key
+    isrc
+    language
+    license
+    lyricist
+    lyrics
+    original_date
+    original_year
+    media
+    publisher
+    set_subtitle
+    url
+
+Other `extra` field names not documented above may be present, but are not
+guaranteed to be consistent/stable across audio formats and tinytag versions.
+
+Multiple values of the same field type are provided if the file contains them.
+Values are always provided as a list, even when only a single value exists.
+
+Example:
+
+    tag: TinyTag = TinyTag.get('/some/music.mp3')
+    catalog_numbers: list[str] | None = tag.extra.get('catalog_number')
+
+    if catalog_numbers:
+        catalog_number: str = catalog_numbers[0]
+        print(catalog_number)
+
+    print(catalog_numbers)
+
+Output:
+
+    > '10'
+    > ['10']
+
+When a file contains multiple values for a [common metadata field](#common-metadata)
+(e.g. `artist`), the primary value is accessed through the common attribute
+(`tag.artist`), and any additional values through the `extra` dictionary
+(`tag.extra.artist`).
+
+Example:
+
+    tag: TinyTag = TinyTag.get('/some/music.mp3')
+    artist: str | None = tag.artist
+    additional_artists: list[str] | None = tag.extra.get('artist')
+
+    print(artist)
+    print(additional_artists)
+
+Output:
+
+    > 'main artist'
+    > ['another artist', 'yet another artist']
+
+### All Metadata
+
+If you need to receive all available metadata as key-value pairs in a flat
+dictionary, use the `as_dict()` method. This combines the common attributes
+and `extra` dictionary, which can be more convenient in some cases.
+
+    tag: TinyTag = TinyTag.get('/some/music.mp3')
+    metadata: dict = tag.as_dict()
+
+### Images
+
+Additionally, you can also get embedded images. To receive any available image,
+prioritizing the front cover:
+
+    tag: TinyTag = TinyTag.get('/some/music.mp3', image=True)
+    image: TagImage | None = tag.images.any
+
+    if image is not None:
+        data: bytes = image.data
+        name: str = image.name
+        description: str = image.description
+
+If you need to receive an image of a specific kind, including its description,
+use `images`:
+
+    tag.images        # available embedded images
+
+The following common images are available:
+
+    front_cover
+    back_cover
+    leaflet
+    media
+    other
+
+The following less common images are provided in an `extra` dictionary when
+present:
+
+    icon
+    other_icon
+    lead_artist
+    artist
+    conductor
+    band
+    composer
+    lyricist
+    recording_location
+    during_recording
+    during_performance
+    video
+    bright_colored_fish
+    illustration
+    band_logo
+    publisher_logo
+    unknown
+
+The following image attributes are available:
+
+    data           # image data as bytes
+    name           # image name/kind as string
+    mime_type      # image MIME type as string
+    description    # image description as string
+
+To receive a common image, e.g. `front_cover`:
+
+    from tinytag import TinyTag, TagImage, TagImages
+
+    tag: TinyTag = TinyTag.get('/some/music.ogg')
+    images: TagImages = tag.images
+    front_cover_images: list[TagImage] = images.front_cover
+
+    if front_cover_images:
+        image: TagImage = front_cover_images[0]  # Use first image
+        data: bytes = image.data
+        description: str = image.description
+
+To receive an extra image, e.g. `bright_colored_fish`:
+
+    fish_images = tag.images.extra.get('bright_colored_fish')
+
+    if fish_images:
+        image = fish_images[0]  # Use first image
+        data = image.data
+        description = image.description
+
+### Encoding
 
 To open files using a specific encoding, you can use the `encoding` parameter.
-This parameter is however only used for formats where the encoding isn't explicitly
-specified.
+This parameter is however only used for formats where the encoding is not
+explicitly specified.
 
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
+
+### File-like Objects
 
 To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 `file_obj` keyword argument:
 
     TinyTag.get(file_obj=your_file_obj)
+
+### Exceptions
+
+    TinyTagException        # Base class for exceptions
+    ParseError              # Parsing an audio file failed
+    UnsupportedFormatError  # File format is not supported
 
 
 ## Changelog
