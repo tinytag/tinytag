@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-from tinytag.tinytag import TinyTag, TinyTagException
+from tinytag import TinyTag, TinyTagException
 
 
 def _usage() -> None:
@@ -73,15 +73,15 @@ def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> b
 
 
 def _run() -> int:
-    display_help = _pop_switch('--help') or _pop_switch('-h')
-    if display_help:
-        _usage()
-        return 0
+    header_printed = False
     save_image_path = _pop_param('--save-image', None) or _pop_param('-i', None)
     formatting = (_pop_param('--format', None) or _pop_param('-f', None)) or 'json'
     skip_unsupported = _pop_switch('--skip-unsupported') or _pop_switch('-s')
     filenames = sys.argv[1:]
-    header_printed = False
+    display_help = not filenames or _pop_switch('--help') or _pop_switch('-h')
+    if display_help:
+        _usage()
+        return 0
 
     for i, filename in enumerate(filenames):
         if skip_unsupported and not (TinyTag.is_supported(filename) and os.path.isfile(filename)):
