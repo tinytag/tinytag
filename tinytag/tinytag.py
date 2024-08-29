@@ -155,9 +155,9 @@ class TinyTag:
         """Check if a specific file is supported based on its file extension."""
         return cls._get_parser_for_filename(filename) is not None
 
-    def as_dict(self) -> dict[str, str | int | float | list[str | Image] | dict[str, list[Image]]]:
+    def as_dict(self) -> dict[str, str | int | float | list[str] | dict[str, list[Image]]]:
         """Return a flat dictionary representation of the tag."""
-        fields: dict[str, str | int | float | list[str | Image] | dict[str, list[Image]]] = {}
+        fields: dict[str, str | int | float | list[str] | dict[str, list[Image]]] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
                 continue
