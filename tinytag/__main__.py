@@ -46,7 +46,7 @@ def _pop_switch(name: str) -> bool:
 
 
 def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> bool:
-    data = tag.as_dict(flatten=True)
+    data = tag.as_dict()
     del data['images']
     if formatting == 'json':
         print(json.dumps(data, ensure_ascii=False, indent=2))

@@ -110,7 +110,7 @@ class TinyTag:
         self.__dict__: dict[str, str | int | float | Extra | Images]
 
     def __repr__(self) -> str:
-        return str(self.as_dict(flatten=False))
+        return str({key: value for key, value in self.__dict__.items() if not key.startswith('_')})
 
     @classmethod
     def get(cls,
@@ -155,37 +155,28 @@ class TinyTag:
         """Check if a specific file is supported based on its file extension."""
         return cls._get_parser_for_filename(filename) is not None
 
-    def as_dict(self, flatten: bool = True) -> dict[
-        str,
-        str | int | float | Extra | list[str | Image]
-        | dict[str, list[Image] | ImagesExtra]
-    ]:
-        """Return a dictionary representation of the tag."""
-        fields: dict[
-            str,
-            str | int | float | Extra | list[str | Image]
-            | dict[str, list[Image] | ImagesExtra]
-        ] = {}
+    def as_dict(self) -> dict[str, str | int | float | list[str | Image] | dict[str, list[Image]]]:
+        """Return a flat dictionary representation of the tag."""
+        fields: dict[str, str | int | float | list[str | Image] | dict[str, list[Image]]] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
                 continue
             if isinstance(value, Images):
-                fields[key] = value.as_dict(flatten)
-            elif not isinstance(value, Extra):
+                fields[key] = value.as_dict()
+                continue
+            if not isinstance(value, Extra):
                 if value is None:
                     continue
-                if flatten and key != 'filename' and isinstance(value, str):
+                if key != 'filename' and isinstance(value, str):
                     fields[key] = [value]
                 else:
                     fields[key] = value
-            elif flatten:
-                for extra_key, extra_values in value.items():
-                    extra_fields = fields.get(extra_key)
-                    if not isinstance(extra_fields, list):
-                        extra_fields = fields[extra_key] = []
-                    extra_fields += extra_values
-            else:
-                fields[key] = value
+                continue
+            for extra_key, extra_values in value.items():
+                extra_fields = fields.get(extra_key)
+                if not isinstance(extra_fields, list):
+                    extra_fields = fields[extra_key] = []
+                extra_fields += extra_values
         return fields
 
     @classmethod
@@ -365,7 +356,7 @@ class Images:
         self.__dict__: dict[str, list[Image] | ImagesExtra]
 
     def __repr__(self) -> str:
-        return str(self.as_dict(flatten=False))
+        return str({key: value for key, value in self.__dict__.items() if not key.startswith('_')})
 
     @property
     def any(self) -> Image | None:
@@ -382,21 +373,19 @@ class Images:
                 return image
         return None
 
-    def as_dict(self, flatten: bool = True) -> dict[str, list[Image] | ImagesExtra]:
-        """Return a dictionary representation of the tag images."""
-        images: dict[str, list[Image] | ImagesExtra] = {}
+    def as_dict(self) -> dict[str, list[Image]]:
+        """Return a flat dictionary representation of the tag images."""
+        images: dict[str, list[Image]] = {}
         for key, value in self.__dict__.items():
             if not isinstance(value, ImagesExtra):
                 if value:
                     images[key] = value
-            elif flatten:
-                for extra_key, extra_values in value.items():
-                    extra_images = images.get(extra_key)
-                    if not isinstance(extra_images, list):
-                        extra_images = images[extra_key] = []
-                    extra_images += extra_values
-            else:
-                images[key] = value
+                continue
+            for extra_key, extra_values in value.items():
+                extra_images = images.get(extra_key)
+                if not isinstance(extra_images, list):
+                    extra_images = images[extra_key] = []
+                extra_images += extra_values
         return images
 
     def _set_field(self, fieldname: str, value: Image) -> None:
