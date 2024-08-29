@@ -18,7 +18,8 @@ import sys
 
 import pytest
 
-from tinytag.tinytag import TinyTag, TinyTagException, _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
+from tinytag import TinyTag, TinyTagException
+from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 
 testfiles = dict([

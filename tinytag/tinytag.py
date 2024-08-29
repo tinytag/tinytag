@@ -99,15 +99,15 @@ class TinyTag:
         self.genre: str | None = None
         self.year: str | None = None
         self.comment: str | None = None
-        self.extra = TagExtra()
-        self.images = TagImages()
+        self.extra = Extra()
+        self.images = Images()
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # allow override for some file formats
         self._parse_duration = True
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
-        self.__dict__: dict[str, str | int | float | TagExtra | TagImages]
+        self.__dict__: dict[str, str | int | float | Extra | Images]
 
     def __repr__(self) -> str:
         return str(self.as_dict(flatten=False))
@@ -157,21 +157,21 @@ class TinyTag:
 
     def as_dict(self, flatten: bool = True) -> dict[
         str,
-        str | int | float | TagExtra | list[str | TagImage]
-        | dict[str, list[TagImage] | TagImagesExtra]
+        str | int | float | Extra | list[str | Image]
+        | dict[str, list[Image] | ImagesExtra]
     ]:
         """Return a dictionary representation of the tag."""
         fields: dict[
             str,
-            str | int | float | TagExtra | list[str | TagImage]
-            | dict[str, list[TagImage] | TagImagesExtra]
+            str | int | float | Extra | list[str | Image]
+            | dict[str, list[Image] | ImagesExtra]
         ] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
                 continue
-            if isinstance(value, TagImages):
+            if isinstance(value, Images):
                 fields[key] = value.as_dict(flatten)
-            elif not isinstance(value, TagExtra):
+            elif not isinstance(value, Extra):
                 if value is None:
                     continue
                 if flatten and key != 'filename' and isinstance(value, str):
@@ -308,12 +308,12 @@ class TinyTag:
         for key, value in other.__dict__.items():
             if key.startswith('_'):
                 continue
-            if isinstance(value, TagExtra):
+            if isinstance(value, Extra):
                 for extra_key, extra_values in other.extra.items():
                     for extra_value in extra_values:
                         self._set_field(
                             self._EXTRA_PREFIX + extra_key, extra_value, check_conflict=False)
-            elif isinstance(value, TagImages):
+            elif isinstance(value, Images):
                 self.images._update(value)
             elif value is not None:
                 self._set_field(key, value)
@@ -347,33 +347,33 @@ class TinyTag:
              'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
 
 
-class TagExtra(Dict[str, List[str]]):
+class Extra(Dict[str, List[str]]):
     """A dictionary containing additional fields of an audio file."""
 
 
-class TagImages:
+class Images:
     """A class containing images embedded in an audio file."""
     _EXTRA_PREFIX = 'extra.'
 
     def __init__(self) -> None:
-        self.front_cover: list[TagImage] = []
-        self.back_cover: list[TagImage] = []
-        self.leaflet: list[TagImage] = []
-        self.media: list[TagImage] = []
-        self.other: list[TagImage] = []
-        self.extra = TagImagesExtra()
-        self.__dict__: dict[str, list[TagImage] | TagImagesExtra]
+        self.front_cover: list[Image] = []
+        self.back_cover: list[Image] = []
+        self.leaflet: list[Image] = []
+        self.media: list[Image] = []
+        self.other: list[Image] = []
+        self.extra = ImagesExtra()
+        self.__dict__: dict[str, list[Image] | ImagesExtra]
 
     def __repr__(self) -> str:
         return str(self.as_dict(flatten=False))
 
     @property
-    def any(self) -> TagImage | None:
+    def any(self) -> Image | None:
         """Return a cover image.
         If not present, fall back to any other available image.
         """
         for value in self.__dict__.values():
-            if isinstance(value, TagImagesExtra):
+            if isinstance(value, ImagesExtra):
                 for extra_images in value.values():
                     for image in extra_images:
                         return image
@@ -382,11 +382,11 @@ class TagImages:
                 return image
         return None
 
-    def as_dict(self, flatten: bool = True) -> dict[str, list[TagImage] | TagImagesExtra]:
+    def as_dict(self, flatten: bool = True) -> dict[str, list[Image] | ImagesExtra]:
         """Return a dictionary representation of the tag images."""
-        images: dict[str, list[TagImage] | TagImagesExtra] = {}
+        images: dict[str, list[Image] | ImagesExtra] = {}
         for key, value in self.__dict__.items():
-            if not isinstance(value, TagImagesExtra):
+            if not isinstance(value, ImagesExtra):
                 if value:
                     images[key] = value
             elif flatten:
@@ -399,7 +399,7 @@ class TagImages:
                 images[key] = value
         return images
 
-    def _set_field(self, fieldname: str, value: TagImage) -> None:
+    def _set_field(self, fieldname: str, value: Image) -> None:
         if fieldname.startswith(self._EXTRA_PREFIX):
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
             extra_values = self.extra.get(fieldname, [])
@@ -415,9 +415,9 @@ class TagImages:
                 print(f'Setting image field "{fieldname}"')
             self.__dict__[fieldname] = values
 
-    def _update(self, other: TagImages) -> None:
+    def _update(self, other: Images) -> None:
         for key, value in other.__dict__.items():
-            if isinstance(value, TagImagesExtra):
+            if isinstance(value, ImagesExtra):
                 for extra_key, extra_values in value.items():
                     for image_extra in extra_values:
                         self._set_field(self._EXTRA_PREFIX + extra_key, image_extra)
@@ -426,11 +426,11 @@ class TagImages:
                 self._set_field(key, image)
 
 
-class TagImagesExtra(Dict[str, List["TagImage"]]):
+class ImagesExtra(Dict[str, List["Image"]]):
     """A dictionary containing additional images embedded in an audio file."""
 
 
-class TagImage:
+class Image:
     """A class representing an image embedded in an audio file."""
     def __init__(self, name: str, data: bytes, mime_type: str | None = None) -> None:
         self.name = name
@@ -452,7 +452,7 @@ class _MP4(TinyTag):
 
     class _Parser:
         atom_decoder_by_type: dict[
-            int, Callable[[bytes], int | str | bytes | TagImage]] | None = None
+            int, Callable[[bytes], int | str | bytes | Image]] | None = None
         _CUSTOM_FIELD_NAME_MAPPING = {
             'artists': 'artist',
             'conductor': 'extra.conductor',
@@ -490,8 +490,8 @@ class _MP4(TinyTag):
 
         @classmethod
         def _make_data_atom_parser(
-                cls, fieldname: str) -> Callable[[bytes], dict[str, int | str | bytes | TagImage]]:
-            def _parse_data_atom(data_atom: bytes) -> dict[str, int | str | bytes | TagImage]:
+                cls, fieldname: str) -> Callable[[bytes], dict[str, int | str | bytes | Image]]:
+            def _parse_data_atom(data_atom: bytes) -> dict[str, int | str | bytes | Image]:
                 data_type = struct.unpack('>I', data_atom[:4])[0]
                 if cls.atom_decoder_by_type is None:
                     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
@@ -501,8 +501,8 @@ class _MP4(TinyTag):
                         2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
                         3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
                         # 16: duration in millis
-                        13: lambda x: TagImage('front_cover', x, 'image/jpeg'),  # JPEG
-                        14: lambda x: TagImage('front_cover', x, 'image/png'),   # PNG
+                        13: lambda x: Image('front_cover', x, 'image/jpeg'),  # JPEG
+                        14: lambda x: Image('front_cover', x, 'image/png'),   # PNG
                         21: cls._unpack_integer,                    # BE Signed int
                         22: cls._unpack_integer_unsigned,           # BE Unsigned int
                         # 23: lambda x: struct.unpack('>f', x)[0],  # BE Float32
@@ -553,7 +553,7 @@ class _MP4(TinyTag):
                     break
 
         @classmethod
-        def _parse_custom_field(cls, data: bytes) -> dict[str, int | str | bytes | TagImage]:
+        def _parse_custom_field(cls, data: bytes) -> dict[str, int | str | bytes | Image]:
             fh = io.BytesIO(data)
             header_size = 8
             field_name = None
@@ -1087,14 +1087,14 @@ class _ID3(TinyTag):
 
     @classmethod
     def _create_tag_image(cls, data: bytes, pic_type: int, mime_type: str | None = None,
-                          description: str | None = None) -> tuple[str, TagImage]:
+                          description: str | None = None) -> tuple[str, Image]:
         field_name = cls._UNKNOWN_IMAGE_TYPE
         if 0 <= pic_type <= len(cls._IMAGE_TYPES):
             field_name = cls._IMAGE_TYPES[pic_type]
         name = field_name
         if field_name.startswith(cls._EXTRA_PREFIX):
             name = field_name[len(cls._EXTRA_PREFIX):]
-        image = TagImage(name, data)
+        image = Image(name, data)
         if mime_type:
             image.mime_type = mime_type
         if description:
@@ -1398,7 +1398,7 @@ class _Ogg(TinyTag):
 
                 if key_lowercase == "metadata_block_picture" and self._load_image:
                     if DEBUG:
-                        print('Found Vorbis TagImage', key, value[:64])
+                        print('Found Vorbis Image', key, value[:64])
                     fieldname, fieldvalue = _Flac._parse_image(io.BytesIO(base64.b64decode(value)))
                     self.images._set_field(fieldname, fieldvalue)
                 else:
@@ -1625,7 +1625,7 @@ class _Flac(TinyTag):
         self._tags_parsed = True
 
     @classmethod
-    def _parse_image(cls, fh: BinaryIO) -> tuple[str, TagImage]:
+    def _parse_image(cls, fh: BinaryIO) -> tuple[str, Image]:
         # https://xiph.org/flac/format.html#metadata_block_picture
         pic_type, mime_type_len = struct.unpack('>2I', fh.read(8))
         mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
