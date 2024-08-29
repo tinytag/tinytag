@@ -109,21 +109,23 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 ### 2.0.0  (Unreleased)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
+- **BREAKING:** 'extra' dict stores values in list form
 - **BREAKING:** TinyTagException no longer inherits LookupError
 - **BREAKING:** TinyTag subclasses are now private
 - **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
+- Add type hints to codebase
 - Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
 - Mark 'audio_offset' attribute as obsolete
 - Deprecate 'get_image()' method in favor of 'images.any' property
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images
 - Add more standard 'extra' fields
+- ID3: Fix invalid sample rate/duration in some cases
 - FLAC: Apply ID3 tags after Vorbis
-- OGG/WMA: set missing 'channels' field
-- WMA: set missing 'extra.copyright' field
-- WMA: raise exception if file is invalid
-- Add type hints to codebase
+- OGG/WMA: Set missing 'channels' field
+- WMA: Set missing 'extra.copyright' field
+- WMA: Raise exception if file is invalid
 - Various optimizations
 
 ### 1.10.1  (2023-10-26)
