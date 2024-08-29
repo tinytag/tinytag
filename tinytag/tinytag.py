@@ -156,7 +156,7 @@ class TinyTag:
         return cls._get_parser_for_filename(filename) is not None
 
     def as_dict(self) -> dict[str, str | int | float | list[str] | dict[str, list[Image]]]:
-        """Return a flat dictionary representation of the tag."""
+        """Return a flat dictionary representation of available metadata."""
         fields: dict[str, str | int | float | list[str] | dict[str, list[Image]]] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
@@ -374,7 +374,7 @@ class Images:
         return None
 
     def as_dict(self) -> dict[str, list[Image]]:
-        """Return a flat dictionary representation of the tag images."""
+        """Return a flat dictionary representation of available images."""
         images: dict[str, list[Image]] = {}
         for key, value in self.__dict__.items():
             if not isinstance(value, ImagesExtra):
