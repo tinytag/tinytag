@@ -83,6 +83,8 @@ testfiles = dict([
          'artist': 'Paso a paso', 'album': 'S/T', 'disc_total': 0, 'year': '2003'}),
     ('samples/empty_file.mp3',
         {'extra': {}, 'filesize': 0}),
+    ('samples/incomplete.mp3',
+        {'extra': {}, 'filesize': 3}),
     ('samples/silence-44khz-56k-mono-1s.mp3',
         {'extra': {}, 'channels': 1, 'samplerate': 44100, 'duration': 1.0265261269342902,
          'filesize': 7280, 'bitrate': 56.0}),
@@ -708,7 +710,6 @@ def test_mp3_length_estimation() -> None:
 
 @pytest.mark.parametrize("path,cls", [
     ('samples/silence-44-s-v1.mp3', _Flac),
-    ('samples/incomplete.mp3', _ID3),
     ('samples/flac1.5sStereo.flac', _Ogg),
     ('samples/flac1.5sStereo.flac', _Wave),
     ('samples/flac1.5sStereo.flac', _Wma),
