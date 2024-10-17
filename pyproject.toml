@@ -1,0 +1,113 @@
+[build-system]
+requires = ["flit_core>=3.2"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "tinytag"
+version = "2.0.0"
+description = "Read audio file metadata"
+authors = [
+    {name = "Tom Wallroth", email = "tomwallroth@gmail.com"},
+    {name = "Mat (mathiascode)"}
+]
+keywords = [
+    "metadata",
+    "audio",
+    "music",
+    "mp3",
+    "m4a",
+    "wav",
+    "ogg",
+    "opus",
+    "flac",
+    "wma",
+    "aiff"
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Multimedia",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Typing :: Typed"
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.7"
+
+[project.urls]
+Homepage = "https://github.com/tinytag/tinytag"
+
+[project.optional-dependencies]
+tests = [
+    "pycodestyle",
+    "pylint",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.flit.sdist]
+exclude = [
+    ".gitignore",
+    ".github/",
+    "tinytag/icons/",
+    "tinytag/tests/"
+]
+
+[tool.pylint.master]
+disable = [
+    "bad-plugin-value",
+    "invalid-name",
+    "protected-access",
+    "too-many-lines",
+    "too-many-arguments",
+    "too-many-boolean-expressions",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "too-many-nested-blocks",
+    "too-many-statements",
+    "too-few-public-methods",
+    "too-many-positional-arguments",
+    "unknown-option-value"
+]
+enable = [
+    "consider-using-augmented-assign",
+    "use-implicit-booleaness-not-comparison-to-string"
+]
+load-plugins = [
+    "pylint.extensions.bad_builtin",
+    "pylint.extensions.check_elif",
+    "pylint.extensions.code_style",
+    "pylint.extensions.comparison_placement",
+    "pylint.extensions.consider_refactoring_into_while_condition",
+    "pylint.extensions.emptystring",
+    "pylint.extensions.for_any_all",
+    "pylint.extensions.dict_init_mutate",
+    "pylint.extensions.dunder",
+    "pylint.extensions.eq_without_hash",
+    "pylint.extensions.overlapping_exceptions",
+    "pylint.extensions.private_import",
+    "pylint.extensions.set_membership",
+    "pylint.extensions.typing"
+]
+ignore-paths = "build"
+py-version = "3.7"
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.mypy]
+strict = true
