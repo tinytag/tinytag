@@ -54,8 +54,7 @@ Homepage = "https://github.com/tinytag/tinytag"
 tests = [
     "pycodestyle",
     "pylint",
-    "pytest",
-    "pytest-cov"
+    "pytest"
 ]
 
 [tool.flit.sdist]

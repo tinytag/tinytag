@@ -41,7 +41,7 @@ jobs:
           cache-dependency-path: setup.py
 
       - name: Install dependencies
-        run: python -m pip install build flit .[tests]
+        run: python -m pip install build coverage flit .[tests]
 
       - name: PEP 8 style checks
         run: python -m pycodestyle --max-line-length=100 .
@@ -56,7 +56,9 @@ jobs:
           python -m mypy -p tinytag
 
       - name: Unit tests
-        run: python -m pytest --cov --cov-report=lcov:coverage/lcov.info
+        run: |
+          coverage run -m pytest
+          coverage lcov -o coverage/lcov.info
         env:
           TINYTAG_DEBUG: true
 
