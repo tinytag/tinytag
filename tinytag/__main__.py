@@ -1,12 +1,13 @@
 # pylint: disable=missing-module-docstring,protected-access
 
 from __future__ import annotations
-from io import StringIO
-from os.path import splitext
+
 import csv
 import json
-import os
 import sys
+
+from io import StringIO
+from os.path import isfile, splitext
 
 from tinytag import TinyTag, TinyTagException
 
@@ -84,7 +85,7 @@ def _run() -> int:
         return 0
 
     for i, filename in enumerate(filenames):
-        if skip_unsupported and not (TinyTag.is_supported(filename) and os.path.isfile(filename)):
+        if skip_unsupported and not (TinyTag.is_supported(filename) and isfile(filename)):
             continue
         try:
             tag = TinyTag.get(filename, image=save_image_path is not None)
