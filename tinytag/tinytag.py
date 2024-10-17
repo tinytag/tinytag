@@ -29,11 +29,6 @@
 
 """Audio file metadata reader"""
 
-# pylint: disable=invalid-name,protected-access
-# pylint: disable=too-many-lines,too-many-arguments,too-many-boolean-expressions
-# pylint: disable=too-many-branches,too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-nested-blocks,too-many-statements,too-few-public-methods
-
 
 from __future__ import annotations
 from base64 import b64decode

@@ -1,36 +1,15 @@
 *.py[cod]
 
-# C extensions
-*.so
-
 # Packages
-*.egg
 *.egg-info
 dist
 build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-lib
-lib64
 __pycache__
-
-# Installer logs
-pip-log.txt
 
 # Unit test / coverage reports
 .coverage
-.tox
-nosetests.xml
-test-results/
 .mypy_cache
-
-# Translations
-*.mo
+.pytest_cache
 
 # Mr Developer
 .mr.developer.cfg
@@ -44,6 +23,3 @@ venv
 
 # Visual Studio Code
 .vscode
-
-# custom test samples
-tinytag/tests/custom_samples

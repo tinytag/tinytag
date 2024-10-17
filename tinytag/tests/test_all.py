@@ -1,4 +1,4 @@
-# pylint: disable=missing-function-docstring,missing-module-docstring,protected-access
+# pylint: disable=missing-function-docstring,missing-module-docstring
 
 from __future__ import annotations
 
