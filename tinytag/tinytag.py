@@ -33,7 +33,6 @@
 from __future__ import annotations
 from base64 import b64decode
 from collections.abc import Callable, Iterator
-from functools import reduce
 from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, SEEK_SET, environ, fsdecode
 from re import match
@@ -303,16 +302,6 @@ class TinyTag:
                 self._set_field(key, value)
 
     @staticmethod
-    def _bytes_to_int_le(b: bytes) -> int:
-        fmt = {1: '<B', 2: '<H', 4: '<I', 8: '<Q'}.get(len(b))
-        result: int = unpack(fmt, b)[0] if fmt is not None else 0
-        return result
-
-    @staticmethod
-    def _bytes_to_int(b: tuple[int, ...]) -> int:
-        return reduce(lambda accu, elem: (accu << 8) + elem, b, 0)
-
-    @staticmethod
     def _unpad(s: str) -> str:
         # strings in mp3 and asf *may* be terminated with a zero byte at the end
         return s.strip('\x00')
@@ -514,7 +503,7 @@ class _MP4(TinyTag):
                 cls, fieldname1: str, fieldname2: str) -> Callable[[bytes], dict[str, int]]:
             def _(data_atom: bytes) -> dict[str, int]:
                 number_data = data_atom[8:14]
-                numbers = unpack('>HHH', number_data)
+                numbers = unpack('>3H', number_data)
                 # for some reason the first number is always irrelevant.
                 return {fieldname1: numbers[1], fieldname2: numbers[2]}
             return _
@@ -568,8 +557,7 @@ class _MP4(TinyTag):
             datafh = BytesIO(data)
             datafh.seek(16, SEEK_CUR)  # jump over version and flags
             channels = unpack('>H', datafh.read(2))[0]
-            datafh.seek(2, SEEK_CUR)   # jump over bit_depth
-            datafh.seek(2, SEEK_CUR)   # jump over QT compr id & pkt size
+            datafh.seek(4, SEEK_CUR)   # jump over bit_depth, QT compr id & pkt size
             sr = unpack('>I', datafh.read(4))[0]
 
             # ES Description Atom
@@ -997,7 +985,7 @@ class _ID3(TinyTag):
             extended = (header[3] & 0x40) > 0
             # experimental = (header[3] & 0x20) > 0
             # footer = (header[3] & 0x10) > 0
-            size = self._calc_size(header[4:8], 7)
+            size = self._unsynchsafe(header[4:8])
         self._bytepos_after_id3v2 = size
         return size, extended, major
 
@@ -1007,8 +995,7 @@ class _ID3(TinyTag):
             end_pos = fh.tell() + size
             parsed_size = 0
             if extended:  # just read over the extended header.
-                size_bytes = unpack('4B', fh.read(6)[0:4])
-                extd_size = self._calc_size(size_bytes, 7)
+                extd_size = self._unsynchsafe(unpack('4B', fh.read(6)[:4]))
                 fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
             while parsed_size < size:
                 frame_size = self._parse_frame(fh, id3version=major)
@@ -1094,14 +1081,18 @@ class _ID3(TinyTag):
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
         frame_header_size = 6 if id3version == 2 else 10
         frame_size_bytes = 3 if id3version == 2 else 4
-        binformat = '3s3B' if id3version == 2 else '4s4B2B'
-        bits_per_byte = 7 if id3version == 4 else 8  # only id3v2.4 is synchsafe
+        is_synchsafe_int = id3version == 4
         frame_header_data = fh.read(frame_header_size)
         if len(frame_header_data) != frame_header_size:
             return 0
-        frame = unpack(binformat, frame_header_data)
-        frame_id = self._decode_string(frame[0])
-        frame_size = self._calc_size(frame[1:1 + frame_size_bytes], bits_per_byte)
+        frame_id = self._decode_string(frame_header_data[:frame_size_bytes])
+        frame_size: int
+        if frame_size_bytes == 3:
+            frame_size = unpack('>I', b'\x00' + frame_header_data[3:6])[0]
+        elif is_synchsafe_int:
+            frame_size = self._unsynchsafe(unpack('4B', frame_header_data[4:8]))
+        else:
+            frame_size = unpack('>I', frame_header_data[4:8])[0]
         if DEBUG:
             print(f'Found id3 Frame {frame_id} at {fh.tell()}-{fh.tell() + frame_size} '
                   f'of {self.filesize}')
@@ -1152,7 +1143,7 @@ class _ID3(TinyTag):
             elif frame_id in self._IMAGE_FRAME_IDS:
                 if self._load_image:
                     # See section 4.14: http://id3.org/id3v2.4.0-frames
-                    encoding = content[0:1]
+                    encoding = content[:1]
                     if frame_id == 'PIC':  # ID3 v2.2:
                         imgformat = self._decode_string(content[1:4]).lower()
                         mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
@@ -1200,7 +1191,7 @@ class _ID3(TinyTag):
                     bytestr = bytestr[3:]  # remove language
                 bytestr = bytestr.lstrip(b'\x00')  # strip optional additional null bytes
             # read byte order mark to determine endianness
-            encoding = 'UTF-16be' if bytestr[0:2] == b'\xfe\xff' else 'UTF-16le'
+            encoding = 'UTF-16be' if bytestr[:2] == b'\xfe\xff' else 'UTF-16le'
             # strip the bom if it exists
             if bytestr[:2] in {b'\xfe\xff', b'\xff\xfe'}:
                 bytestr = bytestr[2:] if len(bytestr) % 2 == 0 else bytestr[2:-1]
@@ -1221,9 +1212,8 @@ class _ID3(TinyTag):
         return self._unpad(bytestr.decode(encoding, 'replace'))
 
     @staticmethod
-    def _calc_size(bytestr: tuple[int, ...], bits_per_byte: int) -> int:
-        # length of some mp3 header fields is described by 7 or 8-bit-bytes
-        return reduce(lambda accu, elem: (accu << bits_per_byte) + elem, bytestr, 0)
+    def _unsynchsafe(intarr: tuple[int, ...]) -> int:
+        return (intarr[0] << 21) + (intarr[1] << 14) + (intarr[2] << 7) + intarr[3]
 
 
 class _Ogg(TinyTag):
@@ -1303,29 +1293,30 @@ class _Ogg(TinyTag):
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
             walker = BytesIO(packet)
-            if packet[0:7] == b"\x01vorbis":
+            if packet[:7] == b"\x01vorbis":
                 if self._parse_duration:
                     (self.channels, self.samplerate, _max_bitrate, bitrate,
                      _min_bitrate) = unpack("<B4i", packet[11:28])
                     self.bitrate = bitrate / 1000
-            elif packet[0:7] == b"\x03vorbis":
+            elif packet[:7] == b"\x03vorbis":
                 if self._parse_tags:
                     walker.seek(7, SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(walker)
-            elif packet[0:8] == b'OpusHead':
+            elif packet[:8] == b'OpusHead':
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
                     # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
                     walker.seek(8, SEEK_CUR)  # jump over header name
-                    (version, ch, _, _sr, _, _) = unpack("<BBHIHB", walker.read(11))
+                    version, ch = unpack("BB", walker.read(2))
+                    walker.seek(9, SEEK_CUR)
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
                         self.samplerate = 48000  # internally opus always uses 48khz
-            elif packet[0:8] == b'OpusTags':
+            elif packet[:8] == b'OpusTags':
                 if self._parse_tags:  # parse opus metadata:
                     walker.seek(8, SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(walker)
-            elif packet[0:5] == b'\x7fFLAC':
+            elif packet[:5] == b'\x7fFLAC':
                 # https://xiph.org/flac/ogg_mapping.html
                 walker.seek(9, SEEK_CUR)  # jump over header name, version and number of headers
                 flactag = _Flac()
@@ -1343,12 +1334,13 @@ class _Ogg(TinyTag):
                     if block_type == _Flac.METADATA_VORBIS_COMMENT:
                         self._parse_vorbis_comment(walker)
                 check_flac_second_packet = False
-            elif packet[0:8] == b'Speex   ':
+            elif packet[:8] == b'Speex   ':
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
                     walker.seek(36, SEEK_CUR)  # jump over header name and irrelevant fields
-                    (self.samplerate, _, _, self.channels,
-                     self.bitrate) = unpack("<5i", walker.read(20))
+                    self.samplerate = unpack("<i", walker.read(4))[0]
+                    walker.seek(8, SEEK_CUR)
+                    self.channels, self.bitrate = unpack("<ii", walker.read(8))
                 check_speex_second_packet = True
             elif check_speex_second_packet:
                 if self._parse_tags:
@@ -1546,16 +1538,14 @@ class _Flac(TinyTag):
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         header_data = fh.read(4)
         while len(header_data) == 4:
-            meta_header = unpack('B3B', header_data)
-            block_type = meta_header[0] & 0x7f
-            is_last_block = meta_header[0] & 0x80
-            size = self._bytes_to_int(meta_header[1:4])
+            block_type = header_data[0] & 0x7f
+            is_last_block = header_data[0] & 0x80
+            size = unpack('>I', b'\x00' + header_data[1:4])[0]
             # http://xiph.org/flac/format.html#metadata_block_streaminfo
             if block_type == self.METADATA_STREAMINFO and self._parse_duration:
-                stream_info_header = fh.read(size)
-                if len(stream_info_header) < 34:  # invalid streaminfo
+                info_header = fh.read(size)
+                if len(info_header) < 34:  # invalid streaminfo
                     break
-                header_values = unpack('HH3s3s8B16s', stream_info_header)
                 # From the xiph documentation:
                 # py | <bits>
                 # ----------------------------------------------
@@ -1568,22 +1558,19 @@ class _Flac(TinyTag):
                 #    | <5>   (bits per sample)-1.
                 #    | <36>  Total samples in stream.
                 # 16s| <128> MD5 signature
-                # min_blk, max_blk, min_frm, max_frm = header[0:4]
-                # min_frm = self._bytes_to_int(unpack('3B', min_frm))
-                # max_frm = self._bytes_to_int(unpack('3B', max_frm))
                 #                 channels--.  bits      total samples
                 # |----- samplerate -----| |-||----| |---------~   ~----|
                 # 0000 0000 0000 0000 0000 0000 0000 0000 0000      0000
                 # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
-                self.samplerate = self._bytes_to_int(header_values[4:7]) >> 4
-                self.channels = ((header_values[6] >> 1) & 0x07) + 1
+                self.samplerate = samplerate = unpack('>I', b'\x00' + info_header[10:13])[0] >> 4
+                self.channels = ((info_header[12] >> 1) & 0x07) + 1
                 self.bitdepth = (
-                    ((header_values[6] & 1) << 4) + ((header_values[7] & 0xF0) >> 4) + 1)
-                total_sample_bytes = ((header_values[7] & 0x0F),) + header_values[8:12]
-                total_samples = self._bytes_to_int(total_sample_bytes)
-                self.duration = total_samples / self.samplerate
-                if self.duration > 0:
-                    self.bitrate = self.filesize / self.duration * 8 / 1000
+                    ((info_header[12] & 1) << 4) + ((info_header[13] & 0xF0) >> 4) + 1)
+                total_sample_bytes = bytes([info_header[13] & 0x0F]) + info_header[14:18]
+                total_samples = unpack('>Q', b'\x00\x00\x00' + total_sample_bytes)[0]
+                self.duration = duration = total_samples / samplerate
+                if duration > 0:
+                    self.bitrate = self.filesize / duration * 8 / 1000
             elif block_type == self.METADATA_VORBIS_COMMENT and self._parse_tags:
                 oggtag = _Ogg()
                 oggtag._filehandler = fh
@@ -1609,7 +1596,7 @@ class _Flac(TinyTag):
     @classmethod
     def _parse_image(cls, fh: BinaryIO) -> tuple[str, Image]:
         # https://xiph.org/flac/format.html#metadata_block_picture
-        pic_type, mime_type_len = unpack('>2I', fh.read(8))
+        pic_type, mime_type_len = unpack('>II', fh.read(8))
         mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
         description_len = unpack('>I', fh.read(4))[0]
         description = fh.read(description_len).decode('utf-8', 'replace')
@@ -1669,8 +1656,18 @@ class _Wma(TinyTag):
         """ decode _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
         if value_type == 0:  # Unicode string
             return self._decode_string(value)
+        fmt = None
         if 1 < value_type < 6:  # DWORD / QWORD / WORD
-            return str(self._bytes_to_int_le(value))
+            if len(value) == 1:
+                fmt = '<B'
+            elif len(value) == 2:
+                fmt = '<H'
+            elif len(value) == 4:
+                fmt = '<I'
+            elif len(value) == 8:
+                fmt = '<Q'
+        if fmt:
+            return str(unpack(fmt, value)[0])
         return None
 
     def _parse_tag(self, fh: BinaryIO) -> None:
@@ -1682,15 +1679,15 @@ class _Wma(TinyTag):
             raise ParseError('Invalid WMA header')
         while True:
             object_id = fh.read(16)
-            object_size = self._bytes_to_int_le(fh.read(8))
+            object_size_data = fh.read(8)
+            if not object_size_data:
+                break
+            object_size = unpack('<Q', object_size_data)[0]
             if object_size == 0 or object_size > self.filesize:
                 break  # invalid object, stop parsing.
             if object_id == self._ASF_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
-                title_length = self._bytes_to_int_le(fh.read(2))
-                author_length = self._bytes_to_int_le(fh.read(2))
-                copyright_length = self._bytes_to_int_le(fh.read(2))
-                description_length = self._bytes_to_int_le(fh.read(2))
-                rating_length = self._bytes_to_int_le(fh.read(2))
+                (title_length, author_length, copyright_length, description_length,
+                 rating_length) = unpack('<5H', fh.read(10))
                 data_blocks = {
                     'title': title_length,
                     'artist': author_length,
@@ -1705,12 +1702,11 @@ class _Wma(TinyTag):
                         self._set_field(i_field_name, value)
             elif object_id == self._ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
-                descriptor_count = self._bytes_to_int_le(fh.read(2))
+                descriptor_count = unpack('<H', fh.read(2))[0]
                 for _ in range(descriptor_count):
-                    name_len = self._bytes_to_int_le(fh.read(2))
+                    name_len = unpack('<H', fh.read(2))[0]
                     name = self._decode_string(fh.read(name_len))
-                    value_type = self._bytes_to_int_le(fh.read(2))
-                    value_len = self._bytes_to_int_le(fh.read(2))
+                    value_type, value_len = unpack('<HH', fh.read(4))
                     if value_type == 1:
                         fh.seek(value_len, SEEK_CUR)  # skip byte values
                         continue
@@ -1728,9 +1724,9 @@ class _Wma(TinyTag):
                             self._set_field(field_name, field_value)
             elif object_id == self._ASF_FILE_PROPERTY_OBJECT and self._parse_duration:
                 fh.seek(40, SEEK_CUR)
-                play_duration = self._bytes_to_int_le(fh.read(8)) / 10000000
+                play_duration = unpack('<Q', fh.read(8))[0] / 10000000
                 fh.seek(8, SEEK_CUR)
-                preroll = self._bytes_to_int_le(fh.read(8)) / 1000
+                preroll = unpack('<Q', fh.read(8))[0] / 1000
                 fh.seek(16, SEEK_CUR)
                 # According to the specification, we need to subtract the preroll from play_duration
                 # to get the actual duration of the file
@@ -1738,18 +1734,15 @@ class _Wma(TinyTag):
             elif object_id == self._ASF_STREAM_PROPERTIES_OBJECT and self._parse_duration:
                 stream_type = fh.read(16)
                 fh.seek(24, SEEK_CUR)  # skip irrelevant fields
-                type_specific_data_length = self._bytes_to_int_le(fh.read(4))
-                error_correction_data_length = self._bytes_to_int_le(fh.read(4))
+                type_specific_data_length, error_correction_data_length = unpack('<II', fh.read(8))
                 fh.seek(6, SEEK_CUR)   # skip irrelevant fields
                 already_read = 0
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
-                    codec_id_format_tag = self._bytes_to_int_le(fh.read(2))
-                    self.channels = self._bytes_to_int_le(fh.read(2))
-                    self.samplerate = self._bytes_to_int_le(fh.read(4))
-                    avg_bytes_per_second = self._bytes_to_int_le(fh.read(4))
+                    (codec_id_format_tag, self.channels, self.samplerate,
+                     avg_bytes_per_second) = unpack('<HHII', fh.read(12))
                     self.bitrate = avg_bytes_per_second * 8 / 1000
                     fh.seek(2, SEEK_CUR)  # skip irrelevant field
-                    bits_per_sample = self._bytes_to_int_le(fh.read(2))
+                    bits_per_sample = unpack('<H', fh.read(2))[0]
                     if codec_id_format_tag == 355:  # lossless
                         self.bitdepth = bits_per_sample
                     already_read = 16
