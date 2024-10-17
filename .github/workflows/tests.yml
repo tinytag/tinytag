@@ -67,7 +67,7 @@ jobs:
         run: python -m build --no-isolation
 
       - name: Coveralls
-        uses: coverallsapp/github-action@master
+        uses: coverallsapp/github-action@v2
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
@@ -78,6 +78,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Coveralls finished
-        uses: coverallsapp/github-action@master
+        uses: coverallsapp/github-action@v2
         with:
           parallel-finished: true
