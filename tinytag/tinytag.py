@@ -31,15 +31,21 @@
 
 
 from __future__ import annotations
-from base64 import b64decode
-from collections.abc import Callable, Iterator
+from binascii import a2b_base64
 from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, SEEK_SET, environ, fsdecode
-from re import match
 from struct import unpack
 from sys import stderr
-from typing import Any, BinaryIO, Dict, List
-from warnings import warn
+
+# Lazy imports for type checking
+if False:  # pylint: disable=using-constant-test
+    from collections.abc import Callable, Iterator
+    from typing import Any, BinaryIO, Dict, List
+
+    _Extra = Dict[str, List[str]]
+    _ImagesExtra = Dict[str, List["Image"]]
+else:
+    _Extra = _ImagesExtra = dict
 
 
 DEBUG = bool(environ.get('TINYTAG_DEBUG'))  # some of the parsers can print debug info
@@ -120,6 +126,7 @@ class TinyTag:
         if file_obj is None:
             raise ValueError('Either filename or file_obj argument is required')
         if 'ignore_errors' in kwargs:
+            from warnings import warn  # pylint: disable=import-outside-toplevel
             warn('ignore_errors argument is obsolete, and will be removed in a future '
                  '2.x release', DeprecationWarning, stacklevel=2)
         try:
@@ -193,6 +200,7 @@ class TinyTag:
     @classmethod
     def _get_parser_for_file_handle(cls, fh: BinaryIO) -> type[TinyTag] | None:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
+        from re import match  # pylint: disable=import-outside-toplevel
         if cls._magic_bytes_mapping is None:
             cls._magic_bytes_mapping = {
                 b'^ID3': _ID3,
@@ -308,6 +316,7 @@ class TinyTag:
 
     def get_image(self) -> bytes | None:
         """Deprecated, use images.any instead."""
+        from warnings import warn  # pylint: disable=import-outside-toplevel
         warn('get_image() is deprecated, and will be removed in a future 2.x release. '
              'Use images.any instead.', DeprecationWarning, stacklevel=2)
         image = self.images.any
@@ -316,11 +325,12 @@ class TinyTag:
     @property
     def audio_offset(self) -> None:
         """Obsolete."""
+        from warnings import warn  # pylint: disable=import-outside-toplevel
         warn('audio_offset attribute is obsolete, and will be '
              'removed in a future 2.x release', DeprecationWarning, stacklevel=2)
 
 
-class Extra(Dict[str, List[str]]):
+class Extra(_Extra):
     """A dictionary containing additional fields of an audio file."""
 
 
@@ -397,7 +407,7 @@ class Images:
                 self._set_field(key, image)
 
 
-class ImagesExtra(Dict[str, List["Image"]]):
+class ImagesExtra(_ImagesExtra):
     """A dictionary containing additional images embedded in an audio file."""
 
 
@@ -1373,7 +1383,7 @@ class _Ogg(TinyTag):
                 if key_lowercase == "metadata_block_picture" and self._load_image:
                     if DEBUG:
                         print('Found Vorbis Image', key, value[:64])
-                    fieldname, fieldvalue = _Flac._parse_image(BytesIO(b64decode(value)))
+                    fieldname, fieldvalue = _Flac._parse_image(BytesIO(a2b_base64(value)))
                     self.images._set_field(fieldname, fieldvalue)
                 else:
                     if DEBUG:

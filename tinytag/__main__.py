@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import csv
-import json
 import sys
 
 from io import StringIO
@@ -50,10 +48,12 @@ def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> b
     data = tag.as_dict()
     del data['images']
     if formatting == 'json':
+        import json  # pylint: disable=import-outside-toplevel
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return header_printed
     if formatting not in {'csv', 'tsv', 'tabularcsv'}:
         return header_printed
+    import csv  # pylint: disable=import-outside-toplevel
     for field, value in data.items():
         if isinstance(value, str):
             data[field] = value.replace('\x00', ';')  # use a more friendly separator for output
