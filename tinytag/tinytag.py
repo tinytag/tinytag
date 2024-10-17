@@ -75,7 +75,6 @@ class TinyTag:
     )
     _EXTRA_PREFIX = 'extra.'
     _file_extension_mapping: dict[tuple[str, ...], type[TinyTag]] | None = None
-    _magic_bytes_mapping: dict[bytes, type[TinyTag]] | None = None
 
     def __init__(self) -> None:
         self.filename: bytes | str | PathLike[Any] | None = None
@@ -200,30 +199,25 @@ class TinyTag:
     @classmethod
     def _get_parser_for_file_handle(cls, fh: BinaryIO) -> type[TinyTag] | None:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
-        from re import match  # pylint: disable=import-outside-toplevel
-        if cls._magic_bytes_mapping is None:
-            cls._magic_bytes_mapping = {
-                b'^ID3': _ID3,
-                b'^\xff\xfb': _ID3,
-                b'^OggS.........................FLAC': _Ogg,
-                b'^OggS........................Opus': _Ogg,
-                b'^OggS........................Speex': _Ogg,
-                b'^OggS.........................vorbis': _Ogg,
-                b'^RIFF....WAVE': _Wave,
-                b'^fLaC': _Flac,
-                b'^\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C': _Wma,
-                b'....ftypM4A': _MP4,  # https://www.file-recovery.com/m4a-signature-format.htm
-                b'....ftypaax': _MP4,  # Audible proprietary M4A container
-                b'....ftypaaxc': _MP4,  # Audible proprietary M4A container
-                b'\xff\xf1': _MP4,  # https://www.garykessler.net/library/file_sigs.html
-                b'^FORM....AIFF': _Aiff,
-                b'^FORM....AIFC': _Aiff,
-            }
-        header = fh.read(max(len(sig) for sig in cls._magic_bytes_mapping))
+        header = fh.read(35)
         fh.seek(0)
-        for magic, parser in cls._magic_bytes_mapping.items():
-            if match(magic, header):
-                return parser
+        if header[:3] == b'ID3' or header[:2] == b'\xff\xfb':
+            return _ID3
+        if header[:4] == b'fLaC':
+            return _Flac
+        if ((header[4:8] == b'ftyp' and header[8:11] in {b'M4A', b'M4B', b'aax'})
+                or b'\xff\xf1' in header):
+            return _MP4
+        if (header[:4] == b'OggS'
+            and (header[29:33] == b'FLAC' or header[29:35] == b'vorbis'
+                 or header[28:32] == b'Opus' or header[29:34] == b'Speex')):
+            return _Ogg
+        if header[:4] == b'RIFF' and header[8:12] == b'WAVE':
+            return _Wave
+        if header[:16] == b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C':
+            return _Wma
+        if header[:4] == b'FORM' and header[8:12] in {b'AIFF', b'AIFC'}:
+            return _Aiff
         return None
 
     @classmethod
