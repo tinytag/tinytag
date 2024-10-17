@@ -1,20 +1,14 @@
-# tests can be extended using other bigger files that are not going to be
-# checked into git, by placing them into the custom_samples folder
-#
-# see custom_samples/instructions.txt
-#
-
 # pylint: disable=missing-function-docstring,missing-module-docstring,protected-access
 
-
 from __future__ import annotations
-from typing import Any
 
-import io
-import os
-import pathlib
+import os.path
 import shutil
 import sys
+
+from io import BytesIO
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -648,7 +642,7 @@ def test_file_reading_duration(testfile: str, expected: dict[str, dict[str, Any]
 
 def test_pathlib_compatibility() -> None:
     testfile = next(iter(testfiles.keys()))
-    filename = pathlib.Path(testfolder) / testfile
+    filename = Path(testfolder) / testfile
     TinyTag.get(filename)
     assert TinyTag.is_supported(filename)
 
@@ -659,7 +653,7 @@ def test_file_obj_compatibility() -> None:
     with open(filename, 'rb') as file_handle:
         tag = TinyTag.get(file_obj=file_handle)
         file_handle.seek(0)
-        tag_bytesio = TinyTag.get(file_obj=io.BytesIO(file_handle.read()))
+        tag_bytesio = TinyTag.get(file_obj=BytesIO(file_handle.read()))
         assert tag.filesize == tag_bytesio.filesize
 
 
