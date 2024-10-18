@@ -444,20 +444,46 @@ class _MP4(TinyTag):
             'barcode': 'extra.barcode',
             'catalognumber': 'extra.catalog_number',
         }
+        _UNPACK_SIGNED_FORMATS = {
+            1: '>b',
+            2: '>h',
+            4: '>i',
+            8: '>q'
+        }
+        _UNPACK_UNSIGNED_FORMATS = {
+            1: '>B',
+            2: '>H',
+            4: '>I',
+            8: '>Q'
+        }
+
+        @classmethod
+        def _unpack_utf_8_string(cls, value: bytes) -> str:
+            return value.decode('utf-8', 'replace')
+
+        @classmethod
+        def _unpack_utf_16_string(cls, value: bytes) -> str:
+            return value.decode('utf-16', 'replace')
+
+        @classmethod
+        def _unpack_shift_jis_string(cls, value: bytes) -> str:
+            return value.decode('s/jis', 'replace')
+
+        @classmethod
+        def _unpack_jpeg_image(cls, data: bytes) -> Image:
+            return Image('front_cover', data, 'image/jpeg')
+
+        @classmethod
+        def _unpack_png_image(cls, data: bytes) -> Image:
+            return Image('front_cover', data, 'image/png')
 
         @classmethod
         def _unpack_integer(cls, value: bytes, signed: bool = True) -> str:
-            value_length = len(value)
-            result = -1
-            if value_length == 1:
-                result = unpack('>b' if signed else '>B', value)[0]
-            elif value_length == 2:
-                result = unpack('>h' if signed else '>H', value)[0]
-            elif value_length == 4:
-                result = unpack('>i' if signed else '>I', value)[0]
-            elif value_length == 8:
-                result = unpack('>q' if signed else '>Q', value)[0]
-            return str(result)
+            fmts = cls._UNPACK_SIGNED_FORMATS if signed else cls._UNPACK_UNSIGNED_FORMATS
+            value_len = len(value)
+            if value_len in fmts:
+                return str(unpack(fmts[value_len], value)[0])
+            return ""
 
         @classmethod
         def _unpack_integer_unsigned(cls, value: bytes) -> str:
@@ -472,18 +498,14 @@ class _MP4(TinyTag):
                     # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
                     cls.atom_decoder_by_type = {
                         # 0: 'reserved'
-                        1: lambda x: x.decode('utf-8', 'replace'),   # UTF-8
-                        2: lambda x: x.decode('utf-16', 'replace'),  # UTF-16
-                        3: lambda x: x.decode('s/jis', 'replace'),   # S/JIS
+                        1: cls._unpack_utf_8_string,                # UTF-8
+                        2: cls._unpack_utf_16_string,               # UTF-16
+                        3: cls._unpack_shift_jis_string,            # S/JIS
                         # 16: duration in millis
-                        13: lambda x: Image('front_cover', x, 'image/jpeg'),  # JPEG
-                        14: lambda x: Image('front_cover', x, 'image/png'),   # PNG
+                        13: cls._unpack_jpeg_image,                 # JPEG
+                        14: cls._unpack_png_image,                  # PNG
                         21: cls._unpack_integer,                    # BE Signed int
                         22: cls._unpack_integer_unsigned,           # BE Unsigned int
-                        # 23: lambda x: unpack('>f', x)[0],  # BE Float32
-                        # 24: lambda x: unpack('>d', x)[0],  # BE Float64
-                        # 27: lambda x: x,                          # BMP
-                        # 28: lambda x: x,                          # QuickTime Metadata atom
                         65: cls._unpack_integer,                    # 8-bit Signed int
                         66: cls._unpack_integer,                    # BE 16-bit Signed int
                         67: cls._unpack_integer,                    # BE 32-bit Signed int
@@ -558,11 +580,11 @@ class _MP4(TinyTag):
             # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
             # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
             # http://sasperger.tistory.com/103
-            datafh = BytesIO(data)
-            datafh.seek(16, SEEK_CUR)  # jump over version and flags
-            channels = unpack('>H', datafh.read(2))[0]
-            datafh.seek(4, SEEK_CUR)   # jump over bit_depth, QT compr id & pkt size
-            sr = unpack('>I', datafh.read(4))[0]
+
+            # jump over version and flags
+            channels = unpack('>H', data[16:18])[0]
+            # jump over bit_depth, QT compr id & pkt size
+            sr = unpack('>I', data[22:26])[0]
 
             # ES Description Atom
             esds_atom_size = unpack('>I', data[28:32])[0]
@@ -582,31 +604,23 @@ class _MP4(TinyTag):
         @classmethod
         def _parse_audio_sample_entry_alac(cls, data: bytes) -> dict[str, int]:
             # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
-            alac_atom_size = unpack('>I', data[28:32])[0]
-            alac_atom = BytesIO(data[36:36 + alac_atom_size])
-            alac_atom.seek(9, SEEK_CUR)
-            bitdepth = unpack('b', alac_atom.read(1))[0]
-            alac_atom.seek(3, SEEK_CUR)
-            channels = unpack('b', alac_atom.read(1))[0]
-            alac_atom.seek(6, SEEK_CUR)
-            avg_br = unpack('>I', alac_atom.read(4))[0] / 1000  # kbit/s
-            sr = unpack('>I', alac_atom.read(4))[0]
+            bitdepth = data[45]
+            channels = data[49]
+            avg_br, sr = unpack('>II', data[56:64])
+            avg_br /= 1000  # kbit/s
             return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br, 'bitdepth': bitdepth}
 
         @classmethod
         def _parse_mvhd(cls, data: bytes) -> dict[str, float]:
             # http://stackoverflow.com/a/3639993/1191373
-            walker = BytesIO(data)
-            version = unpack('b', walker.read(1))[0]
-            walker.seek(3, SEEK_CUR)  # jump over flags
+            version = data[0]
+            # jump over flags
             if version == 0:  # uses 32 bit integers for timestamps
-                walker.seek(8, SEEK_CUR)  # jump over create & mod times
-                time_scale = unpack('>I', walker.read(4))[0]
-                duration = unpack('>I', walker.read(4))[0]
+                # jump over create & mod times
+                time_scale, duration = unpack('>II', data[12:20])
             else:  # version == 1:  # uses 64 bit integers for timestamps
-                walker.seek(16, SEEK_CUR)  # jump over create & mod times
-                time_scale = unpack('>I', walker.read(4))[0]
-                duration = unpack('>q', walker.read(8))[0]
+                # jump over create & mod times
+                time_scale, duration = unpack('>Iq', data[20:28])
             return {'duration': duration / time_scale}
 
     # The parser tree: Each key is an atom name which is traversed if existing.
@@ -903,7 +917,7 @@ class _ID3(TinyTag):
                 if frames:
                     self.bitrate = bitrate_accu / frames
                 break  # EOF
-            _sync, conf, bitrate_freq, rest = unpack('BBBB', header)
+            _sync, conf, bitrate_freq, rest = unpack('4B', header)
             br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
             sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
             padding = 1 if bitrate_freq & 0x02 > 0 else 0
@@ -978,18 +992,17 @@ class _ID3(TinyTag):
         size = major = 0
         extended = False
         # for info on the specs, see: http://id3.org/Developer%20Information
-        header = unpack('3sBBB4B', fh.read(10))
-        tag = header[0].decode('ISO-8859-1', 'replace')
+        header = fh.read(10)
         # check if there is an ID3v2 tag at the beginning of the file
-        if tag == 'ID3':
-            major, _rev = header[1:3]
+        if header[:3] == b'ID3':
+            major = header[3]
             if DEBUG:
                 print(f'Found id3 v2.{major}')
-            # unsync = (header[3] & 0x80) > 0
-            extended = (header[3] & 0x40) > 0
-            # experimental = (header[3] & 0x20) > 0
-            # footer = (header[3] & 0x10) > 0
-            size = self._unsynchsafe(header[4:8])
+            # unsync = (header[5] & 0x80) > 0
+            extended = (header[5] & 0x40) > 0
+            # experimental = (header[5] & 0x20) > 0
+            # footer = (header[5] & 0x10) > 0
+            size = self._unsynchsafe(unpack('4B', header[6:10]))
         self._bytepos_after_id3v2 = size
         return size, extended, major
 
@@ -1296,32 +1309,31 @@ class _Ogg(TinyTag):
         check_flac_second_packet = False
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
-            walker = BytesIO(packet)
             if packet[:7] == b"\x01vorbis":
                 if self._parse_duration:
-                    (self.channels, self.samplerate, _max_bitrate, bitrate,
-                     _min_bitrate) = unpack("<B4i", packet[11:28])
-                    self.bitrate = bitrate / 1000
+                    self.channels, self.samplerate = unpack("<Bi", packet[11:16])
+                    self.bitrate = unpack("<i", packet[20:24])[0] / 1000
             elif packet[:7] == b"\x03vorbis":
                 if self._parse_tags:
+                    walker = BytesIO(packet)
                     walker.seek(7, SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(walker)
             elif packet[:8] == b'OpusHead':
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
                     # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
-                    walker.seek(8, SEEK_CUR)  # jump over header name
-                    version, ch = unpack("BB", walker.read(2))
-                    walker.seek(9, SEEK_CUR)
+                    version, ch = unpack("BB", packet[8:10])
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
                         self.samplerate = 48000  # internally opus always uses 48khz
             elif packet[:8] == b'OpusTags':
                 if self._parse_tags:  # parse opus metadata:
+                    walker = BytesIO(packet)
                     walker.seek(8, SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(walker)
             elif packet[:5] == b'\x7fFLAC':
                 # https://xiph.org/flac/ogg_mapping.html
+                walker = BytesIO(packet)
                 walker.seek(9, SEEK_CUR)  # jump over header name, version and number of headers
                 flactag = _Flac()
                 flactag._filehandler = walker
@@ -1333,7 +1345,8 @@ class _Ogg(TinyTag):
             elif check_flac_second_packet:
                 # second packet contains FLAC metadata block
                 if self._parse_tags:
-                    meta_header = unpack('B3B', walker.read(4))
+                    walker = BytesIO(packet)
+                    meta_header = walker.read(4)
                     block_type = meta_header[0] & 0x7f
                     if block_type == _Flac.METADATA_VORBIS_COMMENT:
                         self._parse_vorbis_comment(walker)
@@ -1341,13 +1354,12 @@ class _Ogg(TinyTag):
             elif packet[:8] == b'Speex   ':
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
-                    walker.seek(36, SEEK_CUR)  # jump over header name and irrelevant fields
-                    self.samplerate = unpack("<i", walker.read(4))[0]
-                    walker.seek(8, SEEK_CUR)
-                    self.channels, self.bitrate = unpack("<ii", walker.read(8))
+                    self.samplerate = unpack("<i", packet[36:40])[0]
+                    self.channels, self.bitrate = unpack("<ii", packet[48:56])
                 check_speex_second_packet = True
             elif check_speex_second_packet:
                 if self._parse_tags:
+                    walker = BytesIO(packet)
                     length = unpack('I', walker.read(4))[0]  # starts with a comment string
                     comment = walker.read(length).decode('utf-8', 'replace')
                     self._set_field('comment', comment)
@@ -1399,12 +1411,13 @@ class _Ogg(TinyTag):
         previous_page = b''  # contains data from previous (continuing) pages
         header_data = fh.read(27)  # read ogg page header
         while len(header_data) == 27:
-            header = unpack('<4sBBqIIiB', header_data)
-            # https://xiph.org/ogg/doc/framing.html
-            oggs, version, _flags, pos, _serial, _pageseq, _crc, segments = header
-            self._max_samplenum = max(self._max_samplenum, pos)
-            if oggs != b'OggS' or version != 0:
+            version = header_data[4]
+            if header_data[:4] != b'OggS' or version != 0:
                 raise ParseError('Invalid OGG header')
+            # https://xiph.org/ogg/doc/framing.html
+            pos = unpack('<q', header_data[6:14])[0]
+            segments = header_data[26]
+            self._max_samplenum = max(self._max_samplenum, pos)
             segsizes = unpack('B' * segments, fh.read(segments))
             total = 0
             for segsize in segsizes:  # read all segments
@@ -1455,27 +1468,26 @@ class _Wave(TinyTag):
     def _parse_tag(self, fh: BinaryIO) -> None:
         # see: http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
         # and: https://en.wikipedia.org/wiki/WAV
-        riff, _size, fformat = unpack('4sI4s', fh.read(12))
-        if riff != b'RIFF' or fformat != b'WAVE':
+        header = fh.read(12)
+        if header[:4] != b'RIFF' or header[8:12] != b'WAVE':
             raise ParseError('Invalid WAV header')
         if self._parse_duration:
             self.bitdepth = 16  # assume 16bit depth (CD quality)
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
-            subchunkid, subchunksize = unpack('4sI', chunk_header)
+            subchunkid = chunk_header[:4]
+            subchunksize = unpack('I', chunk_header[4:8])[0]
             subchunksize += subchunksize % 2  # IFF chunks are padded to an even number of bytes
             if subchunkid == b'fmt ' and self._parse_duration:
-                _, channels, samplerate = unpack('HHI', fh.read(8))
-                _, _, bitdepth = unpack('<IHH', fh.read(8))
+                chunk = fh.read(subchunksize)
+                _format_tag, channels, samplerate = unpack('<HHI', chunk[:8])
+                bitdepth = unpack('<H', chunk[14:16])[0]
                 if bitdepth == 0:
                     # Certain codecs (e.g. GSM 6.10) give us a bit depth of zero.
                     # Avoid division by zero when calculating duration.
                     bitdepth = 1
                 self.bitrate = samplerate * channels * bitdepth / 1000
                 self.channels, self.samplerate, self.bitdepth = channels, samplerate, bitdepth
-                remaining_size = subchunksize - 16
-                if remaining_size > 0:
-                    fh.seek(remaining_size, 1)  # skip remaining data in chunk
             elif subchunkid == b'data' and self._parse_duration:
                 if (self.channels is not None and self.samplerate is not None
                         and self.bitdepth is not None):
@@ -1487,12 +1499,12 @@ class _Wave(TinyTag):
                 if is_info != b'INFO':  # jump over non-INFO sections
                     fh.seek(subchunksize - 4, SEEK_CUR)
                 else:
-                    sub_fh = BytesIO(fh.read(subchunksize - 4))
-                    field = sub_fh.read(4)
+                    walker = BytesIO(fh.read(subchunksize - 4))
+                    field = walker.read(4)
                     while len(field) == 4:
-                        data_length = unpack('I', sub_fh.read(4))[0]
+                        data_length = unpack('I', walker.read(4))[0]
                         data_length += data_length % 2  # IFF chunks are padded to an even size
-                        data = sub_fh.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
+                        data = walker.read(data_length).split(b'\x00', 1)[0]  # strip zero-byte
                         fieldname = self._RIFF_MAPPING.get(field)
                         if fieldname:
                             value = data.decode('utf-8', 'replace')
@@ -1501,7 +1513,7 @@ class _Wave(TinyTag):
                                     self._set_field(fieldname, int(value))
                             else:
                                 self._set_field(fieldname, value)
-                        field = sub_fh.read(4)
+                        field = walker.read(4)
             elif subchunkid in {b'id3 ', b'ID3 '} and self._parse_tags:
                 id3 = _ID3()
                 id3._filehandler = fh
@@ -1588,7 +1600,7 @@ class _Flac(TinyTag):
             else:
                 if DEBUG:
                     print('Unknown FLAC block type', block_type)
-                fh.seek(size, 1)  # seek over this block
+                fh.seek(size, SEEK_CUR)  # seek over this block
 
             if is_last_block:
                 break
@@ -1604,7 +1616,8 @@ class _Flac(TinyTag):
         mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
         description_len = unpack('>I', fh.read(4))[0]
         description = fh.read(description_len).decode('utf-8', 'replace')
-        _width, _height, _depth, _colors, pic_len = unpack('>5I', fh.read(20))
+        fh.seek(16, SEEK_CUR)  # jump over width, height, depth, colors
+        pic_len = unpack('>I', fh.read(4))[0]
         return _ID3._create_tag_image(fh.read(pic_len), pic_type, mime_type, description)
 
 
@@ -1641,6 +1654,12 @@ class _Wma(TinyTag):
         'WM/Barcode': 'extra.barcode',
         'WM/CatalogNo': 'extra.catalog_number',
     }
+    _ASF_UNPACK_FORMATS = {
+        1: '<B',
+        2: '<H',
+        4: '<I',
+        8: '<Q'
+    }
     _ASF_CONTENT_DESCRIPTION_OBJECT = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
     _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT = (b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00'
                                                 b'\xa0\xc9^\xa8P')
@@ -1652,27 +1671,6 @@ class _Wma(TinyTag):
     def _determine_duration(self, fh: BinaryIO) -> None:
         if not self._tags_parsed:
             self._parse_tag(fh)
-
-    def _decode_string(self, bytestring: bytes) -> str:
-        return self._unpad(bytestring.decode('utf-16', 'replace'))
-
-    def _decode_ext_desc(self, value_type: int, value: bytes) -> str | None:
-        """ decode _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
-        if value_type == 0:  # Unicode string
-            return self._decode_string(value)
-        fmt = None
-        if 1 < value_type < 6:  # DWORD / QWORD / WORD
-            if len(value) == 1:
-                fmt = '<B'
-            elif len(value) == 2:
-                fmt = '<H'
-            elif len(value) == 4:
-                fmt = '<I'
-            elif len(value) == 8:
-                fmt = '<Q'
-        if fmt:
-            return str(unpack(fmt, value)[0])
-        return None
 
     def _parse_tag(self, fh: BinaryIO) -> None:
         header = fh.read(30)
@@ -1690,8 +1688,9 @@ class _Wma(TinyTag):
             if object_size == 0 or object_size > self.filesize:
                 break  # invalid object, stop parsing.
             if object_id == self._ASF_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
+                walker = BytesIO(fh.read(object_size - 24))
                 (title_length, author_length, copyright_length, description_length,
-                 rating_length) = unpack('<5H', fh.read(10))
+                 rating_length) = unpack('<5H', walker.read(10))
                 data_blocks = {
                     'title': title_length,
                     'artist': author_length,
@@ -1700,61 +1699,62 @@ class _Wma(TinyTag):
                     '_rating': rating_length,
                 }
                 for i_field_name, length in data_blocks.items():
-                    bytestring = fh.read(length)
-                    value = self._decode_string(bytestring)
+                    value = self._unpad(walker.read(length).decode('utf-16', 'replace'))
                     if not i_field_name.startswith('_') and value:
                         self._set_field(i_field_name, value)
             elif object_id == self._ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT and self._parse_tags:
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
-                descriptor_count = unpack('<H', fh.read(2))[0]
+                walker = BytesIO(fh.read(object_size - 24))
+                descriptor_count = unpack('<H', walker.read(2))[0]
                 for _ in range(descriptor_count):
-                    name_len = unpack('<H', fh.read(2))[0]
-                    name = self._decode_string(fh.read(name_len))
-                    value_type, value_len = unpack('<HH', fh.read(4))
+                    name_len = unpack('<H', walker.read(2))[0]
+                    name = self._unpad(walker.read(name_len).decode('utf-16', 'replace'))
+                    value_type, value_len = unpack('<HH', walker.read(4))
                     if value_type == 1:
-                        fh.seek(value_len, SEEK_CUR)  # skip byte values
+                        walker.seek(value_len, SEEK_CUR)  # skip byte values
                         continue
                     field_name = self._ASF_MAPPING.get(name)  # try to get normalized field name
                     if field_name is None:  # custom field
                         if name.startswith('WM/'):
                             name = name[3:]
                         field_name = self._EXTRA_PREFIX + name.lower()
-                    field_value = self._decode_ext_desc(value_type, fh.read(value_len))
-                    if field_value is not None:
+                    field_value = self._decode_ext_desc(value_type, walker.read(value_len))
+                    if field_value:
                         if field_name in {'track', 'disc'}:
                             if isinstance(field_value, int) or field_value.isdecimal():
                                 self._set_field(field_name, int(field_value))
                         elif field_value:
                             self._set_field(field_name, field_value)
             elif object_id == self._ASF_FILE_PROPERTY_OBJECT and self._parse_duration:
-                fh.seek(40, SEEK_CUR)
-                play_duration = unpack('<Q', fh.read(8))[0] / 10000000
-                fh.seek(8, SEEK_CUR)
-                preroll = unpack('<Q', fh.read(8))[0] / 1000
-                fh.seek(16, SEEK_CUR)
+                data = fh.read(object_size - 24)
+                play_duration = unpack('<Q', data[40:48])[0] / 10000000
+                preroll = unpack('<Q', data[56:64])[0] / 1000
                 # According to the specification, we need to subtract the preroll from play_duration
                 # to get the actual duration of the file
                 self.duration = max(play_duration - preroll, 0.0)
             elif object_id == self._ASF_STREAM_PROPERTIES_OBJECT and self._parse_duration:
-                stream_type = fh.read(16)
-                fh.seek(24, SEEK_CUR)  # skip irrelevant fields
-                type_specific_data_length, error_correction_data_length = unpack('<II', fh.read(8))
-                fh.seek(6, SEEK_CUR)   # skip irrelevant fields
-                already_read = 0
+                data = fh.read(object_size - 24)
+                stream_type = data[:16]
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
                     (codec_id_format_tag, self.channels, self.samplerate,
-                     avg_bytes_per_second) = unpack('<HHII', fh.read(12))
+                     avg_bytes_per_second) = unpack('<HHII', data[54:66])
                     self.bitrate = avg_bytes_per_second * 8 / 1000
-                    fh.seek(2, SEEK_CUR)  # skip irrelevant field
-                    bits_per_sample = unpack('<H', fh.read(2))[0]
                     if codec_id_format_tag == 355:  # lossless
-                        self.bitdepth = bits_per_sample
-                    already_read = 16
-                fh.seek(type_specific_data_length - already_read, SEEK_CUR)
-                fh.seek(error_correction_data_length, SEEK_CUR)
+                        self.bitdepth = unpack('<H', data[68:70])[0]
             else:
-                fh.seek(object_size - 24, SEEK_CUR)  # read over onknown object ids
+                fh.seek(object_size - 24, SEEK_CUR)  # read over unknown object ids
         self._tags_parsed = True
+
+    @classmethod
+    def _decode_ext_desc(cls, value_type: int, value: bytes) -> str:
+        """ decode _ASF_EXTENDED_CONTENT_DESCRIPTION_OBJECT values"""
+        if value_type == 0:  # Unicode string
+            return cls._unpad(value.decode('utf-16', 'replace'))
+        if 1 < value_type < 6:  # DWORD / QWORD / WORD
+            value_len = len(value)
+            if value_len in cls._ASF_UNPACK_FORMATS:
+                return str(unpack(cls._ASF_UNPACK_FORMATS[value_len], value)[0])
+        return ""
 
 
 class _Aiff(TinyTag):
@@ -1800,35 +1800,36 @@ class _Aiff(TinyTag):
     }
 
     def _parse_tag(self, fh: BinaryIO) -> None:
-        chunk_id, _size, form = unpack('>4sI4s', fh.read(12))
-        if chunk_id != b'FORM' or form not in (b'AIFC', b'AIFF'):
+        header = fh.read(12)
+        if header[:4] != b'FORM' or header[8:12] not in {b'AIFC', b'AIFF'}:
             raise ParseError('Invalid AIFF header')
         chunk_header = fh.read(8)
         while len(chunk_header) == 8:
-            sub_chunk_id, sub_chunk_size = unpack('>4sI', chunk_header)
+            sub_chunk_id = chunk_header[:4]
+            sub_chunk_size = unpack('>I', chunk_header[4:8])[0]
             sub_chunk_size += sub_chunk_size % 2  # IFF chunks are padded to an even number of bytes
             if sub_chunk_id in self._AIFF_MAPPING and self._parse_tags:
                 value = self._unpad(fh.read(sub_chunk_size).decode('utf-8', 'replace'))
                 self._set_field(self._AIFF_MAPPING[sub_chunk_id], value)
             elif sub_chunk_id == b'COMM' and self._parse_duration:
-                channels, num_frames, bitdepth = unpack('>hLh', fh.read(8))
+                chunk = fh.read(sub_chunk_size)
+                channels, num_frames, bitdepth = unpack('>hLh', chunk[:8])
                 self.channels, self.bitdepth = channels, bitdepth
                 try:
-                    exponent, mantissa = unpack('>HQ', fh.read(10))   # Extended precision
+                    exponent, mantissa = unpack('>HQ', chunk[8:18])   # Extended precision
                     samplerate = int(mantissa * (2 ** (exponent - 0x3FFF - 63)))
                     duration = num_frames / samplerate
                     bitrate = samplerate * channels * bitdepth / 1000
                     self.samplerate, self.duration, self.bitrate = samplerate, duration, bitrate
                 except OverflowError:
                     pass
-                fh.seek(sub_chunk_size - 18, 1)  # skip remaining data in chunk
             elif sub_chunk_id in {b'id3 ', b'ID3 '} and self._parse_tags:
                 id3 = _ID3()
                 id3._filehandler = fh
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
             else:  # some other chunk, just skip the data
-                fh.seek(sub_chunk_size, 1)
+                fh.seek(sub_chunk_size, SEEK_CUR)
             chunk_header = fh.read(8)
         self._tags_parsed = True
 
