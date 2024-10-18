@@ -115,12 +115,12 @@ class TinyTag:
     @classmethod
     def get(cls,
             filename: bytes | str | PathLike[Any] | None = None,
+            file_obj: BinaryIO | None = None,
             tags: bool = True,
             duration: bool = True,
             image: bool = False,
             encoding: str | None = None,
-            file_obj: BinaryIO | None = None,
-            **kwargs: Any) -> TinyTag:
+            ignore_errors: bool | None = None) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
         if filename and should_close_file:
@@ -129,7 +129,7 @@ class TinyTag:
         if file_obj is None:
             raise ValueError(
                 'Either filename or file_obj argument is required')
-        if 'ignore_errors' in kwargs:
+        if ignore_errors is not None:
             # pylint: disable=import-outside-toplevel
             from warnings import warn
             warn('ignore_errors argument is obsolete, and will be removed in '

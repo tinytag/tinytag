@@ -1639,6 +1639,8 @@ def test_deprecations() -> None:
     with pytest.warns(DeprecationWarning):
         tag = TinyTag.get(filename=file_path, image=True, ignore_errors=True)
     with pytest.warns(DeprecationWarning):
+        tag = TinyTag.get(filename=file_path, image=True, ignore_errors=False)
+    with pytest.warns(DeprecationWarning):
         assert tag.audio_offset is None
     with pytest.warns(DeprecationWarning):
         assert tag.images.any is not None
