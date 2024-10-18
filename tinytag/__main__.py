@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2015-2024 tinytag Contributors
+# SPDX-License-Identifier: MIT
+
 # pylint: disable=missing-module-docstring,protected-access
 
 from __future__ import annotations

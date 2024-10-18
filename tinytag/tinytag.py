@@ -1,13 +1,12 @@
-# tinytag - an audio file metadata reader
-# Copyright (c) 2014-2023 Tom Wallroth
-# Copyright (c) 2021-2024 Mat (mathiascode)
+# SPDX-FileCopyrightText: 2014-2024 tinytag Contributors
+# SPDX-License-Identifier: MIT
 
-# Sources on GitHub:
+# tinytag - an audio file metadata reader
 # http://github.com/tinytag/tinytag
 
 # MIT License
 
-# Copyright (c) 2014-2024 Tom Wallroth, Mat (mathiascode)
+# Copyright (c) 2014-2024 Tom Wallroth, Mat (mathiascode), et al.
 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -28,7 +27,6 @@
 # DEALINGS IN THE SOFTWARE.
 
 """Audio file metadata reader"""
-
 
 from __future__ import annotations
 from binascii import a2b_base64
@@ -1248,9 +1246,6 @@ class _ID3(TinyTag):
                         mime_end_pos = content.index(b'\x00', 1)
                         mime_type = self._decode_string(
                             content[1:mime_end_pos]).lower()
-                        # ID3 v2.2 format in v2.3...
-                        if mime_type in self._ID3V2_2_IMAGE_FORMATS:
-                            mime_type = self._ID3V2_2_IMAGE_FORMATS[mime_type]
                         # skip mtype, pictype(1)
                         desc_start_pos = mime_end_pos + 2
                     pic_type = content[desc_start_pos - 1]

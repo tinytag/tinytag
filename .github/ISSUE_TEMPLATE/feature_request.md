@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2021-2024 tinytag Contributors
+SPDX-License-Identifier: MIT
+-->
+
 ---
 name: Feature request
 about: Suggest an idea for this project

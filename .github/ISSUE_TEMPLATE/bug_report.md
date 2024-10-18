@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2021-2024 tinytag Contributors
+SPDX-License-Identifier: MIT
+-->
+
 ---
 name: Bug report
 about: Something is broken or doesn't work as expected

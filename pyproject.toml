@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 tinytag Contributors
+# SPDX-License-Identifier: MIT
+
 [build-system]
 requires = ["flit_core>=3.2"]
 build-backend = "flit_core.buildapi"
