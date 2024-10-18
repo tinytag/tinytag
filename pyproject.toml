@@ -67,25 +67,22 @@ exclude = [
 
 [tool.pylint.master]
 disable = [
-    "bad-plugin-value",
     "invalid-name",
-    "protected-access",
-    "too-many-lines",
     "too-many-arguments",
     "too-many-boolean-expressions",
     "too-many-branches",
     "too-many-instance-attributes",
+    "too-many-lines",
     "too-many-locals",
+    "too-many-positional-arguments",
     "too-many-nested-blocks",
     "too-many-return-statements",
     "too-many-statements",
     "too-few-public-methods",
-    "too-many-positional-arguments",
     "unknown-option-value"
 ]
 enable = [
-    "consider-using-augmented-assign",
-    "use-implicit-booleaness-not-comparison-to-string"
+    "consider-using-augmented-assign"
 ]
 load-plugins = [
     "pylint.extensions.bad_builtin",
@@ -93,21 +90,22 @@ load-plugins = [
     "pylint.extensions.code_style",
     "pylint.extensions.comparison_placement",
     "pylint.extensions.consider_refactoring_into_while_condition",
-    "pylint.extensions.emptystring",
-    "pylint.extensions.for_any_all",
+    "pylint.extensions.consider_ternary_expression",
     "pylint.extensions.dict_init_mutate",
+    "pylint.extensions.docstyle",
     "pylint.extensions.dunder",
+    "pylint.extensions.empty_comment",
     "pylint.extensions.eq_without_hash",
+    "pylint.extensions.for_any_all",
+    "pylint.extensions.no_self_use",
     "pylint.extensions.overlapping_exceptions",
     "pylint.extensions.private_import",
+    "pylint.extensions.redefined_loop_name",
+    "pylint.extensions.redefined_variable_type",
     "pylint.extensions.set_membership",
     "pylint.extensions.typing"
 ]
-ignore-paths = "build"
 py-version = "3.7"
-
-[tool.pylint.format]
-max-line-length = 100
 
 [tool.mypy]
 strict = true
