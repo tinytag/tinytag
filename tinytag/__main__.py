@@ -44,23 +44,24 @@ def _pop_switch(name: str) -> bool:
     return False
 
 
-def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> bool:
+def _print_tag(tag: TinyTag, fmt: str, header_printed: bool = False) -> bool:
     data = tag.as_dict()
     del data['images']
-    if formatting == 'json':
+    if fmt == 'json':
         import json  # pylint: disable=import-outside-toplevel
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return header_printed
-    if formatting not in {'csv', 'tsv', 'tabularcsv'}:
+    if fmt not in {'csv', 'tsv', 'tabularcsv'}:
         return header_printed
     import csv  # pylint: disable=import-outside-toplevel
     for field, value in data.items():
         if isinstance(value, str):
-            data[field] = value.replace('\x00', ';')  # use a more friendly separator for output
+            # use a more friendly separator for output
+            data[field] = value.replace('\x00', ';')
     csv_file = StringIO()
-    delimiter = '\t' if formatting == 'tsv' else ','
+    delimiter = '\t' if fmt == 'tsv' else ','
     writer = csv.writer(csv_file, delimiter=delimiter, lineterminator='\n')
-    if formatting == 'tabularcsv':
+    if fmt == 'tabularcsv':
         if not header_printed:
             writer.writerow(data.keys())
             header_printed = True
@@ -75,8 +76,8 @@ def _print_tag(tag: TinyTag, formatting: str, header_printed: bool = False) -> b
 
 def _run() -> int:
     header_printed = False
-    save_image_path = _pop_param('--save-image', None) or _pop_param('-i', None)
-    formatting = (_pop_param('--format', None) or _pop_param('-f', None)) or 'json'
+    image_path = _pop_param('--save-image', None) or _pop_param('-i', None)
+    fmt = (_pop_param('--format', None) or _pop_param('-f', None)) or 'json'
     skip_unsupported = _pop_switch('--skip-unsupported') or _pop_switch('-s')
     filenames = sys.argv[1:]
     display_help = not filenames or _pop_switch('--help') or _pop_switch('-h')
@@ -85,21 +86,22 @@ def _run() -> int:
         return 0
 
     for i, filename in enumerate(filenames):
-        if skip_unsupported and not (TinyTag.is_supported(filename) and isfile(filename)):
+        if (skip_unsupported
+                and not (TinyTag.is_supported(filename) and isfile(filename))):
             continue
         try:
-            tag = TinyTag.get(filename, image=save_image_path is not None)
-            if save_image_path:
+            tag = TinyTag.get(filename, image=image_path is not None)
+            if image_path:
                 # allow for saving the image of multiple files
-                actual_save_image_path = save_image_path
+                actual_image_path = image_path
                 if len(filenames) > 1:
-                    actual_save_image_path, ext = splitext(actual_save_image_path)
-                    actual_save_image_path += f'{i:05d}{ext}'
+                    actual_image_path, ext = splitext(actual_image_path)
+                    actual_image_path += f'{i:05d}{ext}'
                 image = tag.images.any
                 if image is not None:
-                    with open(actual_save_image_path, 'wb') as file_handle:
+                    with open(actual_image_path, 'wb') as file_handle:
                         file_handle.write(image.data)
-            header_printed = _print_tag(tag, formatting, header_printed)
+            header_printed = _print_tag(tag, fmt, header_printed)
         except (OSError, TinyTagException) as exc:
             sys.stderr.write(f'{filename}: {exc}\n')
             return 1

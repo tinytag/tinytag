@@ -38,13 +38,12 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
-          cache-dependency-path: setup.py
 
       - name: Install dependencies
         run: python -m pip install build coverage flit .[tests]
 
       - name: PEP 8 style checks
-        run: python -m pycodestyle --max-line-length=100 .
+        run: python -m pycodestyle .
 
       - name: Linting
         run: python -m pylint --recursive=y .
