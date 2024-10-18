@@ -463,270 +463,93 @@ class _MP4(TinyTag):
     https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
     https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
     """
-    # pylint: disable=protected-access
 
-    class _Parser:
-        atom_decoder_by_type: dict[
-            int, Callable[[bytes], int | str | bytes | Image]] | None = None
-        _CUSTOM_FIELD_NAME_MAPPING = {
-            'artists': 'artist',
-            'conductor': 'extra.conductor',
-            'discsubtitle': 'extra.set_subtitle',
-            'initialkey': 'extra.initial_key',
-            'isrc': 'extra.isrc',
-            'language': 'extra.language',
-            'lyricist': 'extra.lyricist',
-            'media': 'extra.media',
-            'website': 'extra.url',
-            'originaldate': 'extra.original_date',
-            'originalyear': 'extra.original_year',
-            'license': 'extra.license',
-            'barcode': 'extra.barcode',
-            'catalognumber': 'extra.catalog_number',
-        }
-        _UNPACK_SIGNED_FORMATS = {
-            1: '>b',
-            2: '>h',
-            4: '>i',
-            8: '>q'
-        }
-        _UNPACK_UNSIGNED_FORMATS = {
-            1: '>B',
-            2: '>H',
-            4: '>I',
-            8: '>Q'
-        }
-
-        @classmethod
-        def _unpack_utf_8_string(cls, value: bytes) -> str:
-            return value.decode('utf-8', 'replace')
-
-        @classmethod
-        def _unpack_utf_16_string(cls, value: bytes) -> str:
-            return value.decode('utf-16', 'replace')
-
-        @classmethod
-        def _unpack_shift_jis_string(cls, value: bytes) -> str:
-            return value.decode('s/jis', 'replace')
-
-        @classmethod
-        def _unpack_jpeg_image(cls, data: bytes) -> Image:
-            return Image('front_cover', data, 'image/jpeg')
-
-        @classmethod
-        def _unpack_png_image(cls, data: bytes) -> Image:
-            return Image('front_cover', data, 'image/png')
-
-        @classmethod
-        def _unpack_integer(cls, value: bytes, signed: bool = True) -> str:
-            fmts = cls._UNPACK_UNSIGNED_FORMATS
-            if signed:
-                fmts = cls._UNPACK_SIGNED_FORMATS
-            value_len = len(value)
-            if value_len in fmts:
-                return str(unpack(fmts[value_len], value)[0])
-            return ""
-
-        @classmethod
-        def _unpack_integer_unsigned(cls, value: bytes) -> str:
-            return cls._unpack_integer(value, signed=False)
-
-        @classmethod
-        def _make_data_parser(
-            cls, fieldname: str
-        ) -> Callable[[bytes], dict[str, int | str | bytes | Image]]:
-            def _parse_data_atom(
-                data_atom: bytes
-            ) -> dict[str, int | str | bytes | Image]:
-                data_type = unpack('>I', data_atom[:4])[0]
-                if cls.atom_decoder_by_type is None:
-                    # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
-                    cls.atom_decoder_by_type = {
-                        # 0: 'reserved'
-                        1: cls._unpack_utf_8_string,       # UTF-8
-                        2: cls._unpack_utf_16_string,      # UTF-16
-                        3: cls._unpack_shift_jis_string,   # S/JIS
-                        # 16: duration in millis
-                        13: cls._unpack_jpeg_image,        # JPEG
-                        14: cls._unpack_png_image,         # PNG
-                        21: cls._unpack_integer,           # BE Signed
-                        22: cls._unpack_integer_unsigned,  # BE Unsigned
-                        65: cls._unpack_integer,           # 8-bit Signed
-                        66: cls._unpack_integer,           # BE 16-bit Signed
-                        67: cls._unpack_integer,           # BE 32-bit Signed
-                        74: cls._unpack_integer,           # BE 64-bit Signed
-                        75: cls._unpack_integer_unsigned,  # 8-bit Unsigned
-                        76: cls._unpack_integer_unsigned,  # BE 16-bit Unsigned
-                        77: cls._unpack_integer_unsigned,  # BE 32-bit Unsigned
-                        78: cls._unpack_integer_unsigned,  # BE 64-bit Unsigned
-                    }
-                conversion = cls.atom_decoder_by_type.get(data_type)
-                if conversion is None:
-                    if DEBUG:
-                        print(f'Cannot convert data type: {data_type}',
-                              file=stderr)
-                    return {}  # don't know how to convert data atom
-                # skip header & null-bytes, convert rest
-                return {fieldname: conversion(data_atom[8:])}
-            return _parse_data_atom
-
-        @classmethod
-        def _make_num_parser(
-            cls, fieldname1: str, fieldname2: str
-        ) -> Callable[[bytes], dict[str, int]]:
-            def _(data_atom: bytes) -> dict[str, int]:
-                number_data = data_atom[8:14]
-                numbers = unpack('>3H', number_data)
-                # for some reason the first number is always irrelevant.
-                return {fieldname1: numbers[1], fieldname2: numbers[2]}
-            return _
-
-        @classmethod
-        def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
-            # dunno why genre is offset by -1 but that's how mutagen does it
-            idx = unpack('>H', data_atom[8:])[0] - 1
-            result = {}
-            # pylint: disable=protected-access
-            if idx < len(_ID3._ID3V1_GENRES):
-                result['genre'] = _ID3._ID3V1_GENRES[idx]
-            return result
-
-        @classmethod
-        def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
-            for _i in range(4):
-                if esds_atom.read(1) != b'\x80':
-                    break
-
-        @classmethod
-        def _parse_custom_field(
-            cls, data: bytes
-        ) -> dict[str, int | str | bytes | Image]:
-            fh = BytesIO(data)
-            header_size = 8
-            field_name = None
-            data_atom = b''
-            atom_header = fh.read(header_size)
-            while len(atom_header) == header_size:
-                atom_size = unpack('>I', atom_header[:4])[0] - header_size
-                atom_type = atom_header[4:]
-                if atom_type == b'name':
-                    atom_value = fh.read(atom_size)[4:].lower()
-                    field_name = atom_value.decode('utf-8', 'replace')
-                    # pylint: disable=protected-access
-                    field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
-                        field_name, TinyTag._EXTRA_PREFIX + field_name)
-                elif atom_type == b'data':
-                    data_atom = fh.read(atom_size)
-                else:
-                    fh.seek(atom_size, SEEK_CUR)
-                atom_header = fh.read(header_size)  # read next atom
-            if len(data_atom) < 8 or field_name is None:
-                return {}
-            parser = cls._make_data_parser(field_name)
-            return parser(data_atom)
-
-        @classmethod
-        def _parse_audio_sample_entry_mp4a(cls, data: bytes) -> dict[str, int]:
-            # this atom also contains the esds atom:
-            # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
-            # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
-            # http://sasperger.tistory.com/103
-
-            # jump over version and flags
-            channels = unpack('>H', data[16:18])[0]
-            # jump over bit_depth, QT compr id & pkt size
-            sr = unpack('>I', data[22:26])[0]
-
-            # ES Description Atom
-            esds_atom_size = unpack('>I', data[28:32])[0]
-            esds_atom = BytesIO(data[36:36 + esds_atom_size])
-            esds_atom.seek(5, SEEK_CUR)   # jump over version, flags and tag
-
-            # ES Descriptor
-            cls._read_extended_descriptor(esds_atom)
-            esds_atom.seek(4, SEEK_CUR)   # jump over ES id, flags and tag
-
-            # Decoder Config Descriptor
-            cls._read_extended_descriptor(esds_atom)
-            esds_atom.seek(9, SEEK_CUR)
-            avg_br = unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
-            return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
-
-        @classmethod
-        def _parse_audio_sample_entry_alac(cls, data: bytes) -> dict[str, int]:
-            # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
-            bitdepth = data[45]
-            channels = data[49]
-            avg_br, sr = unpack('>II', data[56:64])
-            avg_br /= 1000  # kbit/s
-            return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br,
-                    'bitdepth': bitdepth}
-
-        @classmethod
-        def _parse_mvhd(cls, data: bytes) -> dict[str, float]:
-            # http://stackoverflow.com/a/3639993/1191373
-            version = data[0]
-            # jump over flags
-            if version == 0:  # uses 32 bit integers for timestamps
-                # jump over create & mod times
-                time_scale, duration = unpack('>II', data[12:20])
-            else:  # version == 1:  # uses 64 bit integers for timestamps
-                # jump over create & mod times
-                time_scale, duration = unpack('>Iq', data[20:28])
-            return {'duration': duration / time_scale}
-
-    # The parser tree: Each key is an atom name which is traversed if existing.
-    # Leaves of the parser tree are callables which receive the atom data.
-    # callables return {fieldname: value} which is updates the TinyTag.
-    _META_DATA_TREE = {b'moov': {b'udta': {b'meta': {b'ilst': {
-        # http://atomicparsley.sourceforge.net/mpeg-4files.html
-        # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
-        b'\xa9ART': {b'data': _Parser._make_data_parser('artist')},
-        b'\xa9alb': {b'data': _Parser._make_data_parser('album')},
-        b'\xa9cmt': {b'data': _Parser._make_data_parser('comment')},
-        b'\xa9con': {b'data': _Parser._make_data_parser('extra.conductor')},
-        # need test-data for this
-        # b'cpil':   {b'data': _Parser._make_data_parser('extra.compilation')},
-        b'\xa9day': {b'data': _Parser._make_data_parser('year')},
-        b'\xa9des': {b'data': _Parser._make_data_parser('extra.description')},
-        b'\xa9dir': {b'data': _Parser._make_data_parser('extra.director')},
-        b'\xa9gen': {b'data': _Parser._make_data_parser('genre')},
-        b'\xa9lyr': {b'data': _Parser._make_data_parser('extra.lyrics')},
-        b'\xa9mvn': {b'data': _Parser._make_data_parser('movement')},
-        b'\xa9nam': {b'data': _Parser._make_data_parser('title')},
-        b'\xa9pub': {b'data': _Parser._make_data_parser('extra.publisher')},
-        b'\xa9too': {b'data': _Parser._make_data_parser('extra.encoded_by')},
-        b'\xa9wrt': {b'data': _Parser._make_data_parser('composer')},
-        b'aART': {b'data': _Parser._make_data_parser('albumartist')},
-        b'cprt': {b'data': _Parser._make_data_parser('extra.copyright')},
-        b'desc': {b'data': _Parser._make_data_parser('extra.description')},
-        b'disk': {b'data': _Parser._make_num_parser('disc', 'disc_total')},
-        b'gnre': {b'data': _Parser._parse_id3v1_genre},
-        b'trkn': {b'data': _Parser._make_num_parser('track', 'track_total')},
-        b'tmpo': {b'data': _Parser._make_data_parser('extra.bpm')},
-        b'covr': {b'data': _Parser._make_data_parser('images.front_cover')},
-        b'----': _Parser._parse_custom_field,
-    }}}}}
-
-    # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
-    _AUDIO_DATA_TREE = {
-        b'moov': {
-            b'mvhd': _Parser._parse_mvhd,
-            b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {
-                b'mp4a': _Parser._parse_audio_sample_entry_mp4a,
-                b'alac': _Parser._parse_audio_sample_entry_alac
-            }}}}}
-        }
+    _CUSTOM_FIELD_NAME_MAPPING = {
+        'artists': 'artist',
+        'conductor': 'extra.conductor',
+        'discsubtitle': 'extra.set_subtitle',
+        'initialkey': 'extra.initial_key',
+        'isrc': 'extra.isrc',
+        'language': 'extra.language',
+        'lyricist': 'extra.lyricist',
+        'media': 'extra.media',
+        'website': 'extra.url',
+        'originaldate': 'extra.original_date',
+        'originalyear': 'extra.original_year',
+        'license': 'extra.license',
+        'barcode': 'extra.barcode',
+        'catalognumber': 'extra.catalog_number',
     }
-
+    _UNPACK_SIGNED_FORMATS = {
+        1: '>b',
+        2: '>h',
+        4: '>i',
+        8: '>q'
+    }
+    _UNPACK_UNSIGNED_FORMATS = {
+        1: '>B',
+        2: '>H',
+        4: '>I',
+        8: '>Q'
+    }
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
+    _atom_decoder_by_type: dict[
+        int, Callable[[bytes], int | str | bytes | Image]] | None = None
+    _audio_data_tree: dict[bytes, Any] | None = None
+    _meta_data_tree: dict[bytes, Any] | None = None
+
     def _determine_duration(self, fh: BinaryIO) -> None:
-        self._traverse_atoms(fh, path=self._AUDIO_DATA_TREE)
+        # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
+        if _MP4._audio_data_tree is None:
+            _MP4._audio_data_tree = {
+                b'moov': {
+                    b'mvhd': _MP4._parse_mvhd,
+                    b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {
+                        b'mp4a': _MP4._parse_audio_sample_entry_mp4a,
+                        b'alac': _MP4._parse_audio_sample_entry_alac
+                    }}}}}
+                }
+            }
+        self._traverse_atoms(fh, path=_MP4._audio_data_tree)
 
     def _parse_tag(self, fh: BinaryIO) -> None:
-        self._traverse_atoms(fh, path=self._META_DATA_TREE)
+        # The parser tree: Each key is an atom name which is traversed if
+        # existing. Leaves of the parser tree are callables which receive
+        # the atom data. Callables return {fieldname: value} which is updates
+        # the TinyTag.
+        if _MP4._meta_data_tree is None:
+            _MP4._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
+                # http://atomicparsley.sourceforge.net/mpeg-4files.html
+                # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
+                b'\xa9ART': {b'data': _MP4._data_parser('artist')},
+                b'\xa9alb': {b'data': _MP4._data_parser('album')},
+                b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
+                b'\xa9con': {b'data': _MP4._data_parser('extra.conductor')},
+                # need test-data for this
+                # b'cpil':  {b'data': _MP4._data_parser('extra.compilation')},
+                b'\xa9day': {b'data': _MP4._data_parser('year')},
+                b'\xa9des': {b'data': _MP4._data_parser('extra.description')},
+                b'\xa9dir': {b'data': _MP4._data_parser('extra.director')},
+                b'\xa9gen': {b'data': _MP4._data_parser('genre')},
+                b'\xa9lyr': {b'data': _MP4._data_parser('extra.lyrics')},
+                b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
+                b'\xa9nam': {b'data': _MP4._data_parser('title')},
+                b'\xa9pub': {b'data': _MP4._data_parser('extra.publisher')},
+                b'\xa9too': {b'data': _MP4._data_parser('extra.encoded_by')},
+                b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
+                b'aART': {b'data': _MP4._data_parser('albumartist')},
+                b'cprt': {b'data': _MP4._data_parser('extra.copyright')},
+                b'desc': {b'data': _MP4._data_parser('extra.description')},
+                b'disk': {b'data': _MP4._num_parser('disc', 'disc_total')},
+                b'gnre': {b'data': _MP4._parse_id3v1_genre},
+                b'trkn': {b'data': _MP4._num_parser('track', 'track_total')},
+                b'tmpo': {b'data': _MP4._data_parser('extra.bpm')},
+                b'covr': {b'data': _MP4._data_parser('images.front_cover')},
+                b'----': _MP4._parse_custom_field,
+            }}}}}
+        self._traverse_atoms(fh, path=_MP4._meta_data_tree)
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
@@ -764,6 +587,7 @@ class _MP4(TinyTag):
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if fieldname.startswith('images.'):
                         if self._load_image:
+                            # pylint: disable=protected-access
                             self.images._set_field(
                                 fieldname[len('images.'):], value)
                     elif fieldname:
@@ -775,6 +599,184 @@ class _MP4(TinyTag):
             if stop_pos and fh.tell() >= stop_pos:
                 return  # return to parent (next parent node in tree)
             atom_header = fh.read(header_size)  # read next atom
+
+    @classmethod
+    def _unpack_utf_8_string(cls, value: bytes) -> str:
+        return value.decode('utf-8', 'replace')
+
+    @classmethod
+    def _unpack_utf_16_string(cls, value: bytes) -> str:
+        return value.decode('utf-16', 'replace')
+
+    @classmethod
+    def _unpack_shift_jis_string(cls, value: bytes) -> str:
+        return value.decode('s/jis', 'replace')
+
+    @classmethod
+    def _unpack_jpeg_image(cls, data: bytes) -> Image:
+        return Image('front_cover', data, 'image/jpeg')
+
+    @classmethod
+    def _unpack_png_image(cls, data: bytes) -> Image:
+        return Image('front_cover', data, 'image/png')
+
+    @classmethod
+    def _unpack_integer(cls, value: bytes, signed: bool = True) -> str:
+        fmts = cls._UNPACK_UNSIGNED_FORMATS
+        if signed:
+            fmts = cls._UNPACK_SIGNED_FORMATS
+        value_len = len(value)
+        if value_len in fmts:
+            return str(unpack(fmts[value_len], value)[0])
+        return ""
+
+    @classmethod
+    def _unpack_integer_unsigned(cls, value: bytes) -> str:
+        return cls._unpack_integer(value, signed=False)
+
+    @classmethod
+    def _data_parser(
+        cls, fieldname: str
+    ) -> Callable[[bytes], dict[str, int | str | bytes | Image]]:
+        def _parse_data_atom(
+            data_atom: bytes
+        ) -> dict[str, int | str | bytes | Image]:
+            data_type = unpack('>I', data_atom[:4])[0]
+            if cls._atom_decoder_by_type is None:
+                # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
+                cls._atom_decoder_by_type = {
+                    # 0: 'reserved'
+                    1: cls._unpack_utf_8_string,       # UTF-8
+                    2: cls._unpack_utf_16_string,      # UTF-16
+                    3: cls._unpack_shift_jis_string,   # S/JIS
+                    # 16: duration in millis
+                    13: cls._unpack_jpeg_image,        # JPEG
+                    14: cls._unpack_png_image,         # PNG
+                    21: cls._unpack_integer,           # BE Signed
+                    22: cls._unpack_integer_unsigned,  # BE Unsigned
+                    65: cls._unpack_integer,           # 8-bit Signed
+                    66: cls._unpack_integer,           # BE 16-bit Signed
+                    67: cls._unpack_integer,           # BE 32-bit Signed
+                    74: cls._unpack_integer,           # BE 64-bit Signed
+                    75: cls._unpack_integer_unsigned,  # 8-bit Unsigned
+                    76: cls._unpack_integer_unsigned,  # BE 16-bit Unsigned
+                    77: cls._unpack_integer_unsigned,  # BE 32-bit Unsigned
+                    78: cls._unpack_integer_unsigned,  # BE 64-bit Unsigned
+                }
+            conversion = cls._atom_decoder_by_type.get(data_type)
+            if conversion is None:
+                if DEBUG:
+                    print(f'Cannot convert data type: {data_type}',
+                          file=stderr)
+                return {}  # don't know how to convert data atom
+            # skip header & null-bytes, convert rest
+            return {fieldname: conversion(data_atom[8:])}
+        return _parse_data_atom
+
+    @classmethod
+    def _num_parser(
+        cls, fieldname1: str, fieldname2: str
+    ) -> Callable[[bytes], dict[str, int]]:
+        def _(data_atom: bytes) -> dict[str, int]:
+            number_data = data_atom[8:14]
+            numbers = unpack('>3H', number_data)
+            # for some reason the first number is always irrelevant.
+            return {fieldname1: numbers[1], fieldname2: numbers[2]}
+        return _
+
+    @classmethod
+    def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
+        # dunno why genre is offset by -1 but that's how mutagen does it
+        idx = unpack('>H', data_atom[8:])[0] - 1
+        result = {}
+        # pylint: disable=protected-access
+        if idx < len(_ID3._ID3V1_GENRES):
+            result['genre'] = _ID3._ID3V1_GENRES[idx]
+        return result
+
+    @classmethod
+    def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
+        for _i in range(4):
+            if esds_atom.read(1) != b'\x80':
+                break
+
+    @classmethod
+    def _parse_custom_field(
+        cls, data: bytes
+    ) -> dict[str, int | str | bytes | Image]:
+        fh = BytesIO(data)
+        header_size = 8
+        field_name = None
+        data_atom = b''
+        atom_header = fh.read(header_size)
+        while len(atom_header) == header_size:
+            atom_size = unpack('>I', atom_header[:4])[0] - header_size
+            atom_type = atom_header[4:]
+            if atom_type == b'name':
+                atom_value = fh.read(atom_size)[4:].lower()
+                field_name = atom_value.decode('utf-8', 'replace')
+                # pylint: disable=protected-access
+                field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
+                    field_name, TinyTag._EXTRA_PREFIX + field_name)
+            elif atom_type == b'data':
+                data_atom = fh.read(atom_size)
+            else:
+                fh.seek(atom_size, SEEK_CUR)
+            atom_header = fh.read(header_size)  # read next atom
+        if len(data_atom) < 8 or field_name is None:
+            return {}
+        parser = cls._data_parser(field_name)
+        return parser(data_atom)
+
+    @classmethod
+    def _parse_audio_sample_entry_mp4a(cls, data: bytes) -> dict[str, int]:
+        # this atom also contains the esds atom:
+        # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
+        # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
+        # http://sasperger.tistory.com/103
+
+        # jump over version and flags
+        channels = unpack('>H', data[16:18])[0]
+        # jump over bit_depth, QT compr id & pkt size
+        sr = unpack('>I', data[22:26])[0]
+
+        # ES Description Atom
+        esds_atom_size = unpack('>I', data[28:32])[0]
+        esds_atom = BytesIO(data[36:36 + esds_atom_size])
+        esds_atom.seek(5, SEEK_CUR)   # jump over version, flags and tag
+
+        # ES Descriptor
+        cls._read_extended_descriptor(esds_atom)
+        esds_atom.seek(4, SEEK_CUR)   # jump over ES id, flags and tag
+
+        # Decoder Config Descriptor
+        cls._read_extended_descriptor(esds_atom)
+        esds_atom.seek(9, SEEK_CUR)
+        avg_br = unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
+        return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
+
+    @classmethod
+    def _parse_audio_sample_entry_alac(cls, data: bytes) -> dict[str, int]:
+        # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
+        bitdepth = data[45]
+        channels = data[49]
+        avg_br, sr = unpack('>II', data[56:64])
+        avg_br /= 1000  # kbit/s
+        return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br,
+                'bitdepth': bitdepth}
+
+    @classmethod
+    def _parse_mvhd(cls, data: bytes) -> dict[str, float]:
+        # http://stackoverflow.com/a/3639993/1191373
+        version = data[0]
+        # jump over flags
+        if version == 0:  # uses 32 bit integers for timestamps
+            # jump over create & mod times
+            time_scale, duration = unpack('>II', data[12:20])
+        else:  # version == 1:  # uses 64 bit integers for timestamps
+            # jump over create & mod times
+            time_scale, duration = unpack('>Iq', data[20:28])
+        return {'duration': duration / time_scale}
 
 
 class _ID3(TinyTag):
