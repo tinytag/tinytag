@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2020-2024 tinytag Contributors
+# SPDX-License-Identifier: MIT
+
 # pylint: disable=missing-function-docstring,missing-module-docstring
 
 import json
@@ -11,7 +14,7 @@ import pytest
 
 project_folder = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sample_folder = os.path.join(project_folder, 'tinytag', 'tests', 'samples')
-mp3_with_img = os.path.join(sample_folder, 'id3image_without_description.mp3')
+mp3_with_img = os.path.join(sample_folder, 'image-text-encoding.mp3')
 bogus_file = os.path.join(sample_folder, 'there_is_no_such_ext.bogus')
 assert os.path.exists(mp3_with_img)
 

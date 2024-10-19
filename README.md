@@ -1,3 +1,8 @@
+<!--
+  SPDX-FileCopyrightText: 2014-2024 tinytag Contributors
+  SPDX-License-Identifier: MIT
+-->
+
 # tinytag 
 
 tinytag is a Python library for reading audio file metadata
