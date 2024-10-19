@@ -1059,32 +1059,22 @@ testfiles = dict([
         'samplerate': 44100,
         'bitdepth': 16,
     }),
-    ('samples/flac_multiple_fields.flac', {
+    ('samples/flac_with_image.flac', {
         'extra': {
             'artist': ['artist 2', 'artist 3'],
             'genre': ['genre 2'],
             'album': ['album 2'],
             'url': ['https://example.com'],
         },
-        'filesize': 266,
+        'filesize': 2824,
         'album': 'album 1',
         'artist': 'artist 1',
-        'bitrate': 21.28,
+        'bitrate': 225.92,
         'channels': 1,
         'duration': 0.1,
         'genre': 'genre 1',
         'samplerate': 44100,
         'bitdepth': 16,
-    }),
-    ('samples/flac_with_image.flac', {
-        'extra': {},
-        'channels': 2,
-        'duration': 3.684716553287982,
-        'filesize': 4692,
-        'bitrate': 10.186943678613627,
-        'samplerate': 44100,
-        'bitdepth': 16,
-        'title': 'image',
     }),
     ('samples/test2.wma', {
         'extra': {
@@ -1519,10 +1509,11 @@ def test_image_loading(path: str, expected_size: int, desc: str) -> None:
         manual_image = tag.images.other[0]
     assert image is not None
     assert manual_image is not None
-    image.data = manual_image.data
     assert image.name in {'front_cover', 'other'}
     assert image.data is not None
     assert image.data == manual_image.data
+    with pytest.warns(DeprecationWarning):
+        assert image.data == tag.get_image()
     image_size = len(image.data)
     assert image_size == expected_size, \
            f'Image is {image_size} bytes but should be {expected_size} bytes'
@@ -1539,6 +1530,8 @@ def test_image_loading_extra() -> None:
     assert image.data is not None
     assert tag.images.any is not None
     assert tag.images.any.data == image.data
+    with pytest.warns(DeprecationWarning):
+        assert image.data == tag.get_image()
     assert image.mime_type == 'image/jpeg'
     assert image.name == 'bright_colored_fish'
     assert image.description == 'some image ë'
@@ -1601,57 +1594,68 @@ def test_deprecations() -> None:
 
 
 def test_to_str() -> None:
-    tag = TinyTag.get(os.path.join(testfolder, 'samples/id3v22-test.mp3'))
-    assert (
-        "'filesize': 5120, 'duration': 0.13836297152858082, 'channels': 2, "
-        "'bitrate': 160.0, 'bitdepth': None, 'samplerate': 44100, "
-        "'artist': 'Anais Mitchell', 'albumartist': None, 'composer': None, "
-        "'album': 'Hymns for the Exiled', 'disc': None, 'disc_total': None, "
-        "'title': 'cosmic american', 'track': 3, 'track_total': 11, "
-        "'genre': None, 'year': '2004', "
-        "'comment': 'Waterbug Records, www.anaismitchell.com', "
-        "'extra': {'encoded_by': ['iTunes v4.6'], 'itunnorm': [' 0000044E "
-        "00000061 00009B67 000044C3 00022478 00022182 00007FCC 00007E5C "
-        "0002245E 0002214E'], 'itunes_cddb_1': ['9D09130B+174405+11+150+14097"
-        "+27391+43983+65786+84877+99399+113226+132452+146426+163829'], "
-        "'itunes_cddb_tracknumber': ['3']}, 'images': {'front_cover': [], "
-        "'back_cover': [], 'leaflet': [], 'media': [], 'other': [], "
-        "'extra': {}}"
-    ) in str(tag)
+    tag = TinyTag.get(
+        os.path.join(testfolder, 'samples/flac_with_image.flac'), image=True)
+    assert str(tag).endswith(
+        "'filesize': 2824, 'duration': 0.1, 'channels': 1, 'bitrate': 225.92, "
+        "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
+        "'albumartist': None, 'composer': None, 'album': 'album 1', "
+        "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
+        "'track_total': None, 'genre': 'genre 1', 'year': None, "
+        "'comment': None, 'extra': {'artist': ['artist 2', 'artist 3'], "
+        "'album': ['album 2'], 'genre': ['genre 2'], "
+        "'url': ['https://example.com']}, 'images': {'front_cover': "
+        "[{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF"
+        "\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
+        "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': "
+        "'image/jpeg', 'description': 'some image ë'}], 'back_cover': [], "
+        "'leaflet': [], 'media': [], 'other': [], 'extra': "
+        "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
+        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
+        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
+        "'some image ë'}]}}}"
+    )
+    assert str(tag.images) == (
+        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
+        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
+        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
+        "'back_cover': [], 'leaflet': [], 'media': [], 'other': [], 'extra': "
+        "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
+        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
+        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
+        "'some image ë'}]}}"
+    )
 
 
 def test_to_str_flat_dict() -> None:
     tag = TinyTag.get(
-        os.path.join(testfolder, 'samples/flac_multiple_fields.flac'))
-    assert (
-        "'filesize': 266, 'duration': 0.1, 'channels': 1, 'bitrate': 21.28, "
+        os.path.join(testfolder, 'samples/flac_with_image.flac'), image=True)
+    assert str(tag.as_dict()).endswith(
+        "'filesize': 2824, 'duration': 0.1, 'channels': 1, 'bitrate': 225.92, "
         "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
-        "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
-        "'genre': ['genre 1', 'genre 2'], 'url': ['https://example.com'], "
-        "'images': {}"
-    ) in str(tag.as_dict())
-
-
-def test_to_str_images() -> None:
-    tag = TinyTag.get(
-        os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
-    assert str(tag.images) == (
-        "{'front_cover': [], 'back_cover': [], 'leaflet': [], 'media': [], "
-        "'other': [], 'extra': {'bright_colored_fish': [{'name': "
-        "'bright_colored_fish', 'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF"
-        "\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02"
-        "\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0"
-        "lcm..', 'mime_type': 'image/jpeg', 'description': 'some image ë'}]}}"
+        "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], 'genre': "
+        "['genre 1', 'genre 2'], 'url': ['https://example.com'], 'images': "
+        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
+        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
+        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
+        "'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
+        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
+        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
+        "'some image ë'}]}}"
     )
-
-
-def test_to_str_images_flat_dict() -> None:
-    tag = TinyTag.get(
-        os.path.join(testfolder, 'samples/ogg_with_image.ogg'), image=True)
     assert str(tag.images.as_dict()) == (
-        "{'bright_colored_fish': [{'name': 'bright_colored_fish', "
+        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
+        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
+        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
+        "'bright_colored_fish': [{'name': 'bright_colored_fish', "
         "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
-        "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01"
-        "\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
+        "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
+        "\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
         "'description': 'some image ë'}]}"
     )
