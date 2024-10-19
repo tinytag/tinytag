@@ -576,6 +576,12 @@ testfiles = dict([
         'filesize': 2311,
         'title': 'image',
     }),
+    ('samples/utf16_no_bom.mp3', {
+        'extra': {},
+        'filesize': 1069,
+        'title': 'no bom test ë',
+        'artist': 'no bom test 2 ë',
+    }),
     ('samples/empty.ogg', {
         'extra': {},
         'duration': 3.684716553287982,

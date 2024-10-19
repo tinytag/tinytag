@@ -1300,10 +1300,10 @@ class _ID3(TinyTag):
             # remove ADDITIONAL EXTRA BOM :facepalm:
             if value[:4] == b'\x00\x00\xff\xfe':
                 value = value[4:]
-        elif first_byte == b'\x02':  # UTF-16LE
+        elif first_byte == b'\x02':  # UTF-16 without BOM
             # strip optional null byte, if byte count uneven
             value = value[1:-1] if len(value) % 2 == 0 else value[1:]
-            encoding = 'UTF-16le'
+            encoding = 'UTF-16be'
         elif first_byte == b'\x03':  # UTF-8
             value = value[1:]
             encoding = 'UTF-8'
