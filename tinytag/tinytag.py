@@ -1263,7 +1263,7 @@ class _ID3(TinyTag):
                         content[desc_start_pos:], termination)
                     desc_end_pos = desc_start_pos + desc_len + len(termination)
                     desc = self._decode_string(
-                        content[desc_start_pos:desc_end_pos])
+                        encoding + content[desc_start_pos:desc_end_pos])
                     field_name, image = self._create_tag_image(
                         content[desc_end_pos:], pic_type, mime_type, desc)
                     # pylint: disable=protected-access
