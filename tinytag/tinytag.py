@@ -1487,13 +1487,14 @@ class _Ogg(TinyTag):
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
                 key_lower = key.lower()
-                if key_lower == "metadata_block_picture" and self._load_image:
-                    if DEBUG:
-                        print('Found Vorbis Image', key, value[:64])
-                    # pylint: disable=protected-access
-                    fieldname, fieldvalue = _Flac._parse_image(
-                        BytesIO(a2b_base64(value)))
-                    self.images._set_field(fieldname, fieldvalue)
+                if key_lower == "metadata_block_picture":
+                    if self._load_image:
+                        if DEBUG:
+                            print('Found Vorbis Image', key, value[:64])
+                        # pylint: disable=protected-access
+                        fieldname, fieldvalue = _Flac._parse_image(
+                            BytesIO(a2b_base64(value)))
+                        self.images._set_field(fieldname, fieldvalue)
                 else:
                     if DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
