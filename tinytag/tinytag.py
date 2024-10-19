@@ -822,7 +822,7 @@ class _ID3(TinyTag):
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
     _DISALLOWED_FRAME_IDS = {
-        'CHAP', 'CTOC', 'PRIV', 'RGAD', 'GEOB', 'GEO', 'ÿû°d'
+        'CHAP', 'CTOC', 'PRIV', 'RGAD', 'GEOB', 'GEO'
     }
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -1081,18 +1081,19 @@ class _ID3(TinyTag):
 
     def _parse_id3v2(self, fh: BinaryIO) -> None:
         size, extended, major = self._parse_id3v2_header(fh)
-        if size:
-            end_pos = fh.tell() + size
-            parsed_size = 0
-            if extended:  # just read over the extended header.
-                extd_size = self._unsynchsafe(unpack('4B', fh.read(6)[:4]))
-                fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
-            while parsed_size < size:
-                frame_size = self._parse_frame(fh, id3version=major)
-                if frame_size == 0:
-                    break
-                parsed_size += frame_size
-            fh.seek(end_pos, SEEK_SET)
+        if size <= 0:
+            return
+        end_pos = fh.tell() + size
+        parsed_size = 0
+        if extended:  # just read over the extended header.
+            extd_size = self._unsynchsafe(unpack('4B', fh.read(6)[:4]))
+            fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
+        while parsed_size < size:
+            frame_size = self._parse_frame(fh, size, id3version=major)
+            if frame_size == 0:
+                break
+            parsed_size += frame_size
+        fh.seek(end_pos, SEEK_SET)
 
     def _parse_id3v1(self, fh: BinaryIO) -> None:
         if fh.read(3) != b'TAG':  # check if this is an ID3 v1 tag
@@ -1172,7 +1173,10 @@ class _ID3(TinyTag):
                 return i
         return -1
 
-    def _parse_frame(self, fh: BinaryIO, id3version: int | None = None) -> int:
+    def _parse_frame(self,
+                     fh: BinaryIO,
+                     total_size: int,
+                     id3version: int | None = None) -> int:
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
         header_size = 6 if id3version == 2 else 10
         frame_size_bytes = 3 if id3version == 2 else 4
@@ -1190,90 +1194,90 @@ class _ID3(TinyTag):
             frame_size = unpack('>I', header[4:8])[0]
         if DEBUG:
             print(f'Found id3 Frame {frame_id} at '
-                  f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
-        if frame_size > 0:
-            # flags = frame[1+frame_size_bytes:] # dont care about flags.
-            content = fh.read(frame_size)
-            fieldname = self._ID3_MAPPING.get(frame_id)
-            should_set_field = True
-            if fieldname:
-                if not self._parse_tags:
-                    return frame_size
-                language = fieldname in {'comment', 'extra.lyrics'}
-                value = self._decode_string(content, language)
-                if not value:
-                    return frame_size
-                if fieldname == "comment":
-                    # check if comment is a key-value pair (used by iTunes)
-                    should_set_field = not self.__parse_custom_field(value)
-                elif fieldname in {'track', 'disc'}:
-                    if '/' in value:
-                        value, total = value.split('/')[:2]
-                        if total.isdecimal():
-                            self._set_field(f'{fieldname}_total', int(total))
-                    if value.isdecimal():
-                        self._set_field(fieldname, int(value))
-                    should_set_field = False
-                elif fieldname == 'genre':
-                    genre_id = 255
-                    # funky: id3v1 genre hidden in a id3v2 field
-                    if value.isdecimal():
-                        genre_id = int(value)
-                    # funkier: the TCO may contain genres in parens, e.g '(13)'
-                    elif value[:1] == '(':
-                        end_pos = value.find(')')
-                        parens_text = value[1:end_pos]
-                        if end_pos > 0 and parens_text.isdecimal():
-                            genre_id = int(parens_text)
-                    if 0 <= genre_id < len(self._ID3V1_GENRES):
-                        value = self._ID3V1_GENRES[genre_id]
-                if should_set_field:
-                    self._set_field(fieldname, value)
-            elif frame_id in self._CUSTOM_FRAME_IDS:
-                # custom fields
-                if self._parse_tags:
-                    value = self._decode_string(content)
-                    if value:
-                        self.__parse_custom_field(value)
-            elif frame_id in self._IMAGE_FRAME_IDS:
-                if self._load_image:
-                    # See section 4.14: http://id3.org/id3v2.4.0-frames
-                    encoding = content[:1]
-                    if frame_id == 'PIC':  # ID3 v2.2:
-                        imgformat = self._decode_string(content[1:4]).lower()
-                        mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
-                        # skip encoding (1), imgformat (3), pictype(1)
-                        desc_start_pos = 5
-                    else:  # ID3 v2.3+
-                        mime_end_pos = content.index(b'\x00', 1)
-                        mime_type = self._decode_string(
-                            content[1:mime_end_pos]).lower()
-                        # skip mtype, pictype(1)
-                        desc_start_pos = mime_end_pos + 2
-                    pic_type = content[desc_start_pos - 1]
-                    # latin1 and utf-8 are 1 byte
-                    if encoding in {b'\x00', b'\x03'}:
-                        termination = b'\x00'
-                    else:
-                        termination = b'\x00\x00'
-                    desc_len = self._index_utf16(
-                        content[desc_start_pos:], termination)
-                    desc_end_pos = desc_start_pos + desc_len + len(termination)
-                    desc = self._decode_string(
-                        encoding + content[desc_start_pos:desc_end_pos])
-                    field_name, image = self._create_tag_image(
-                        content[desc_end_pos:], pic_type, mime_type, desc)
-                    # pylint: disable=protected-access
-                    self.images._set_field(field_name, image)
-            elif frame_id not in self._DISALLOWED_FRAME_IDS:
-                # unknown, try to add to extra dict
-                if self._parse_tags:
-                    value = self._decode_string(content)
-                    if value:
-                        self._set_field(
-                            self._EXTRA_PREFIX + frame_id.lower(), value)
-            return frame_size
-        return 0
+                  f'{fh.tell()}-{fh.tell() + frame_size} of {total_size}')
+        if frame_size > total_size:
+            # invalid frame size, stop here
+            return 0
+        content = fh.read(frame_size)
+        fieldname = self._ID3_MAPPING.get(frame_id)
+        should_set_field = True
+        if fieldname:
+            if not self._parse_tags:
+                return frame_size
+            language = fieldname in {'comment', 'extra.lyrics'}
+            value = self._decode_string(content, language)
+            if not value:
+                return frame_size
+            if fieldname == "comment":
+                # check if comment is a key-value pair (used by iTunes)
+                should_set_field = not self.__parse_custom_field(value)
+            elif fieldname in {'track', 'disc'}:
+                if '/' in value:
+                    value, total = value.split('/')[:2]
+                    if total.isdecimal():
+                        self._set_field(f'{fieldname}_total', int(total))
+                if value.isdecimal():
+                    self._set_field(fieldname, int(value))
+                should_set_field = False
+            elif fieldname == 'genre':
+                genre_id = 255
+                # funky: id3v1 genre hidden in a id3v2 field
+                if value.isdecimal():
+                    genre_id = int(value)
+                # funkier: the TCO may contain genres in parens, e.g '(13)'
+                elif value[:1] == '(':
+                    end_pos = value.find(')')
+                    parens_text = value[1:end_pos]
+                    if end_pos > 0 and parens_text.isdecimal():
+                        genre_id = int(parens_text)
+                if 0 <= genre_id < len(self._ID3V1_GENRES):
+                    value = self._ID3V1_GENRES[genre_id]
+            if should_set_field:
+                self._set_field(fieldname, value)
+        elif frame_id in self._CUSTOM_FRAME_IDS:
+            # custom fields
+            if self._parse_tags:
+                value = self._decode_string(content)
+                if value:
+                    self.__parse_custom_field(value)
+        elif frame_id in self._IMAGE_FRAME_IDS:
+            if self._load_image:
+                # See section 4.14: http://id3.org/id3v2.4.0-frames
+                encoding = content[:1]
+                if frame_id == 'PIC':  # ID3 v2.2:
+                    imgformat = self._decode_string(content[1:4]).lower()
+                    mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
+                    # skip encoding (1), imgformat (3), pictype(1)
+                    desc_start_pos = 5
+                else:  # ID3 v2.3+
+                    mime_end_pos = content.index(b'\x00', 1)
+                    mime_type = self._decode_string(
+                        content[1:mime_end_pos]).lower()
+                    # skip mtype, pictype(1)
+                    desc_start_pos = mime_end_pos + 2
+                pic_type = content[desc_start_pos - 1]
+                # latin1 and utf-8 are 1 byte
+                if encoding in {b'\x00', b'\x03'}:
+                    termination = b'\x00'
+                else:
+                    termination = b'\x00\x00'
+                desc_len = self._index_utf16(
+                    content[desc_start_pos:], termination)
+                desc_end_pos = desc_start_pos + desc_len + len(termination)
+                desc = self._decode_string(
+                    encoding + content[desc_start_pos:desc_end_pos])
+                field_name, image = self._create_tag_image(
+                    content[desc_end_pos:], pic_type, mime_type, desc)
+                # pylint: disable=protected-access
+                self.images._set_field(field_name, image)
+        elif frame_id not in self._DISALLOWED_FRAME_IDS:
+            # unknown, try to add to extra dict
+            if self._parse_tags:
+                value = self._decode_string(content)
+                if value:
+                    self._set_field(
+                        self._EXTRA_PREFIX + frame_id.lower(), value)
+        return frame_size
 
     def _decode_string(self, value: bytes, language: bool = False) -> str:
         default_encoding = 'ISO-8859-1'
