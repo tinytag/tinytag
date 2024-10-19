@@ -1116,13 +1116,6 @@ class _ID3(TinyTag):
             image.description = description
         return field_name, image
 
-    @staticmethod
-    def _index_utf16(s: bytes, search: bytes) -> int:
-        for i in range(0, len(s), len(search)):
-            if s[i:i + len(search)] == search:
-                return i
-        return -1
-
     def _parse_frame(self,
                      fh: BinaryIO,
                      total_size: int,
@@ -1208,12 +1201,13 @@ class _ID3(TinyTag):
                 pic_type = content[desc_start_pos - 1]
                 # latin1 and utf-8 are 1 byte
                 if encoding in {b'\x00', b'\x03'}:
-                    termination = b'\x00'
+                    desc_end_pos = content.find(b'\x00', desc_start_pos) + 1
                 else:
-                    termination = b'\x00\x00'
-                desc_len = self._index_utf16(
-                    content[desc_start_pos:], termination)
-                desc_end_pos = desc_start_pos + desc_len + len(termination)
+                    desc_end_pos = 0
+                    for i in range(desc_start_pos, len(content), 2):
+                        if content[i:i + 2] == b'\x00\x00':
+                            desc_end_pos = i + 2
+                            break
                 desc = self._decode_string(
                     encoding + content[desc_start_pos:desc_end_pos])
                 field_name, image = self._create_tag_image(
@@ -1332,21 +1326,16 @@ class _Ogg(TinyTag):
         if self.duration is not None or not self.samplerate:
             return  # either ogg flac or invalid file
         if self.filesize > max_page_size:
-            fh.seek(-max_page_size, 2)  # go to last possible page position
-        while True:
-            file_offset = fh.tell()
-            b = fh.read()
-            if len(b) < 4:
-                return  # EOF
-            if b[:4] == b'OggS':  # look for an ogg header
-                fh.seek(file_offset)
-                for _ in self._parse_pages(fh):
-                    pass  # parse all remaining pages
-                self.duration = self._max_samplenum / self.samplerate
-                break
-            idx = b.find(b'OggS')  # try to find header in peeked data
-            if idx != -1:
-                fh.seek(file_offset + idx)
+            # go to last possible page position
+            fh.seek(-max_page_size, SEEK_END)
+        data = fh.read()
+        idx = data.find(b'OggS')  # try to find header in read data
+        if idx != -1:
+            walker = BytesIO(data)
+            walker.seek(idx)
+            for _packet in self._parse_pages(walker):
+                pass  # parse all remaining pages
+            self.duration = self._max_samplenum / self.samplerate
 
     def _parse_tag(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
@@ -1360,7 +1349,7 @@ class _Ogg(TinyTag):
             elif packet[:7] == b"\x03vorbis":
                 if self._parse_tags:
                     walker = BytesIO(packet)
-                    walker.seek(7, SEEK_CUR)  # jump over header name
+                    walker.seek(7)  # jump over header name
                     self._parse_vorbis_comment(walker)
             elif packet[:8] == b'OpusHead':
                 if self._parse_duration:  # parse opus header
@@ -1373,13 +1362,13 @@ class _Ogg(TinyTag):
             elif packet[:8] == b'OpusTags':
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
-                    walker.seek(8, SEEK_CUR)  # jump over header name
+                    walker.seek(8)  # jump over header name
                     self._parse_vorbis_comment(walker)
             elif packet[:5] == b'\x7fFLAC':
                 # https://xiph.org/flac/ogg_mapping.html
                 walker = BytesIO(packet)
                 # jump over header name, version and number of headers
-                walker.seek(9, SEEK_CUR)
+                walker.seek(9)
                 # pylint: disable=protected-access
                 flactag = _Flac()
                 flactag._filehandler = walker
@@ -1558,13 +1547,12 @@ class _Wave(TinyTag):
                     self.duration = (
                         subchunksize / self.channels / self.samplerate
                         / (self.bitdepth / 8))
-                fh.seek(subchunksize, 1)
+                fh.seek(subchunksize, SEEK_CUR)
             elif subchunkid == b'LIST' and self._parse_tags:
-                is_info = fh.read(4)  # check INFO header
-                if is_info != b'INFO':  # jump over non-INFO sections
-                    fh.seek(subchunksize - 4, SEEK_CUR)
-                else:
-                    walker = BytesIO(fh.read(subchunksize - 4))
+                chunk = fh.read(subchunksize)
+                if chunk[:4] == b'INFO':
+                    walker = BytesIO(chunk)
+                    walker.seek(4)  # skip header
                     field = walker.read(4)
                     while len(field) == 4:
                         data_length = unpack('I', walker.read(4))[0]
@@ -1588,7 +1576,7 @@ class _Wave(TinyTag):
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
             else:  # some other chunk, just skip the data
-                fh.seek(subchunksize, 1)
+                fh.seek(subchunksize, SEEK_CUR)
             chunk_header = fh.read(8)
         self._tags_parsed = True
 
@@ -1669,8 +1657,6 @@ class _Flac(TinyTag):
                 fieldname, value = self._parse_image(fh)
                 # pylint: disable=protected-access
                 self.images._set_field(fieldname, value)
-            elif block_type >= 127:
-                break  # invalid block type
             else:
                 if DEBUG:
                     print('Unknown FLAC block type', block_type)
