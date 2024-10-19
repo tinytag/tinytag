@@ -478,23 +478,19 @@ class _MP4(TinyTag):
         'barcode': 'extra.barcode',
         'catalognumber': 'extra.catalog_number',
     }
-    _UNPACK_SIGNED_FORMATS = {
+    _IMAGE_MIME_TYPES = {
+        13: 'image/jpeg',
+        14: 'image/png'
+    }
+    _UNPACK_FORMATS = {
         1: '>b',
         2: '>h',
         4: '>i',
         8: '>q'
     }
-    _UNPACK_UNSIGNED_FORMATS = {
-        1: '>B',
-        2: '>H',
-        4: '>I',
-        8: '>Q'
-    }
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
-    _atom_decoder_by_type: dict[
-        int, Callable[[bytes], int | str | bytes | Image]] | None = None
     _audio_data_tree: dict[bytes, Any] | None = None
     _meta_data_tree: dict[bytes, Any] | None = None
 
@@ -540,11 +536,11 @@ class _MP4(TinyTag):
                 b'aART': {b'data': _MP4._data_parser('albumartist')},
                 b'cprt': {b'data': _MP4._data_parser('extra.copyright')},
                 b'desc': {b'data': _MP4._data_parser('extra.description')},
-                b'disk': {b'data': _MP4._num_parser('disc', 'disc_total')},
+                b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
                 b'gnre': {b'data': _MP4._parse_id3v1_genre},
-                b'trkn': {b'data': _MP4._num_parser('track', 'track_total')},
+                b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
                 b'tmpo': {b'data': _MP4._data_parser('extra.bpm')},
-                b'covr': {b'data': _MP4._data_parser('images.front_cover')},
+                b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
             }}}}}
         self._traverse_atoms(fh, path=_MP4._meta_data_tree)
@@ -599,88 +595,35 @@ class _MP4(TinyTag):
             atom_header = fh.read(header_size)  # read next atom
 
     @classmethod
-    def _unpack_utf_8_string(cls, value: bytes) -> str:
-        return value.decode('utf-8', 'replace')
-
-    @classmethod
-    def _unpack_utf_16_string(cls, value: bytes) -> str:
-        return value.decode('utf-16', 'replace')
-
-    @classmethod
-    def _unpack_shift_jis_string(cls, value: bytes) -> str:
-        return value.decode('s/jis', 'replace')
-
-    @classmethod
-    def _unpack_jpeg_image(cls, data: bytes) -> Image:
-        return Image('front_cover', data, 'image/jpeg')
-
-    @classmethod
-    def _unpack_png_image(cls, data: bytes) -> Image:
-        return Image('front_cover', data, 'image/png')
-
-    @classmethod
-    def _unpack_integer(cls, value: bytes, signed: bool = True) -> str:
-        fmts = cls._UNPACK_UNSIGNED_FORMATS
-        if signed:
-            fmts = cls._UNPACK_SIGNED_FORMATS
-        value_len = len(value)
-        if value_len in fmts:
-            return str(unpack(fmts[value_len], value)[0])
-        return ""
-
-    @classmethod
-    def _unpack_integer_unsigned(cls, value: bytes) -> str:
-        return cls._unpack_integer(value, signed=False)
-
-    @classmethod
     def _data_parser(
         cls, fieldname: str
-    ) -> Callable[[bytes], dict[str, int | str | bytes | Image]]:
+    ) -> Callable[[bytes], dict[str, int | str | bytes | None]]:
         def _parse_data_atom(
             data_atom: bytes
-        ) -> dict[str, int | str | bytes | Image]:
+        ) -> dict[str, int | str | bytes | None]:
             data_type = unpack('>I', data_atom[:4])[0]
-            if cls._atom_decoder_by_type is None:
-                # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html#//apple_ref/doc/uid/TP40000939-CH1-SW34
-                cls._atom_decoder_by_type = {
-                    # 0: 'reserved'
-                    1: cls._unpack_utf_8_string,       # UTF-8
-                    2: cls._unpack_utf_16_string,      # UTF-16
-                    3: cls._unpack_shift_jis_string,   # S/JIS
-                    # 16: duration in millis
-                    13: cls._unpack_jpeg_image,        # JPEG
-                    14: cls._unpack_png_image,         # PNG
-                    21: cls._unpack_integer,           # BE Signed
-                    22: cls._unpack_integer_unsigned,  # BE Unsigned
-                    65: cls._unpack_integer,           # 8-bit Signed
-                    66: cls._unpack_integer,           # BE 16-bit Signed
-                    67: cls._unpack_integer,           # BE 32-bit Signed
-                    74: cls._unpack_integer,           # BE 64-bit Signed
-                    75: cls._unpack_integer_unsigned,  # 8-bit Unsigned
-                    76: cls._unpack_integer_unsigned,  # BE 16-bit Unsigned
-                    77: cls._unpack_integer_unsigned,  # BE 32-bit Unsigned
-                    78: cls._unpack_integer_unsigned,  # BE 64-bit Unsigned
-                }
-            conversion = cls._atom_decoder_by_type.get(data_type)
-            if conversion is None:
-                if DEBUG:
-                    print(f'Cannot convert data type: {data_type}',
-                          file=stderr)
-                return {}  # don't know how to convert data atom
-            # skip header & null-bytes, convert rest
-            return {fieldname: conversion(data_atom[8:])}
+            data = data_atom[8:]
+            value = None
+            if data_type == 1:     # UTF-8 string
+                value = data.decode('utf-8', 'replace')
+            elif data_type == 21:  # BE signed integer
+                fmts = cls._UNPACK_FORMATS
+                data_len = len(data)
+                if data_len in fmts:
+                    value = str(unpack(fmts[data_len], data)[0])
+            return {fieldname: value}
         return _parse_data_atom
 
     @classmethod
-    def _num_parser(
+    def _nums_parser(
         cls, fieldname1: str, fieldname2: str
     ) -> Callable[[bytes], dict[str, int]]:
-        def _(data_atom: bytes) -> dict[str, int]:
+        def _parse_nums(data_atom: bytes) -> dict[str, int]:
             number_data = data_atom[8:14]
             numbers = unpack('>3H', number_data)
             # for some reason the first number is always irrelevant.
             return {fieldname1: numbers[1], fieldname2: numbers[2]}
-        return _
+        return _parse_nums
 
     @classmethod
     def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
@@ -693,6 +636,13 @@ class _MP4(TinyTag):
         return result
 
     @classmethod
+    def _parse_cover_image(cls, data_atom: bytes) -> dict[str, Image]:
+        data_type = unpack('>I', data_atom[:4])[0]
+        image = Image(
+            'front_cover', data_atom[8:], cls._IMAGE_MIME_TYPES.get(data_type))
+        return {'images.front_cover': image}
+
+    @classmethod
     def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
         for _i in range(4):
             if esds_atom.read(1) != b'\x80':
@@ -701,7 +651,7 @@ class _MP4(TinyTag):
     @classmethod
     def _parse_custom_field(
         cls, data: bytes
-    ) -> dict[str, int | str | bytes | Image]:
+    ) -> dict[str, int | str | bytes | None]:
         fh = BytesIO(data)
         header_size = 8
         field_name = None
@@ -1841,9 +1791,18 @@ class _Wma(TinyTag):
                     name_len = unpack('<H', walker.read(2))[0]
                     name = self._unpad(
                         walker.read(name_len).decode('utf-16', 'replace'))
-                    val_type, val_len = unpack('<HH', walker.read(4))
-                    if val_type == 1:
-                        walker.seek(val_len, SEEK_CUR)  # skip byte values
+                    value_type, value_len = unpack('<HH', walker.read(4))
+                    # Unicode string
+                    if value_type == 0:
+                        value = self._unpad(
+                            walker.read(value_len).decode('utf-16', 'replace'))
+                    # DWORD / QWORD / WORD
+                    elif (1 < value_type < 6
+                            and value_len in self._UNPACK_FORMATS):
+                        fmt = self._UNPACK_FORMATS[value_len]
+                        value = str(unpack(fmt, walker.read(value_len))[0])
+                    else:
+                        walker.seek(value_len, SEEK_CUR)  # skip other values
                         continue
                     # try to get normalized field name
                     field_name = self._ASF_MAPPING.get(name)
@@ -1851,13 +1810,11 @@ class _Wma(TinyTag):
                         if name.startswith('WM/'):
                             name = name[3:]
                         field_name = self._EXTRA_PREFIX + name.lower()
-                    val = self._decode_ext_desc(val_type, walker.read(val_len))
-                    if val:
-                        if field_name in {'track', 'disc'}:
-                            if isinstance(val, int) or val.isdecimal():
-                                self._set_field(field_name, int(val))
-                        elif val:
-                            self._set_field(field_name, val)
+                    if field_name in {'track', 'disc'}:
+                        if isinstance(value, int) or value.isdecimal():
+                            self._set_field(field_name, int(value))
+                    elif value:
+                        self._set_field(field_name, value)
             elif object_id == self._ASF_FILE_PROP and self._parse_duration:
                 data = fh.read(object_size - 24)
                 play_duration = unpack('<Q', data[40:48])[0] / 10000000
@@ -1876,17 +1833,6 @@ class _Wma(TinyTag):
             else:
                 fh.seek(object_size - 24, SEEK_CUR)  # skip unknown object ids
         self._tags_parsed = True
-
-    @classmethod
-    def _decode_ext_desc(cls, value_type: int, value: bytes) -> str:
-        """ decode _ASF_EXT_CONTENT_DESC values"""
-        if value_type == 0:  # Unicode string
-            return cls._unpad(value.decode('utf-16', 'replace'))
-        if 1 < value_type < 6:  # DWORD / QWORD / WORD
-            value_len = len(value)
-            if value_len in cls._UNPACK_FORMATS:
-                return str(unpack(cls._UNPACK_FORMATS[value_len], value)[0])
-        return ""
 
 
 class _Aiff(TinyTag):
