@@ -821,7 +821,9 @@ class _ID3(TinyTag):
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
-    _DISALLOWED_FRAME_IDS = {'PRIV', 'RGAD', 'GEOB', 'GEO', 'ÿû°d'}
+    _DISALLOWED_FRAME_IDS = {
+        'CHAP', 'CTOC', 'PRIV', 'RGAD', 'GEOB', 'GEO', 'ÿû°d'
+    }
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
