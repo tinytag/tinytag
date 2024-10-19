@@ -33,7 +33,6 @@ from binascii import a2b_base64
 from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, SEEK_SET, environ, fsdecode
 from struct import unpack
-from sys import stderr
 
 # Lazy imports for type checking
 if False:  # pylint: disable=using-constant-test
@@ -1571,11 +1570,7 @@ class _Flac(TinyTag):
     """FLAC Parser"""
 
     _STREAMINFO = 0
-    _PADDING = 1
-    _APPLICATION = 2
-    _SEEKTABLE = 3
     _VORBIS_COMMENT = 4
-    _CUESHEET = 5
     _PICTURE = 6
 
     def _determine_duration(self, fh: BinaryIO) -> None:
@@ -1644,8 +1639,6 @@ class _Flac(TinyTag):
                 # pylint: disable=protected-access
                 self.images._set_field(fieldname, value)
             else:
-                if DEBUG:
-                    print('Unknown FLAC block type', block_type)
                 fh.seek(size, SEEK_CUR)  # seek over this block
             if is_last_block:
                 break
