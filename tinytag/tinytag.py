@@ -163,7 +163,9 @@ class TinyTag:
         metadata."""
         fields: dict[str, str | int | float | list[str]] = {}
         for key, value in self.__dict__.items():
-            if key.startswith('_') or key == 'images':
+            if key.startswith('_'):
+                continue
+            if isinstance(value, Images):
                 continue
             if not isinstance(value, Extra):
                 if value is None:
