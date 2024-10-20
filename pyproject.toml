@@ -55,6 +55,8 @@ Homepage = "https://github.com/tinytag/tinytag"
 
 [project.optional-dependencies]
 tests = [
+    "coverage",
+    "mypy",
     "pycodestyle",
     "pylint",
     "pytest"

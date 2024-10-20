@@ -19,16 +19,10 @@ jobs:
         include:
           - os: ubuntu-22.04
             python: 3.7
-          - os: ubuntu-22.04
-            python: pypy-3.7
           - os: macos-13
             python: 3.7
-          - os: macos-13
-            python: pypy-3.7
           - os: windows-latest
             python: 3.7
-          - os: windows-latest
-            python: pypy-3.7
 
     steps:
       - name: Checkout code
@@ -43,7 +37,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: python -m pip install build coverage flit reuse .[tests]
+        run: python -m pip install build flit reuse .[tests]
 
       - name: PEP 8 style checks
         run: python -m pycodestyle .
@@ -52,10 +46,7 @@ jobs:
         run: python -m pylint --recursive=y .
 
       - name: Typing
-        if: matrix.python != 'pypy-3.7'
-        run: |
-          python -m pip install mypy
-          python -m mypy -p tinytag
+        run: python -m mypy -p tinytag
 
       - name: Unit tests
         run: python -m coverage run -m pytest
@@ -69,7 +60,7 @@ jobs:
         run: python -m build --no-isolation
 
       - name: REUSE compliance
-        if: matrix.python != '3.7' && matrix.python != 'pypy-3.7'
+        if: matrix.python != '3.7'
         run: python -m reuse lint
 
       - name: Coveralls
