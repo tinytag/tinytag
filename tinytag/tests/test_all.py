@@ -139,8 +139,8 @@ TEST_FILES = dict([
             'musicbrainz album type': ['Album'],
             'musicbrainz album release country': ['United States'],
             'ufid': [
-                'http://musicbrainz.org\x00'
-                'cf639964-eabb-4c40-9673-c2117e456ea5'
+                ('http://musicbrainz.org\x00'
+                 'cf639964-eabb-4c40-9673-c2117e456ea5')
             ],
             'publisher': ['4AD'],
             'tdat': ['1105'],
@@ -381,16 +381,16 @@ TEST_FILES = dict([
             'media': ['CD'],
             'tso2': ['Perfect Circle, A'],
             'ufid': [
-                'http://musicbrainz.org\x00'
-                'd2b8f0e6-735a-42ee-adf0-7eca4e65cd72'
+                ('http://musicbrainz.org\x00'
+                 'd2b8f0e6-735a-42ee-adf0-7eca4e65cd72')
             ],
             'tsop': ['Perfect Circle, A'],
             'original_year': ['2004'],
             'tdat': ['0211'],
             'ipls': [
-                'producer\x00Billy Howerdel\x00'
-                'producer\x00Maynard James Keenan\x00'
-                'engineer\x00Billy Howerdel\x00engineer\x00Critter'
+                ('producer\x00Billy Howerdel\x00'
+                 'producer\x00Maynard James Keenan\x00'
+                 'engineer\x00Billy Howerdel\x00engineer\x00Critter')
             ],
         },
         'filesize': 6943,
