@@ -938,7 +938,7 @@ class _ID3(TinyTag):
             layer_id = (conf >> 1) & 0x03
             channel_mode = (rest >> 6) & 0x03
             # check for eleven 1s, validate bitrate and sample rate
-            if (not header[:2] > b'\xFF\xE0'
+            if (header[:2] <= b'\xFF\xE0'
                     or (first_mpeg_id is not None and first_mpeg_id != mpeg_id)
                     or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0
                     or mpeg_id == 1):
@@ -1017,10 +1017,7 @@ class _ID3(TinyTag):
             major = header[3]
             if DEBUG:
                 print(f'Found id3 v2.{major}')
-            # unsync = (header[5] & 0x80) > 0
             extended = (header[5] & 0x40) > 0
-            # experimental = (header[5] & 0x20) > 0
-            # footer = (header[5] & 0x10) > 0
             size = self._unsynchsafe(unpack('4B', header[6:10]))
         self._bytepos_after_id3v2 = size
         return size, extended, major

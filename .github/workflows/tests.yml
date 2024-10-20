@@ -58,7 +58,7 @@ jobs:
           python -m mypy -p tinytag
 
       - name: Unit tests
-        run: coverage run -m pytest
+        run: python -m coverage run -m pytest
         env:
           TINYTAG_DEBUG: true
 
