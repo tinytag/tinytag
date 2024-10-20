@@ -1320,7 +1320,6 @@ class _Ogg(TinyTag):
     def _determine_duration(self, fh: BinaryIO) -> None:
         if not self._tags_parsed:
             self._parse_tag(fh)  # determine sample rate
-            fh.seek(0)           # and rewind to start
         if self.duration is not None or not self.samplerate:
             return  # either ogg flac or invalid file
         self.duration = self._max_samplenum / self.samplerate
@@ -1392,6 +1391,13 @@ class _Ogg(TinyTag):
                     # other tags
                     self._parse_vorbis_comment(walker, has_vendor=False)
                 check_speex_second_packet = False
+            else:
+                # Optimization: If we need to determine the duration, read
+                # max_samplenum of remaining pages, but skip contents of
+                # segments. If we don't need the duration, stop here.
+                self._tags_parsed = True
+                if not self._parse_duration:
+                    return
         self._tags_parsed = True
 
     def _parse_vorbis_comment(self,
@@ -1438,7 +1444,7 @@ class _Ogg(TinyTag):
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[bytes]:
         # for the spec, see: https://wiki.xiph.org/Ogg
-        previous_page = b''  # contains data from previous (continuing) pages
+        packet_data = bytearray()
         header_len = 27
         page_header = fh.read(header_len)  # read ogg page header
         while len(page_header) == header_len:
@@ -1448,21 +1454,24 @@ class _Ogg(TinyTag):
             # https://xiph.org/ogg/doc/framing.html
             pos = unpack('<q', page_header[6:14])[0]
             segments = page_header[26]
-            self._max_samplenum = max(self._max_samplenum, pos)
-            segsizes = unpack('B' * segments, fh.read(segments))
-            total = 0
-            for segsize in segsizes:  # read all segments
-                total += segsize
-                if total < 255:  # less than 255 bytes means end of page
-                    yield previous_page + fh.read(total)
-                    previous_page = b''
-                    total = 0
-            if total != 0:
-                if total % 255 == 0:
-                    previous_page += fh.read(total)
-                else:
-                    yield previous_page + fh.read(total)
-                    previous_page = b''
+            # pylint: disable=consider-using-max-builtin
+            if pos > self._max_samplenum:
+                self._max_samplenum = pos
+            seg_sizes = unpack('B' * segments, fh.read(segments))
+            read_size = 0
+            for seg_size in seg_sizes:  # read all segments
+                read_size += seg_size
+                # less than 255 bytes means end of packet
+                if seg_size < 255 and not self._tags_parsed:
+                    packet_data += fh.read(read_size)
+                    yield packet_data
+                    packet_data.clear()
+                    read_size = 0
+            if read_size:
+                if self._tags_parsed:
+                    fh.seek(read_size, SEEK_CUR)
+                else:  # packet continues on next page
+                    packet_data += fh.read(read_size)
             page_header = fh.read(header_len)
 
 
