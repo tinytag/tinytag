@@ -211,24 +211,24 @@ class TinyTag:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
         header = filehandle.read(35)
         filehandle.seek(0)
-        if header[:3] == b'ID3' or header[:2] == b'\xff\xfb':
+        if header.startswith(b'ID3') or header.startswith(b'\xff\xfb'):
             return _ID3
-        if header[:4] == b'fLaC':
+        if header.startswith(b'fLaC'):
             return _Flac
         if ((header[4:8] == b'ftyp'
              and header[8:11] in {b'M4A', b'M4B', b'aax'})
                 or b'\xff\xf1' in header):
             return _MP4
-        if (header[:4] == b'OggS'
+        if (header.startswith(b'OggS')
             and (header[29:33] == b'FLAC' or header[29:35] == b'vorbis'
                  or header[28:32] == b'Opus' or header[29:34] == b'Speex')):
             return _Ogg
-        if header[:4] == b'RIFF' and header[8:12] == b'WAVE':
+        if header.startswith(b'RIFF') and header[8:12] == b'WAVE':
             return _Wave
-        if header[:16] == (b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA'
-                           b'\x00\x62\xCE\x6C'):
+        if header.startswith(b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00'
+                             b'\xAA\x00\x62\xCE\x6C'):
             return _Wma
-        if header[:4] == b'FORM' and header[8:12] in {b'AIFF', b'AIFC'}:
+        if header.startswith(b'FORM') and header[8:12] in {b'AIFF', b'AIFC'}:
             return _Aiff
         return None
 
@@ -1013,7 +1013,7 @@ class _ID3(TinyTag):
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = fh.read(10)
         # check if there is an ID3v2 tag at the beginning of the file
-        if header[:3] == b'ID3':
+        if header.startswith(b'ID3'):
             major = header[3]
             if DEBUG:
                 print(f'Found id3 v2.{major}')
@@ -1164,7 +1164,7 @@ class _ID3(TinyTag):
                 if value.isdecimal():
                     genre_id = int(value)
                 # funkier: the TCO may contain genres in parens, e.g '(13)'
-                elif value[:1] == '(':
+                elif value.startswith('('):
                     end_pos = value.find(')')
                     parens_text = value[1:end_pos]
                     if end_pos > 0 and parens_text.isdecimal():
@@ -1239,12 +1239,13 @@ class _ID3(TinyTag):
                 # strip optional additional null bytes
                 value = value.lstrip(b'\x00')
             # read byte order mark to determine endianness
-            encoding = 'UTF-16be' if value[:2] == b'\xfe\xff' else 'UTF-16le'
+            encoding = ('UTF-16be' if value.startswith(b'\xfe\xff')
+                        else 'UTF-16le')
             # strip the bom if it exists
-            if value[:2] in {b'\xfe\xff', b'\xff\xfe'}:
+            if value.startswith(b'\xfe\xff') or value.startswith(b'\xff\xfe'):
                 value = value[2:] if len(value) % 2 == 0 else value[2:-1]
             # remove ADDITIONAL EXTRA BOM :facepalm:
-            if value[:4] == b'\x00\x00\xff\xfe':
+            if value.startswith(b'\x00\x00\xff\xfe'):
                 value = value[4:]
         elif first_byte == b'\x02':  # UTF-16 without BOM
             # strip optional null byte, if byte count uneven
@@ -1325,17 +1326,17 @@ class _Ogg(TinyTag):
         check_flac_second_packet = False
         check_speex_second_packet = False
         for packet in self._parse_pages(fh):
-            if packet[:7] == b"\x01vorbis":
+            if packet.startswith(b"\x01vorbis"):
                 if self._parse_duration:
                     self.channels, self.samplerate = unpack(
                         "<Bi", packet[11:16])
                     self.bitrate = unpack("<i", packet[20:24])[0] / 1000
-            elif packet[:7] == b"\x03vorbis":
+            elif packet.startswith(b"\x03vorbis"):
                 if self._parse_tags:
                     walker = BytesIO(packet)
                     walker.seek(7)  # jump over header name
                     self._parse_vorbis_comment(walker)
-            elif packet[:8] == b'OpusHead':
+            elif packet.startswith(b'OpusHead'):
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
                     # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
@@ -1343,12 +1344,12 @@ class _Ogg(TinyTag):
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
                         self.samplerate = 48000  # opus always uses 48khz
-            elif packet[:8] == b'OpusTags':
+            elif packet.startswith(b'OpusTags'):
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
                     walker.seek(8)  # jump over header name
                     self._parse_vorbis_comment(walker)
-            elif packet[:5] == b'\x7fFLAC':
+            elif packet.startswith(b'\x7fFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
                 walker = BytesIO(packet)
                 # jump over header name, version and number of headers
@@ -1372,7 +1373,7 @@ class _Ogg(TinyTag):
                     if block_type == _Flac._VORBIS_COMMENT:
                         self._parse_vorbis_comment(walker)
                 check_flac_second_packet = False
-            elif packet[:8] == b'Speex   ':
+            elif packet.startswith(b'Speex   '):
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
                     self.samplerate = unpack("<i", packet[36:40])[0]
@@ -1541,7 +1542,7 @@ class _Wave(TinyTag):
                 fh.seek(subchunk_size, SEEK_CUR)
             elif subchunk_id == b'LIST' and self._parse_tags:
                 chunk = fh.read(subchunk_size)
-                if chunk[:4] == b'INFO':
+                if chunk.startswith(b'INFO'):
                     walker = BytesIO(chunk)
                     walker.seek(4)  # skip header
                     field = walker.read(4)
@@ -1586,7 +1587,7 @@ class _Flac(TinyTag):
     def _parse_tag(self, fh: BinaryIO) -> None:
         id3 = None
         header = fh.read(4)
-        if header[:3] == b'ID3':  # parse ID3 header if it exists
+        if header.startswith(b'ID3'):  # parse ID3 header if it exists
             fh.seek(-4, SEEK_CUR)
             # pylint: disable=protected-access
             id3 = _ID3()
