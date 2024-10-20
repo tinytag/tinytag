@@ -1326,8 +1326,8 @@ def compare_tag(results: dict[str, Any],
                 expected: dict[str, Any],
                 file: str, prev_path: str | None = None) -> None:
     def compare_values(path: str,
-                       result_val: str | int | float,
-                       expected_val: str | int | float) -> bool:
+                       result_val: str | float,
+                       expected_val: str | float) -> bool:
         # lets not copy *all* the lyrics inside the fixture
         if (path == 'extra.lyrics'
                 and isinstance(expected_val, list)
@@ -1337,7 +1337,7 @@ def compare_tag(results: dict[str, Any],
             return result_val == pytest.approx(expected_val)
         return result_val == expected_val
 
-    def error_fmt(value: str | int | float) -> str:
+    def error_fmt(value: str | float) -> str:
         return f'{repr(value)} ({type(value)})'
 
     assert isinstance(results, dict)

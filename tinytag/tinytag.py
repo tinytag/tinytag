@@ -101,7 +101,7 @@ class TinyTag:
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
-        self.__dict__: dict[str, str | int | float | Extra | Images]
+        self.__dict__: dict[str, str | float | Extra | Images]
 
     def __repr__(self) -> str:
         return str({
@@ -158,10 +158,10 @@ class TinyTag:
         extension."""
         return cls._get_parser_for_filename(filename) is not None
 
-    def as_dict(self) -> dict[str, str | int | float | list[str]]:
+    def as_dict(self) -> dict[str, str | float | list[str]]:
         """Return a flat dictionary representation of available
         metadata."""
-        fields: dict[str, str | int | float | list[str]] = {}
+        fields: dict[str, str | float | list[str]] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
                 continue
@@ -265,7 +265,7 @@ class TinyTag:
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: str | int | float,
+    def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
         if fieldname.startswith(self._EXTRA_PREFIX):
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
