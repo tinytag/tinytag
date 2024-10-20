@@ -43,8 +43,8 @@ def file_size(filename: str) -> int:
 def test_wrong_params() -> None:
     with pytest.raises(CalledProcessError) as excinfo:
         run_cli('-lol')
-    assert excinfo.value.stdout == (b"-lol: [Errno 2] No such file or "
-                                    b"directory: '-lol'\n")
+    output = excinfo.value.stdout.strip()
+    assert output == b"-lol: [Errno 2] No such file or directory: '-lol'"
 
 
 def test_print_help() -> None:
