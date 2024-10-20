@@ -1223,6 +1223,15 @@ TEST_FILES = dict([
         'channels': 1,
         'bitrate': 27.887,
     }),
+    ('mvhd_version_1.m4a', {
+        'extra': {},
+        'title': '64-bit test',
+        'filesize': 2048,
+        'samplerate': 44100,
+        'duration': 123251.6585941043,
+        'channels': 2,
+        'bitrate': 0.0,
+    }),
     ('test-tagged.aiff', {
         'extra': {},
         'channels': 2,

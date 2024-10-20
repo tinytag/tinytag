@@ -713,13 +713,11 @@ class _MP4(TinyTag):
     def _parse_mvhd(cls, data: bytes) -> dict[str, float]:
         # http://stackoverflow.com/a/3639993/1191373
         version = data[0]
-        # jump over flags
+        # jump over flags, create & mod times
         if version == 0:  # uses 32 bit integers for timestamps
-            # jump over create & mod times
             time_scale, duration = unpack('>II', data[12:20])
         else:  # version == 1:  # uses 64 bit integers for timestamps
-            # jump over create & mod times
-            time_scale, duration = unpack('>Iq', data[20:28])
+            time_scale, duration = unpack('>IQ', data[20:32])
         return {'duration': duration / time_scale}
 
 
