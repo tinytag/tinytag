@@ -36,13 +36,16 @@ python3 -m pip install tinytag
     * WMA
     * AIFF / AIFF-C
   * Same API for all formats
+  * Small, portable library
+  * High code coverage
   * Pure Python, no dependencies
   * Supports Python 3.7 or higher
-  * High test coverage
-  * A few hundred lines of code (just include it in your project!)
 
-tinytag only provides the minimum needed for _reading_ meta-data.
-It can determine track number, total tracks, title, artist, album, year, duration and any more.
+## Usage
+
+tinytag only provides the minimum needed for _reading_ metadata, and presents
+it in a simple format. It can determine track number, total tracks, title,
+artist, album, year, duration and more.
 
     from tinytag import TinyTag
     tag = TinyTag.get('/some/music.mp3')
@@ -51,12 +54,19 @@ It can determine track number, total tracks, title, artist, album, year, duratio
     
 Alternatively you can use tinytag directly on the command line:
 
-    $ python -m tinytag --format csv /some/music.mp3
+    $ python3 -m tinytag --format csv /some/music.mp3
     > {"filename": "/some/music.mp3", "filesize": 30212227, "album": "Album", "albumartist": "Artist", "artist": "Artist", "audio_offset": null, "bitrate": 256, "channels": 2, "comment": null, "composer": null, "disc": "1", "disc_total": null, "duration": 10, "genre": null, "samplerate": 44100, "title": "Title", "track": "5", "track_total": null, "year": "2012"}
 
-Check `python -m tinytag --help` for all CLI options, for example other output formats.
+Check `python3 -m tinytag --help` for all CLI options, for example other
+output formats.
 
-To receive a list of file extensions tinytag supports, use the `SUPPORTED_FILE_EXTENSIONS` constant:
+Support for changing/writing metadata will not be added. Use another library
+such as [Mutagen](https://mutagen.readthedocs.io/) for this.
+
+### Supported Files
+
+To receive a tuple of file extensions tinytag supports, use the
+`SUPPORTED_FILE_EXTENSIONS` constant:
 
     TinyTag.SUPPORTED_FILE_EXTENSIONS
 
@@ -64,7 +74,9 @@ Alternatively, check if a file is supported:
 
     is_supported = TinyTag.is_supported('/some/music.mp3')
 
-List of possible attributes you can get with TinyTag:
+### Common Metadata
+
+List of common attributes you can get with tinytag:
 
     tag.album         # album as string
     tag.albumartist   # album artist as string
@@ -85,6 +97,8 @@ List of possible attributes you can get with TinyTag:
     tag.track_total   # total number of tracks as string
     tag.year          # year or date as string
 
+### Additional Metadata
+
 For non-common fields and fields specific to single file formats, use `extra`:
 
     tag.extra         # a dict of additional data
@@ -92,16 +106,22 @@ For non-common fields and fields specific to single file formats, use `extra`:
 The `extra` dict currently *may* contain the following data:
    `url`, `isrc`, `text`, `initial_key`, `lyrics`, `copyright`
 
-Additionally you can also get cover images from ID3 tags:
+### Images
+
+Additionally you can also get cover images from tags:
 
     tag = TinyTag.get('/some/music.mp3', image=True)
     image_data = tag.get_image()
 
+### Encoding
+
 To open files using a specific encoding, you can use the `encoding` parameter.
-This parameter is however only used for formats where the encoding isn't explicitly
-specified.
+This parameter is however only used for formats where the encoding is not
+explicitly specified.
 
     TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
+
+### File-like Objects
 
 To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 `file_obj` keyword argument:
