@@ -7,7 +7,7 @@ import json
 import os
 import sys
 
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, STDOUT
 from tempfile import NamedTemporaryFile
 
 import pytest
@@ -29,7 +29,8 @@ tinytag_attributes = {
 def run_cli(args: str) -> str:
     debug_env = str(os.environ.pop("TINYTAG_DEBUG", None))
     output = check_output(
-        f'{sys.executable} -m tinytag ' + args, cwd=project_folder, shell=True)
+        f'{sys.executable} -m tinytag ' + args, cwd=project_folder,
+        shell=True, stderr=STDOUT)
     if debug_env:
         os.environ["TINYTAG_DEBUG"] = debug_env
     return output.decode('utf-8')
@@ -40,8 +41,10 @@ def file_size(filename: str) -> int:
 
 
 def test_wrong_params() -> None:
-    with pytest.raises(CalledProcessError):
-        assert 'tinytag [options] <filename' in run_cli('-lol')
+    with pytest.raises(CalledProcessError) as excinfo:
+        run_cli('-lol')
+    assert excinfo.value.stdout == (b"-lol: [Errno 2] No such file or "
+                                    b"directory: '-lol'\n")
 
 
 def test_print_help() -> None:
