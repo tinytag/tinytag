@@ -158,17 +158,12 @@ class TinyTag:
         extension."""
         return cls._get_parser_for_filename(filename) is not None
 
-    def as_dict(self) -> dict[
-            str, str | int | float | list[str] | dict[str, list[Image]]]:
+    def as_dict(self) -> dict[str, str | int | float | list[str]]:
         """Return a flat dictionary representation of available
         metadata."""
-        fields: dict[
-            str, str | int | float | list[str] | dict[str, list[Image]]] = {}
+        fields: dict[str, str | int | float | list[str]] = {}
         for key, value in self.__dict__.items():
-            if key.startswith('_'):
-                continue
-            if isinstance(value, Images):
-                fields[key] = value.as_dict()
+            if key.startswith('_') or key == 'images':
                 continue
             if not isinstance(value, Extra):
                 if value is None:

@@ -1637,16 +1637,7 @@ def test_to_str_flat_dict() -> None:
         "'filesize': 2824, 'duration': 0.1, 'channels': 1, 'bitrate': 225.92, "
         "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
         "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], 'genre': "
-        "['genre 1', 'genre 2'], 'url': ['https://example.com'], 'images': "
-        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
-        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
-        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
-        "'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
-        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
-        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
-        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
-        "'some image ë'}]}}"
+        "['genre 1', 'genre 2'], 'url': ['https://example.com']}"
     )
     assert str(tag.images.as_dict()) == (
         "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"

@@ -49,7 +49,6 @@ def _pop_switch(name: str) -> bool:
 
 def _print_tag(tag: TinyTag, fmt: str, header_printed: bool = False) -> bool:
     data = tag.as_dict()
-    del data['images']
     if fmt == 'json':
         import json  # pylint: disable=import-outside-toplevel
         print(json.dumps(data, ensure_ascii=False, indent=2))
