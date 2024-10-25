@@ -135,6 +135,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
 - **BREAKING:** 'extra' dict stores values in list form
+- **BREAKING:** 'as_dict()' method (previously undocumented) returns tag fields in list form
 - **BREAKING:** TinyTagException no longer inherits LookupError
 - **BREAKING:** TinyTag subclasses are now private
 - **BREAKING:** Remove function to use custom audio file samples in tests
@@ -146,7 +147,9 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images
 - Add more standard 'extra' fields
+- Use Flit as Python build backend instead of Setuptools
 - ID3: Fix invalid sample rate/duration in some cases
+- ID3: Fix reading of UTF-16 strings without BOM
 - FLAC: Apply ID3 tags after Vorbis
 - OGG/WMA: Set missing 'channels' field
 - WMA: Set missing 'extra.copyright' field
