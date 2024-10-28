@@ -385,7 +385,8 @@ TEST_FILES = dict([
                  'd2b8f0e6-735a-42ee-adf0-7eca4e65cd72')
             ],
             'tsop': ['Perfect Circle, A'],
-            'original_year': ['2004'],
+            'tory': ['2004'],
+            'originalyear': ['2004'],
             'tdat': ['0211'],
             'ipls': [
                 ('producer\x00Billy Howerdel\x00'

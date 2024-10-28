@@ -470,8 +470,6 @@ class _MP4(TinyTag):
         'lyricist': 'extra.lyricist',
         'media': 'extra.media',
         'website': 'extra.url',
-        'originaldate': 'extra.original_date',
-        'originalyear': 'extra.original_year',
         'license': 'extra.license',
         'barcode': 'extra.barcode',
         'catalognumber': 'extra.catalog_number',
@@ -753,15 +751,12 @@ class _ID3(TinyTag):
         'TENC': 'extra.encoded_by', 'TEN': 'extra.encoded_by',
         'TSSE': 'extra.encoder_settings', 'TSS': 'extra.encoder_settings',
         'TMED': 'extra.media', 'TMT': 'extra.media',
-        'TDOR': 'extra.original_date',
-        'TORY': 'extra.original_year', 'TOR': 'extra.original_year',
         'WCOP': 'extra.license',
     }
     _ID3_MAPPING_CUSTOM = {
         'artists': 'artist',
         'director': 'extra.director',
         'license': 'extra.license',
-        'originalyear': 'extra.original_year',
         'barcode': 'extra.barcode',
         'catalognumber': 'extra.catalog_number',
     }
@@ -1301,8 +1296,6 @@ class _Ogg(TinyTag):
         'encodedby': 'extra.encoded_by',
         'encodersettings': 'extra.encoder_settings',
         'media': 'extra.media',
-        'originaldate': 'extra.original_date',
-        'originalyear': 'extra.original_year',
         'license': 'extra.license',
         'barcode': 'extra.barcode',
         'catalognumber': 'extra.catalog_number',
@@ -1695,8 +1688,6 @@ class _Wma(TinyTag):
         'WM/EncodedBy': 'extra.encoded_by',
         'WM/EncodingSettings': 'extra.encoder_settings',
         'WM/Media': 'extra.media',
-        'WM/OriginalReleaseTime': 'extra.original_date',
-        'WM/OriginalReleaseYear': 'extra.original_year',
         'WM/Barcode': 'extra.barcode',
         'WM/CatalogNo': 'extra.catalog_number',
     }
