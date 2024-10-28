@@ -74,7 +74,7 @@ class TinyTag:
     _file_extension_mapping: dict[tuple[str, ...], type[TinyTag]] | None = None
 
     def __init__(self) -> None:
-        self.filename: bytes | str | PathLike[Any] | None = None
+        self.filename: str | None = None
         self.filesize = 0
         self.duration: float | None = None
         self.channels: int | None = None
@@ -120,9 +120,12 @@ class TinyTag:
             ignore_errors: bool | None = None) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
-        if filename and should_close_file:
-            # pylint: disable=consider-using-with
-            file_obj = open(filename, 'rb')
+        filename_str = None
+        if filename:
+            if should_close_file:
+                # pylint: disable=consider-using-with
+                file_obj = open(filename, 'rb')
+            filename_str = fsdecode(filename)
         if file_obj is None:
             raise ValueError(
                 'Either filename or file_obj argument is required')
@@ -136,11 +139,11 @@ class TinyTag:
             file_obj.seek(0, SEEK_END)
             filesize = file_obj.tell()
             file_obj.seek(0)
-            parser_class = cls._get_parser_class(filename, file_obj)
+            parser_class = cls._get_parser_class(filename_str, file_obj)
             tag = parser_class()
             tag._filehandler = file_obj
             tag._default_encoding = encoding
-            tag.filename = filename
+            tag.filename = filename_str
             tag.filesize = filesize
             if filesize > 0:
                 try:
@@ -156,7 +159,8 @@ class TinyTag:
     def is_supported(cls, filename: bytes | str | PathLike[Any]) -> bool:
         """Check if a specific file is supported based on its file
         extension."""
-        return cls._get_parser_for_filename(filename) is not None
+        filename_str = fsdecode(filename)
+        return cls._get_parser_for_filename(filename_str) is not None
 
     def as_dict(self) -> dict[str, str | float | list[str]]:
         """Return a flat dictionary representation of available
@@ -183,9 +187,7 @@ class TinyTag:
         return fields
 
     @classmethod
-    def _get_parser_for_filename(
-        cls, filename: bytes | str | PathLike[Any]
-    ) -> type[TinyTag] | None:
+    def _get_parser_for_filename(cls, filename: str) -> type[TinyTag] | None:
         if cls._file_extension_mapping is None:
             cls._file_extension_mapping = {
                 ('.mp1', '.mp2', '.mp3'): _ID3,
@@ -197,7 +199,7 @@ class TinyTag:
                  '.aax', '.aaxc'): _MP4,
                 ('.aiff', '.aifc', '.aif', '.afc'): _Aiff,
             }
-        filename = fsdecode(filename).lower()
+        filename = filename.lower()
         for ext, tagclass in cls._file_extension_mapping.items():
             if filename.endswith(ext):
                 return tagclass
@@ -235,7 +237,7 @@ class TinyTag:
     @classmethod
     def _get_parser_class(
         cls,
-        filename: bytes | str | PathLike[Any] | None = None,
+        filename: str | None = None,
         filehandle: BinaryIO | None = None
     ) -> type[TinyTag]:
         if cls != TinyTag:
