@@ -140,10 +140,10 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 - **BREAKING:** TinyTag subclasses are now private
 - **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
+- **DEPRECATION:** Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
+- **DEPRECATION:** Mark 'audio_offset' attribute as obsolete
+- **DEPRECATION:** Deprecate 'get_image()' method in favor of 'images.any' property
 - Add type hints to codebase
-- Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
-- Mark 'audio_offset' attribute as obsolete
-- Deprecate 'get_image()' method in favor of 'images.any' property
 - Provide access to custom metadata fields through the 'extra' dict
 - Provide access to all available images
 - Add more standard 'extra' fields
