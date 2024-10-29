@@ -1509,10 +1509,8 @@ def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
 def test_image_loading(path: str, expected_size: int, desc: str) -> None:
     tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, path), image=True)
     image = tag.images.any
-    manual_image = None
-    if tag.images.front_cover:
-        manual_image = tag.images.front_cover[0]
-    else:
+    manual_image = tag.images.front_cover
+    if manual_image is None:
         manual_image = tag.images.extra["other"][0]
     assert image is not None
     assert manual_image is not None
@@ -1612,11 +1610,11 @@ def test_to_str() -> None:
         "'comment': None, 'extra': {'artist': ['artist 2', 'artist 3'], "
         "'album': ['album 2'], 'genre': ['genre 2'], "
         "'url': ['https://example.com']}, 'images': {'front_cover': "
-        "[{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF"
+        "{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF"
         "\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
         "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': "
-        "'image/jpeg', 'description': 'some image ë'}], 'back_cover': [], "
-        "'leaflet': [], 'media': [], 'extra': "
+        "'image/jpeg', 'description': 'some image ë'}, 'back_cover': None, "
+        "'media': None, 'extra': "
         "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
         "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
@@ -1624,11 +1622,11 @@ def test_to_str() -> None:
         "'some image ë'}]}}}"
     )
     assert str(tag.images) == (
-        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+        "{'front_cover': {'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
         "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
         "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
-        "'back_cover': [], 'leaflet': [], 'media': [], 'extra': "
+        "'mime_type': 'image/jpeg', 'description': 'some image ë'}, "
+        "'back_cover': None, 'media': None, 'extra': "
         "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
         "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
