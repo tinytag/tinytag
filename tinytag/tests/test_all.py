@@ -1512,8 +1512,8 @@ def test_image_loading(path: str, expected_size: int, desc: str) -> None:
     manual_image = None
     if tag.images.front_cover:
         manual_image = tag.images.front_cover[0]
-    elif tag.images.other:
-        manual_image = tag.images.other[0]
+    else:
+        manual_image = tag.images.extra["other"][0]
     assert image is not None
     assert manual_image is not None
     assert image.name in {'front_cover', 'other'}
@@ -1616,7 +1616,7 @@ def test_to_str() -> None:
         "\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
         "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': "
         "'image/jpeg', 'description': 'some image ë'}], 'back_cover': [], "
-        "'leaflet': [], 'media': [], 'other': [], 'extra': "
+        "'leaflet': [], 'media': [], 'extra': "
         "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
         "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
@@ -1628,7 +1628,7 @@ def test_to_str() -> None:
         "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
         "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
         "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
-        "'back_cover': [], 'leaflet': [], 'media': [], 'other': [], 'extra': "
+        "'back_cover': [], 'leaflet': [], 'media': [], 'extra': "
         "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
         "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"

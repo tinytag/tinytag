@@ -61,7 +61,7 @@ class UnsupportedFormatError(TinyTagException):
 
 
 class TinyTag:
-    """A class containing audio file metadata."""
+    """A class containing audio file properties and metadata."""
 
     SUPPORTED_FILE_EXTENSIONS = (
         '.mp1', '.mp2', '.mp3',
@@ -81,6 +81,7 @@ class TinyTag:
         self.bitrate: float | None = None
         self.bitdepth: int | None = None
         self.samplerate: int | None = None
+
         self.artist: str | None = None
         self.albumartist: str | None = None
         self.composer: str | None = None
@@ -93,8 +94,10 @@ class TinyTag:
         self.genre: str | None = None
         self.year: str | None = None
         self.comment: str | None = None
+
         self.extra = Extra()
         self.images = Images()
+
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # override for some formats
         self._parse_duration = True
@@ -349,7 +352,7 @@ class TinyTag:
 
 
 class Extra(_Extra):
-    """A dictionary containing additional fields of an audio file."""
+    """A dictionary containing additional metadata fields of an audio file."""
 
 
 class Images:
@@ -361,7 +364,7 @@ class Images:
         self.back_cover: list[Image] = []
         self.leaflet: list[Image] = []
         self.media: list[Image] = []
-        self.other: list[Image] = []
+
         self.extra = ImagesExtra()
         self.__dict__: dict[str, list[Image] | ImagesExtra]
 
@@ -820,7 +823,7 @@ class _ID3(TinyTag):
         'png': 'image/png',
     }
     _IMAGE_TYPES = (
-        'other',
+        'extra.other',
         'extra.icon',
         'extra.other_icon',
         'front_cover',
