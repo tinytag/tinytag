@@ -360,13 +360,12 @@ class Images:
     _EXTRA_PREFIX = 'extra.'
 
     def __init__(self) -> None:
-        self.front_cover: list[Image] = []
-        self.back_cover: list[Image] = []
-        self.leaflet: list[Image] = []
-        self.media: list[Image] = []
+        self.front_cover: Image | None = None
+        self.back_cover: Image | None = None
+        self.media: Image | None = None
 
         self.extra = ImagesExtra()
-        self.__dict__: dict[str, list[Image] | ImagesExtra]
+        self.__dict__: dict[str, Image | ImagesExtra]
 
     def __repr__(self) -> str:
         return str({
@@ -385,8 +384,8 @@ class Images:
                     for image in extra_images:
                         return image
                 continue
-            for image in value:
-                return image
+            if value is not None:
+                return value
         return None
 
     def as_dict(self) -> dict[str, list[Image]]:
@@ -394,8 +393,8 @@ class Images:
         images: dict[str, list[Image]] = {}
         for key, value in self.__dict__.items():
             if not isinstance(value, ImagesExtra):
-                if value:
-                    images[key] = value
+                if value is not None:
+                    images[key] = [value]
                 continue
             for extra_key, extra_values in value.items():
                 extra_images = images.get(extra_key)
@@ -405,7 +404,8 @@ class Images:
         return images
 
     def _set_field(self, fieldname: str, value: Image) -> None:
-        if fieldname.startswith(self._EXTRA_PREFIX):
+        old_value = self.__dict__.get(fieldname)
+        if fieldname.startswith(self._EXTRA_PREFIX) or old_value is not None:
             fieldname = fieldname[len(self._EXTRA_PREFIX):]
             extra_values = self.extra.get(fieldname, [])
             extra_values.append(value)
@@ -413,12 +413,9 @@ class Images:
                 print(f'Setting extra image field "{fieldname}"')
             self.extra[fieldname] = extra_values
             return
-        values = self.__dict__.get(fieldname, [])
-        if isinstance(values, list):
-            values.append(value)
-            if DEBUG:
-                print(f'Setting image field "{fieldname}"')
-            self.__dict__[fieldname] = values
+        if DEBUG:
+            print(f'Setting image field "{fieldname}"')
+        self.__dict__[fieldname] = value
 
     def _update(self, other: Images) -> None:
         for key, value in other.__dict__.items():
@@ -428,8 +425,8 @@ class Images:
                         self._set_field(
                             self._EXTRA_PREFIX + extra_key, image_extra)
                 continue
-            for image in value:
-                self._set_field(key, image)
+            if value is not None:
+                self._set_field(key, value)
 
 
 class ImagesExtra(_ImagesExtra):
@@ -828,7 +825,7 @@ class _ID3(TinyTag):
         'extra.other_icon',
         'front_cover',
         'back_cover',
-        'leaflet',
+        'extra.leaflet',
         'media',
         'extra.lead_artist',
         'extra.artist',
