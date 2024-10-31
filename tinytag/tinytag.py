@@ -836,7 +836,7 @@ class _ID3(TinyTag):
         'extra.recording_location',
         'extra.during_recording',
         'extra.during_performance',
-        'extra.video',
+        'extra.screen_capture',
         'extra.bright_colored_fish',
         'extra.illustration',
         'extra.band_logo',
