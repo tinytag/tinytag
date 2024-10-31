@@ -784,7 +784,6 @@ class _ID3(TinyTag):
         'Native American', 'Cabaret', 'New Wave', 'Psychadelic', 'Rave',
         'Showtunes', 'Trailer', 'Lo-Fi', 'Tribal', 'Acid Punk', 'Acid Jazz',
         'Polka', 'Retro', 'Musical', 'Rock & Roll', 'Hard Rock',
-
         # Wimamp Extended Genres
         'Folk', 'Folk-Rock', 'National Folk', 'Swing', 'Fast Fusion', 'Bebob',
         'Latin', 'Revival', 'Celtic', 'Bluegrass', 'Avantgarde', 'Gothic Rock',
@@ -795,12 +794,10 @@ class _ID3(TinyTag):
         'Tango', 'Samba', 'Folklore', 'Ballad', 'Power Ballad',
         'Rhythmic Soul', 'Freestyle', 'Duet', 'Punk Rock', 'Drum Solo',
         'A capella', 'Euro-House', 'Dance Hall', 'Goa', 'Drum & Bass',
-
-        # according to https://de.wikipedia.org/wiki/Liste_der_ID3v1-Genres:
         'Club-House', 'Hardcore Techno', 'Terror', 'Indie', 'BritPop',
-        '',  # don't use ethnic slur ("Negerpunk", WTF!)
-        'Polsk Punk', 'Beat', 'Christian Gangsta Rap', 'Heavy Metal',
-        'Black Metal', 'Contemporary Christian', 'Christian Rock',
+        'Afro-Punk', 'Polsk Punk', 'Beat', 'Christian Gangsta Rap',
+        'Heavy Metal', 'Black Metal', 'Contemporary Christian',
+        'Christian Rock',
         # WinAmp 1.91
         'Merengue', 'Salsa', 'Thrash Metal', 'Anime', 'Jpop', 'Synthpop',
         # WinAmp 5.6
