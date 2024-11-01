@@ -20,7 +20,7 @@ from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 TEST_FILES = dict([
     ('vbri.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'samplerate': 44100,
         'duration': 0.47020408163265304,
@@ -35,7 +35,7 @@ TEST_FILES = dict([
         'bitrate': 125.33333333333333,
     }),
     ('cbr.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'samplerate': 44100,
         'duration': 0.48866995073891617,
@@ -50,7 +50,7 @@ TEST_FILES = dict([
         'comment': 'Ripped by THSLIVE',
     }),
     ('vbr_xing_header.mp3', {
-        'extra': {},
+        'other': {},
         'bitrate': 186.04383278145696,
         'channels': 1,
         'samplerate': 44100,
@@ -58,7 +58,7 @@ TEST_FILES = dict([
         'filesize': 91731,
     }),
     ('vbr_xing_header_2channel.mp3', {
-        'extra': {
+        'other': {
             'encoder_settings': [
                 'LAME 32bits version 3.99.5 (http://lame.sf.net)'
             ],
@@ -75,7 +75,7 @@ TEST_FILES = dict([
         'year': '1992',
     }),
     ('id3v22-test.mp3', {
-        'extra': {
+        'other': {
             'encoded_by': ['iTunes v4.6'],
             'itunnorm': [
                 ' 0000044E 00000061 00009B67 000044C3 00022478 00022182'
@@ -101,7 +101,7 @@ TEST_FILES = dict([
         'comment': 'Waterbug Records, www.anaismitchell.com',
     }),
     ('silence-44-s-v1.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'samplerate': 44100,
         'genre': 'Darkwave',
@@ -115,7 +115,7 @@ TEST_FILES = dict([
         'bitrate': 32.0,
     }),
     ('id3v1-latin1.mp3', {
-        'extra': {},
+        'other': {},
         'genre': 'Rock',
         'album': 'The Young Americans',
         'title': 'Play Dead',
@@ -126,7 +126,7 @@ TEST_FILES = dict([
         'comment': '                            ',
     }),
     ('UTF16.mp3', {
-        'extra': {
+        'other': {
             'musicbrainz artist id': ['664c3e0e-42d8-48c1-b209-1efca19c0325'],
             'musicbrainz album id': ['25322466-a29b-417b-b560-399687b91ddd'],
             'musicbrainz album artist id': [
@@ -164,7 +164,7 @@ TEST_FILES = dict([
         'comment': 'Track 7',
     }),
     ('utf-8-id3v2.mp3', {
-        'extra': {},
+        'other': {},
         'genre': 'Acustico',
         'track_total': 21,
         'track': 1,
@@ -176,15 +176,15 @@ TEST_FILES = dict([
         'year': '2003',
     }),
     ('empty_file.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 0
     }),
     ('incomplete.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 3
     }),
     ('silence-44khz-56k-mono-1s.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'samplerate': 44100,
         'duration': 1.0265261269342902,
@@ -192,7 +192,7 @@ TEST_FILES = dict([
         'bitrate': 56.0,
     }),
     ('silence-22khz-mono-1s.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'samplerate': 22050,
         'filesize': 4284,
@@ -200,7 +200,7 @@ TEST_FILES = dict([
         'duration': 1.0438932496075353,
     }),
     ('id3v24-long-title.mp3', {
-        'extra': {
+        'other': {
             'copyright': [
                 '2013 Marathon Artists under exclsuive license from '
                 'Courtney Barnett'
@@ -221,7 +221,7 @@ TEST_FILES = dict([
         'year': '2013',
     }),
     ('utf16be.mp3', {
-        'extra': {},
+        'other': {},
         'title': '52-girls',
         'filesize': 2048,
         'track': 6,
@@ -231,7 +231,7 @@ TEST_FILES = dict([
         'year': '1981',
     }),
     ('id3v22.TCO.genre.mp3', {
-        'extra': {
+        'other': {
             'encoded_by': ['iTunes 11.0.4'],
             'itunnorm': [
                 ' 000019F0 00001E2A 00009F9A 0000C689 000312A1 00030C1A'
@@ -251,7 +251,7 @@ TEST_FILES = dict([
         'title': 'Applause',
     }),
     ('id3_comment_utf_16_with_bom.mp3', {
-        'extra': {
+        'other': {
             'copyright': ['(c) 2008 nin'],
             'isrc': ['USTC40852229'],
             'bpm': ['60'],
@@ -271,7 +271,7 @@ TEST_FILES = dict([
         'comment': '3/4 time',
     }),
     ('id3_comment_utf_16_double_bom.mp3', {
-        'extra': {
+        'other': {
             'label': ['Unclear']
         },
         'filesize': 512,
@@ -282,7 +282,7 @@ TEST_FILES = dict([
         'year': '2012',
     }),
     ('id3_genre_id_out_of_bounds.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 512,
         'album': 'MECHANICAL ANIMALS',
         'artist': 'Manson',
@@ -291,7 +291,7 @@ TEST_FILES = dict([
         'year': '0',
     }),
     ('image-text-encoding.mp3', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'samplerate': 22050,
         'filesize': 11104,
@@ -300,7 +300,7 @@ TEST_FILES = dict([
         'duration': 1.0438932496075353,
     }),
     ('id3v1_does_not_overwrite_id3v2.mp3', {
-        'extra': {
+        'other': {
             'love rating': ['L'],
             'publisher': ['Century Media'],
             'popm': ['MusicBee\x00Ä']
@@ -315,7 +315,7 @@ TEST_FILES = dict([
         'year': '1992',
     }),
     ('non_ascii_filename_äää.mp3', {
-        'extra': {
+        'other': {
             'encoder_settings': ['Lavf58.20.100']
         },
         'filesize': 80919,
@@ -325,7 +325,7 @@ TEST_FILES = dict([
         'bitrate': 127.6701030927835,
     }),
     ('chinese_id3.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 1000,
         'album': '½ÇÂäÖ®¸è',
         'albumartist': 'ËÕÔÆ',
@@ -339,7 +339,7 @@ TEST_FILES = dict([
         'track': 1,
     }),
     ('cut_off_titles.mp3', {
-        'extra': {
+        'other': {
             'encoder_settings': ['Lavf54.29.104']
         },
         'filesize': 1000,
@@ -352,7 +352,7 @@ TEST_FILES = dict([
         'title': 'Tony Hawk VS Wayne Gretzky',
     }),
     ('id3_xxx_lang.mp3', {
-        'extra': {
+        'other': {
             'script': ['Latn'],
             'acoustid id': ['2dc0b571-a633-45b0-aa5e-f3d25e4e0020'],
             'musicbrainz album type': ['album'],
@@ -417,7 +417,7 @@ TEST_FILES = dict([
         'bitrate': 8.25,
         'channels': 1,
         'duration': 9.216,
-        'extra': {},
+        'other': {},
         'samplerate': 8000,
     }),
     ('vbr8stereo.mp3', {
@@ -425,7 +425,7 @@ TEST_FILES = dict([
         'bitrate': 8.25,
         'channels': 2,
         'duration': 9.216,
-        'extra': {},
+        'other': {},
         'samplerate': 8000,
     }),
     ('vbr11.mp3', {
@@ -433,7 +433,7 @@ TEST_FILES = dict([
         'bitrate': 8.143465909090908,
         'channels': 1,
         'duration': 9.195102040816327,
-        'extra': {},
+        'other': {},
         'samplerate': 11025,
     }),
     ('vbr11stereo.mp3', {
@@ -441,7 +441,7 @@ TEST_FILES = dict([
         'bitrate': 8.143465909090908,
         'channels': 2,
         'duration': 9.195102040816327,
-        'extra': {},
+        'other': {},
         'samplerate': 11025,
     }),
     ('vbr16.mp3', {
@@ -449,7 +449,7 @@ TEST_FILES = dict([
         'bitrate': 8.251968503937007,
         'channels': 1,
         'duration': 9.144,
-        'extra': {},
+        'other': {},
         'samplerate': 16000,
     }),
     ('vbr16stereo.mp3', {
@@ -457,7 +457,7 @@ TEST_FILES = dict([
         'bitrate': 8.251968503937007,
         'channels': 2,
         'duration': 9.144,
-        'extra': {},
+        'other': {},
         'samplerate': 16000,
     }),
     ('vbr22.mp3', {
@@ -465,7 +465,7 @@ TEST_FILES = dict([
         'bitrate': 8.145021489971347,
         'channels': 1,
         'duration': 9.11673469387755,
-        'extra': {},
+        'other': {},
         'samplerate': 22050,
     }),
     ('vbr22stereo.mp3', {
@@ -473,7 +473,7 @@ TEST_FILES = dict([
         'bitrate': 8.145021489971347,
         'channels': 2,
         'duration': 9.11673469387755,
-        'extra': {},
+        'other': {},
         'samplerate': 22050,
     }),
     ('vbr32.mp3', {
@@ -481,7 +481,7 @@ TEST_FILES = dict([
         'bitrate': 32.50592885375494,
         'channels': 1,
         'duration': 9.108,
-        'extra': {},
+        'other': {},
         'samplerate': 32000,
     }),
     ('vbr32stereo.mp3', {
@@ -489,7 +489,7 @@ TEST_FILES = dict([
         'bitrate': 32.50592885375494,
         'channels': 2,
         'duration': 9.108,
-        'extra': {},
+        'other': {},
         'samplerate': 32000,
     }),
     ('vbr44.mp3', {
@@ -497,7 +497,7 @@ TEST_FILES = dict([
         'bitrate': 32.21697198275862,
         'channels': 1,
         'duration': 9.09061224489796,
-        'extra': {},
+        'other': {},
         'samplerate': 44100,
     }),
     ('vbr44stereo.mp3', {
@@ -505,7 +505,7 @@ TEST_FILES = dict([
         'bitrate': 32.21697198275862,
         'channels': 2,
         'duration': 9.09061224489796,
-        'extra': {},
+        'other': {},
         'samplerate': 44100,
     }),
     ('vbr48.mp3', {
@@ -513,7 +513,7 @@ TEST_FILES = dict([
         'bitrate': 32.33862433862434,
         'channels': 1,
         'duration': 9.072,
-        'extra': {},
+        'other': {},
         'samplerate': 48000,
     }),
     ('vbr48stereo.mp3', {
@@ -521,11 +521,11 @@ TEST_FILES = dict([
         'bitrate': 32.33862433862434,
         'channels': 2,
         'duration': 9.072,
-        'extra': {},
+        'other': {},
         'samplerate': 48000,
     }),
     ('id3v24_genre_null_byte.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 256,
         'album': '\u79d8\u5bc6',
         'albumartist': 'aiko',
@@ -541,11 +541,11 @@ TEST_FILES = dict([
         'bitrate': 24.0,
         'channels': 1,
         'duration': 0.144,
-        'extra': {},
+        'other': {},
         'samplerate': 8000,
     }),
     ('id3_multiple_artists.mp3', {
-        'extra': {
+        'other': {
             'artist': [
                 'artist2',
                 'artist3',
@@ -569,21 +569,21 @@ TEST_FILES = dict([
         'channels': 1,
         'duration': 3.96,
         'samplerate': 16000,
-        'extra': {},
+        'other': {},
     }),
     ('id3v22_with_image.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 2311,
         'title': 'image',
     }),
     ('utf16_no_bom.mp3', {
-        'extra': {},
+        'other': {},
         'filesize': 1069,
         'title': 'no bom test ë',
         'artist': 'no bom test 2 ë',
     }),
     ('empty.ogg', {
-        'extra': {},
+        'other': {},
         'duration': 3.684716553287982,
         'filesize': 4328,
         'bitrate': 112.0,
@@ -591,7 +591,7 @@ TEST_FILES = dict([
         'channels': 2,
     }),
     ('multipage-setup.ogg', {
-        'extra': {
+        'other': {
             'transcoded': ['mp3;241'],
             'replaygain_album_gain': ['-10.29 dB'],
             'replaygain_album_peak': ['1.50579047'],
@@ -612,7 +612,7 @@ TEST_FILES = dict([
         'channels': 2,
     }),
     ('test.ogg', {
-        'extra': {},
+        'other': {},
         'duration': 1.0,
         'album': 'the boss',
         'year': '2006',
@@ -626,7 +626,7 @@ TEST_FILES = dict([
         'comment': 'hello!',
     }),
     ('corrupt_metadata.ogg', {
-        'extra': {},
+        'other': {},
         'filesize': 18648,
         'bitrate': 80.0,
         'duration': 2.132358276643991,
@@ -634,7 +634,7 @@ TEST_FILES = dict([
         'channels': 1,
     }),
     ('composer.ogg', {
-        'extra': {},
+        'other': {},
         'filesize': 4480,
         'album': 'An Album',
         'artist': 'An Artist',
@@ -650,7 +650,7 @@ TEST_FILES = dict([
         'comment': 'A Comment',
     }),
     ('ogg_with_image.ogg', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 0.1,
         'filesize': 5759,
@@ -660,7 +660,7 @@ TEST_FILES = dict([
         'title': 'Sample Title',
     }),
     ('test.opus', {
-        'extra': {
+        'other': {
             'encoder': ['Lavc57.24.102 libopus'],
             'arrange': ['\u6771\u65b9'],
             'catalogid': ['ARCD0024'],
@@ -689,7 +689,7 @@ TEST_FILES = dict([
         'track_total': 13,
     }),
     ('8khz_5s.opus', {
-        'extra': {
+        'other': {
             'encoder': ['opusenc from opus-tools 0.2']
         },
         'filesize': 7251,
@@ -698,7 +698,7 @@ TEST_FILES = dict([
         'duration': 5.0065,
     }),
     ('test_flac.oga', {
-        'extra': {
+        'other': {
             'copyright': ['test3'],
             'isrc': ['test4'],
             'lyrics': ['test7']
@@ -718,7 +718,7 @@ TEST_FILES = dict([
         'year': '2023',
     }),
     ('test.spx', {
-        'extra': {},
+        'other': {},
         'filesize': 7921,
         'channels': 1,
         'samplerate': 16000,
@@ -729,7 +729,7 @@ TEST_FILES = dict([
         'comment': 'Encoded with Speex 1.2.0',
     }),
     ('test.wav', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 1.0,
         'filesize': 176444,
@@ -738,7 +738,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('test3sMono.wav', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 3.0,
         'filesize': 264644,
@@ -747,7 +747,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('test-tagged.wav', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 1.0,
         'filesize': 176688,
@@ -763,7 +763,7 @@ TEST_FILES = dict([
         'year': '2014',
     }),
     ('test-riff-tags.wav', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 1.0,
         'filesize': 176540,
@@ -777,7 +777,7 @@ TEST_FILES = dict([
         'year': '2014',
     }),
     ('silence-22khz-mono-1s.wav', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 0.9991836734693877,
         'filesize': 48160,
@@ -786,7 +786,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('id3_header_with_a_zero_byte.wav', {
-        'extra': {
+        'other': {
             'title': ['Stacked']
         },
         'channels': 1,
@@ -801,7 +801,7 @@ TEST_FILES = dict([
         'album': 'prototypes',
     }),
     ('adpcm.wav', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 12.167256235827665,
         'filesize': 268686,
@@ -817,7 +817,7 @@ TEST_FILES = dict([
         'year': '1990',
     }),
     ('riff_extra_zero.wav', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20670,
@@ -832,7 +832,7 @@ TEST_FILES = dict([
         'track': 3,
     }),
     ('riff_extra_zero_2.wav', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20682,
@@ -846,7 +846,7 @@ TEST_FILES = dict([
         'track': 7,
     }),
     ('wav_invalid_track_number.wav', {
-        'extra': {},
+        'other': {},
         'filesize': 8908,
         'bitrate': 705.6,
         'duration': 0.1,
@@ -855,7 +855,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('gsm_6_10.wav', {
-        'extra': {},
+        'other': {},
         'bitdepth': 1,
         'bitrate': 44.1,
         'channels': 1,
@@ -871,7 +871,7 @@ TEST_FILES = dict([
         'genre': 'Bass',
     }),
     ('wav_with_image.wav', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 2.14475,
         'filesize': 22902,
@@ -880,7 +880,7 @@ TEST_FILES = dict([
         'bitdepth': 8,
     }),
     ('flac1sMono.flac', {
-        'extra': {},
+        'other': {},
         'genre': 'Avantgarde',
         'album': 'alb',
         'year': '2014',
@@ -896,7 +896,7 @@ TEST_FILES = dict([
         'comment': 'hello',
     }),
     ('flac453sStereo.flac', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 453.51473922902494,
         'filesize': 84236,
@@ -905,7 +905,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('flac1.5sStereo.flac', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'album': 'alb',
         'year': '2014',
@@ -921,7 +921,7 @@ TEST_FILES = dict([
         'comment': 'hello',
     }),
     ('flac_application.flac', {
-        'extra': {
+        'other': {
             'replaygain_track_peak': ['0.9976'],
             'musicbrainz_albumartistid': [
                 'e5c7b94f-e264-473c-bb0f-37c85d4d5c70'
@@ -948,7 +948,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('no-tags.flac', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 4692,
@@ -957,7 +957,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('variable-block.flac', {
-        'extra': {
+        'other': {
             'discid': ['AA0B360B'],
             'japanese title': ['アップルシード オリジナル・サウンドトラック'],
             'organization': ['Sony Music Records (SRCP-371)'],
@@ -986,11 +986,11 @@ TEST_FILES = dict([
         'composer': 'Boom Boom Satellites (Lyrics)',
     }),
     ('106-invalid-streaminfo.flac', {
-        'extra': {},
+        'other': {},
         'filesize': 4692
     }),
     ('106-short-picture-block-size.flac', {
-        'extra': {},
+        'other': {},
         'filesize': 4692,
         'bitrate': 10.186943678613627,
         'channels': 2,
@@ -999,7 +999,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('with_padded_id3_header.flac', {
-        'extra': {},
+        'other': {},
         'filesize': 16070,
         'album': 'album',
         'artist': 'artist',
@@ -1015,7 +1015,7 @@ TEST_FILES = dict([
         'comment': 'comment',
     }),
     ('with_padded_id3_header2.flac', {
-        'extra': {
+        'other': {
             'mcdi': [
                 '2\x01\x05\x00\x10\x01\x00\x00\x00\x00\x00\x00\x10\x02\x00'
                 '\x00\x00W5\x00\x10\x03\x00\x00\x00\x90\x0c\x00\x10\x04\x00'
@@ -1051,7 +1051,7 @@ TEST_FILES = dict([
         'comment': 'comment',
     }),
     ('flac_invalid_track_number.flac', {
-        'extra': {},
+        'other': {},
         'filesize': 235,
         'bitrate': 18.8,
         'channels': 1,
@@ -1060,7 +1060,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('flac_with_image.flac', {
-        'extra': {
+        'other': {
             'artist': ['artist 2', 'artist 3'],
             'genre': ['genre 2'],
             'album': ['album 2'],
@@ -1077,7 +1077,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('test2.wma', {
-        'extra': {
+        'other': {
             '_track': ['0'],
             'mediaprimaryclassid': ['{D1607DBC-E323-4BE2-86A1-48A42A28441E}'],
             'encodingtime': ['128861118183900000'],
@@ -1102,7 +1102,7 @@ TEST_FILES = dict([
         'channels': 2,
     }),
     ('lossless.wma', {
-        'extra': {},
+        'other': {},
         'samplerate': 44100,
         'bitrate': 667.296,
         'filesize': 2500,
@@ -1111,7 +1111,7 @@ TEST_FILES = dict([
         'channels': 2,
     }),
     ('wma_invalid_track_number.wma', {
-        'extra': {
+        'other': {
             'encoder_settings': ['Lavf60.16.100']
         },
         'filesize': 3940,
@@ -1121,7 +1121,7 @@ TEST_FILES = dict([
         'channels': 1,
     }),
     ('test.m4a', {
-        'extra': {
+        'other': {
             'itunsmpb': [
                 ' 00000000 00000840 000001DC 0000000000D3E9E4 00000000'
                 ' 00000000 00000000 00000000 00000000 00000000 00000000'
@@ -1152,7 +1152,7 @@ TEST_FILES = dict([
         'filesize': 61432,
     }),
     ('mpeg4_with_image.m4a', {
-        'extra': {
+        'other': {
             'publisher': ['test7'],
             'bpm': ['1'],
             'encoded_by': ['Lavf60.3.100']
@@ -1166,7 +1166,7 @@ TEST_FILES = dict([
         'bitrate': 27.887,
     }),
     ('alac_file.m4a', {
-        'extra': {
+        'other': {
             'copyright': ['© Hyperion Records Ltd, London'],
             'lyrics': ['Album notes:'],
             'upc': ['0034571177380']
@@ -1191,7 +1191,7 @@ TEST_FILES = dict([
         'bitdepth': 16,
     }),
     ('mpeg4_desc_cmt.m4a', {
-        'extra': {
+        'other': {
             'description': ['test description'],
             'encoded_by': ['Lavf59.27.100']
         },
@@ -1203,7 +1203,7 @@ TEST_FILES = dict([
         'samplerate': 44100,
     }),
     ('mpeg4_xa9des.m4a', {
-        'extra': {
+        'other': {
             'description': ['test description']
         },
         'filesize': 2639,
@@ -1211,7 +1211,7 @@ TEST_FILES = dict([
         'duration': 727.1066666666667,
     }),
     ('test2.m4a', {
-        'extra': {
+        'other': {
             'publisher': ['test7'],
             'bpm': ['99999'],
             'encoded_by': ['Lavf60.3.100']
@@ -1225,7 +1225,7 @@ TEST_FILES = dict([
         'bitrate': 27.887,
     }),
     ('mvhd_version_1.m4a', {
-        'extra': {},
+        'other': {},
         'title': '64-bit test',
         'filesize': 2048,
         'samplerate': 44100,
@@ -1234,7 +1234,7 @@ TEST_FILES = dict([
         'bitrate': 0.0,
     }),
     ('test-tagged.aiff', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 1.0,
         'filesize': 177620,
@@ -1250,7 +1250,7 @@ TEST_FILES = dict([
         'year': '2014',
     }),
     ('test.aiff', {
-        'extra': {
+        'other': {
             'copyright': ['℗ 1992 Ace Records']
         },
         'channels': 2,
@@ -1263,7 +1263,7 @@ TEST_FILES = dict([
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),
     ('pluck-pcm8.aiff', {
-        'extra': {},
+        'other': {},
         'channels': 2,
         'duration': 0.2999546485260771,
         'filesize': 6892,
@@ -1277,7 +1277,7 @@ TEST_FILES = dict([
         'year': '2013',
     }),
     ('M1F1-mulawC-AFsp.afc', {
-        'extra': {
+        'other': {
             'comment': ['user: kabal@CAPELLA', 'program: CopyAudio']
         },
         'channels': 2,
@@ -1289,13 +1289,13 @@ TEST_FILES = dict([
         'comment': 'AFspdate: 2003-01-30 03:28:34 UTC',
     }),
     ('invalid_sample_rate.aiff', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'filesize': 4096,
         'bitdepth': 16,
     }),
     ('aiff_extra_tags.aiff', {
-        'extra': {
+        'other': {
             'copyright': ['test'],
             'isrc': ['CC-XXX-YY-NNNNN']
         },
@@ -1309,7 +1309,7 @@ TEST_FILES = dict([
         'artist': 'artist 1;artist 2',
     }),
     ('aiff_with_image.aiff', {
-        'extra': {},
+        'other': {},
         'channels': 1,
         'duration': 2.176,
         'filesize': 21044,
@@ -1330,7 +1330,7 @@ def compare_tag(results: dict[str, Any],
                        result_val: str | float,
                        expected_val: str | float) -> bool:
         # lets not copy *all* the lyrics inside the fixture
-        if (path == 'extra.lyrics'
+        if (path == 'other.lyrics'
                 and isinstance(expected_val, list)
                 and isinstance(result_val, list)):
             return result_val[0].startswith(expected_val[0])
@@ -1378,7 +1378,7 @@ def test_file_reading_tags(testfile: str,
                            expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(SAMPLE_FOLDER, testfile)
     excluded_attrs = {
-        "bitdepth", "bitrate", "channels", "duration", "samplerate"
+        'bitdepth', 'bitrate', 'channels', 'duration', 'samplerate'
     }
     tag = TinyTag.get(filename, tags=True, duration=False)
     results = {
@@ -1399,14 +1399,14 @@ def test_file_reading_duration(testfile: str,
                                expected: dict[str, dict[str, Any]]) -> None:
     filename = os.path.join(SAMPLE_FOLDER, testfile)
     allowed_attrs = {
-        "bitdepth", "bitrate", "channels", "duration",
-        "filesize", "samplerate"}
+        'bitdepth', 'bitrate', 'channels', 'duration',
+        'filesize', 'samplerate'}
     tag = TinyTag.get(filename, tags=False, duration=True)
     results = {
         key: val for key, val in tag.__dict__.items()
         if not key.startswith('_') and val is not None
     }
-    for attr_name in ('filename', 'extra', 'images'):
+    for attr_name in ('filename', 'other', 'images'):
         del results[attr_name]
     expected = {
         key: val for key, val in expected.items() if key in allowed_attrs
@@ -1434,14 +1434,14 @@ def test_file_obj_compatibility() -> None:
 
 @pytest.mark.skipif(
     system() == 'Windows' and python_implementation() == 'PyPy',
-    reason="PyPy on Windows not supported"
+    reason='PyPy on Windows not supported'
 )
 def test_binary_path_compatibility() -> None:
     binary_file_path = os.path.join(
         SAMPLE_FOLDER, 'non_ascii_filename_äää.mp3').encode('utf-8')
     tag = TinyTag.get(binary_file_path)
     assert tag.samplerate == 44100
-    assert tag.extra['encoder_settings'] == ['Lavf58.20.100']
+    assert tag.other['encoder_settings'] == ['Lavf58.20.100']
 
 
 def test_unsupported_extension() -> None:
@@ -1511,10 +1511,10 @@ def test_image_loading(path: str, expected_size: int, desc: str) -> None:
     image = tag.images.any
     manual_image = tag.images.front_cover
     if manual_image is None:
-        manual_image = tag.images.extra["other"][0]
+        manual_image = tag.images.other['generic'][0]
     assert image is not None
     assert manual_image is not None
-    assert image.name in {'front_cover', 'other'}
+    assert image.name in {'front_cover', 'generic'}
     assert image.data is not None
     assert image.data == manual_image.data
     with pytest.warns(DeprecationWarning):
@@ -1528,10 +1528,10 @@ def test_image_loading(path: str, expected_size: int, desc: str) -> None:
     assert image.description == desc
 
 
-def test_image_loading_extra() -> None:
+def test_image_loading_other() -> None:
     tag = TinyTag.get(
         os.path.join(SAMPLE_FOLDER, 'ogg_with_image.ogg'), image=True)
-    image = tag.images.extra['bright_colored_fish'][0]
+    image = tag.images.other['bright_colored_fish'][0]
     assert image.data is not None
     assert tag.images.any is not None
     assert tag.images.any.data == image.data
@@ -1542,10 +1542,10 @@ def test_image_loading_extra() -> None:
     assert image.description == 'some image ë'
     assert len(image.data) == 1220
     assert str(image) == (
-        "{'name': 'bright_colored_fish', 'data': b'\\xff\\xd8\\xff\\xe0\\x00"
+        "Image(name='bright_colored_fish', data=b'\\xff\\xd8\\xff\\xe0\\x00"
         "\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02"
         "\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "'mime_type': 'image/jpeg', 'description': 'some image ë'}"
+        "mime_type='image/jpeg', description='some image ë')"
     )
 
 
@@ -1586,13 +1586,15 @@ def test_show_hint_for_wrong_usage() -> None:
 
 
 def test_deprecations() -> None:
-    file_path = os.path.join(SAMPLE_FOLDER, 'id3v24-long-title.mp3')
+    file_path = os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac')
     with pytest.warns(DeprecationWarning):
         tag = TinyTag.get(filename=file_path, image=True, ignore_errors=True)
     with pytest.warns(DeprecationWarning):
         tag = TinyTag.get(filename=file_path, image=True, ignore_errors=False)
     with pytest.warns(DeprecationWarning):
         assert tag.audio_offset is None
+    with pytest.warns(DeprecationWarning):
+        assert str(tag.extra) == "{'url': 'https://example.com'}"
     with pytest.warns(DeprecationWarning):
         assert tag.images.any is not None
         assert tag.get_image() == tag.images.any.data
@@ -1601,6 +1603,7 @@ def test_deprecations() -> None:
 def test_str_vars() -> None:
     tag = TinyTag.get(
         os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+    vars_str = str(vars(tag))
     assert (
         "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
         "'channels': 1, 'bitrate': 225.92, "
@@ -1608,22 +1611,25 @@ def test_str_vars() -> None:
         "'albumartist': None, 'composer': None, 'album': 'album 1', "
         "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
         "'track_total': None, 'genre': 'genre 1', 'year': None, "
-        "'comment': None, 'extra': {'artist': ['artist 2', 'artist 3'], "
-        "'album': ['album 2'], 'genre': ['genre 2'], "
-        "'url': ['https://example.com']}, 'images': <tinytag.tinytag.Images "
+        "'comment': None, 'images': <tinytag.tinytag.Images "
         "object at "
-    ) in str(vars(tag))
-    assert str(vars(tag.images)).startswith(
-        "{'front_cover': {'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+    ) in vars_str
+    assert (
+        "'other': {'artist': ['artist 2', 'artist 3'], "
+        "'album': ['album 2'], 'genre': ['genre 2'], "
+        "'url': ['https://example.com']}"
+    ) in vars_str
+    assert str(vars(tag.images)) == (
+        "{'front_cover': Image(name='front_cover', data=b'\\xff\\xd8\\xff"
         "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
         "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "'mime_type': 'image/jpeg', 'description': 'some image ë'}, "
-        "'back_cover': None, 'media': None, 'extra': "
-        "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
+        "mime_type='image/jpeg', description='some image ë'), "
+        "'back_cover': None, 'media': None, 'other': "
+        "{'bright_colored_fish': [Image(name='bright_colored_fish', data="
         "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
         "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
-        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
-        "'some image ë'}]}}"
+        "\\x02\\xa0lcm..', mime_type='image/jpeg', description="
+        "'some image ë')]}}"
     )
 
 
@@ -1638,13 +1644,13 @@ def test_str_flat_dict() -> None:
         "['genre 1', 'genre 2'], 'url': ['https://example.com']}"
     )
     assert str(tag.images.as_dict()) == (
-        "{'front_cover': [{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
+        "{'front_cover': [Image(name='front_cover', data=b'\\xff\\xd8\\xff"
         "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
         "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "'mime_type': 'image/jpeg', 'description': 'some image ë'}], "
-        "'bright_colored_fish': [{'name': 'bright_colored_fish', "
-        "'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
+        "mime_type='image/jpeg', description='some image ë')], "
+        "'bright_colored_fish': [Image(name='bright_colored_fish', "
+        "data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
         "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
-        "\\x00\\x00\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', "
-        "'description': 'some image ë'}]}"
+        "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', "
+        "description='some image ë')]}"
     )

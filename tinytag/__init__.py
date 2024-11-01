@@ -4,10 +4,10 @@
 """Audio file metadata reader"""
 
 from .tinytag import (
-    TinyTag, Extra, Image, Images, ImagesExtra,
+    TinyTag, Image, Images, OtherFields, OtherImages,
     TinyTagException, ParseError, UnsupportedFormatError
 )
 __all__ = (
-    "TinyTag", "Extra", "Image", "Images", "ImagesExtra",
+    "TinyTag", "Image", "Images", "OtherFields", "OtherImages",
     "TinyTagException", "ParseError", "UnsupportedFormatError"
 )
