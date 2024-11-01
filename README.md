@@ -134,25 +134,25 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 ### 2.0.0  (Unreleased)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
-- **BREAKING:** 'extra' dict stores values in list form
-- **BREAKING:** 'as_dict()' method (previously undocumented) returns tag fields in list form
+- **BREAKING:** 'as_dict()' method (previously undocumented) returns tag field values in list form
 - **BREAKING:** TinyTagException no longer inherits LookupError
 - **BREAKING:** TinyTag subclasses are now private
 - **BREAKING:** Remove function to use custom audio file samples in tests
 - **BREAKING:** Remove support for Python 2
 - **DEPRECATION:** Mark 'ignore_errors' parameter for TinyTag.get() as obsolete
 - **DEPRECATION:** Mark 'audio_offset' attribute as obsolete
+- **DEPRECATION:** Deprecate 'extra' dict in favor of 'other' dict with values in list form
 - **DEPRECATION:** Deprecate 'get_image()' method in favor of 'images.any' property
 - Add type hints to codebase
-- Provide access to custom metadata fields through the 'extra' dict
+- Provide access to custom metadata fields through the 'other' dict
 - Provide access to all available images
-- Add more standard 'extra' fields
+- Add more standard 'other' fields
 - Use Flit as Python build backend instead of Setuptools
 - ID3: Fix invalid sample rate/duration in some cases
 - ID3: Fix reading of UTF-16 strings without BOM
 - FLAC: Apply ID3 tags after Vorbis
 - OGG/WMA: Set missing 'channels' field
-- WMA: Set missing 'extra.copyright' field
+- WMA: Set missing 'other.copyright' field
 - WMA: Raise exception if file is invalid
 - Various optimizations
 

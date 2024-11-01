@@ -39,10 +39,10 @@ if False:  # pylint: disable=using-constant-test
     from collections.abc import Callable, Iterator
     from typing import Any, BinaryIO, Dict, List
 
-    _Extra = Dict[str, List[str]]
-    _ImagesExtra = Dict[str, List["Image"]]
+    _OtherFields = Dict[str, List[str]]
+    _OtherImages = Dict[str, List["Image"]]
 else:
-    _Extra = _ImagesExtra = dict
+    _OtherFields = _OtherImages = dict
 
 # some of the parsers can print debug info
 DEBUG = bool(environ.get('TINYTAG_DEBUG'))
@@ -61,7 +61,7 @@ class UnsupportedFormatError(TinyTagException):
 
 
 class TinyTag:
-    """A class containing audio file properties and metadata."""
+    """A class containing audio file properties and metadata fields."""
 
     SUPPORTED_FILE_EXTENSIONS = (
         '.mp1', '.mp2', '.mp3',
@@ -70,12 +70,13 @@ class TinyTag:
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
         '.aiff', '.aifc', '.aif', '.afc'
     )
-    _EXTRA_PREFIX = 'extra.'
+    _OTHER_PREFIX = 'other.'
     _file_extension_mapping: dict[tuple[str, ...], type[TinyTag]] | None = None
 
     def __init__(self) -> None:
         self.filename: str | None = None
         self.filesize = 0
+
         self.duration: float | None = None
         self.channels: int | None = None
         self.bitrate: float | None = None
@@ -95,8 +96,8 @@ class TinyTag:
         self.year: str | None = None
         self.comment: str | None = None
 
-        self.extra = Extra()
         self.images = Images()
+        self.other = OtherFields()
 
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # override for some formats
@@ -104,7 +105,7 @@ class TinyTag:
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
-        self.__dict__: dict[str, str | float | Extra | Images]
+        self.__dict__: dict[str, str | float | Images | OtherFields]
 
     @classmethod
     def get(cls,
@@ -130,7 +131,7 @@ class TinyTag:
             # pylint: disable=import-outside-toplevel
             from warnings import warn
             warn('ignore_errors argument is obsolete, and will be removed in '
-                 'a future 2.x release', DeprecationWarning, stacklevel=2)
+                 'the future', DeprecationWarning, stacklevel=2)
         try:
             # pylint: disable=protected-access
             file_obj.seek(0, SEEK_END)
@@ -168,7 +169,7 @@ class TinyTag:
                 continue
             if isinstance(value, Images):
                 continue
-            if not isinstance(value, Extra):
+            if not isinstance(value, OtherFields):
                 if value is None:
                     continue
                 if key != 'filename' and isinstance(value, str):
@@ -176,11 +177,11 @@ class TinyTag:
                 else:
                     fields[key] = value
                 continue
-            for extra_key, extra_values in value.items():
-                extra_fields = fields.get(extra_key)
-                if not isinstance(extra_fields, list):
-                    extra_fields = fields[extra_key] = []
-                extra_fields += extra_values
+            for other_key, other_values in value.items():
+                other_fields = fields.get(other_key)
+                if not isinstance(other_fields, list):
+                    other_fields = fields[other_key] = []
+                other_fields += other_values
         return fields
 
     @classmethod
@@ -266,28 +267,28 @@ class TinyTag:
 
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
-        if fieldname.startswith(self._EXTRA_PREFIX):
-            fieldname = fieldname[len(self._EXTRA_PREFIX):]
+        if fieldname.startswith(self._OTHER_PREFIX):
+            fieldname = fieldname[len(self._OTHER_PREFIX):]
             if check_conflict and fieldname in self.__dict__:
                 fieldname = '_' + fieldname
-            extra_values = self.extra.get(fieldname, [])
-            if not isinstance(value, str) or value in extra_values:
+            other_values = self.other.get(fieldname, [])
+            if not isinstance(value, str) or value in other_values:
                 return
-            extra_values.append(value)
+            other_values.append(value)
             if DEBUG:
                 print(
-                    f'Setting extra field "{fieldname}" to "{extra_values!r}"')
-            self.extra[fieldname] = extra_values
+                    f'Setting other field "{fieldname}" to "{other_values!r}"')
+            self.other[fieldname] = other_values
             return
         old_value = self.__dict__.get(fieldname)
         new_value = value
         if isinstance(new_value, str):
-            # First value goes in tag, others in tag.extra
+            # First value goes in tag, others in tag.other
             values = new_value.split('\x00')
             for index, i_value in enumerate(values):
                 if index or old_value and i_value != old_value:
                     self._set_field(
-                        self._EXTRA_PREFIX + fieldname, i_value,
+                        self._OTHER_PREFIX + fieldname, i_value,
                         check_conflict=False)
                     continue
                 new_value = i_value
@@ -311,11 +312,11 @@ class TinyTag:
         for key, value in other.__dict__.items():
             if key.startswith('_'):
                 continue
-            if isinstance(value, Extra):
-                for extra_key, extra_values in other.extra.items():
-                    for extra_value in extra_values:
+            if isinstance(value, OtherFields):
+                for other_key, other_values in other.other.items():
+                    for other_value in other_values:
                         self._set_field(
-                            self._EXTRA_PREFIX + extra_key, extra_value,
+                            self._OTHER_PREFIX + other_key, other_value,
                             check_conflict=False)
             elif isinstance(value, Images):
                 self.images._update(value)  # pylint: disable=protected-access
@@ -328,10 +329,10 @@ class TinyTag:
         return s.strip('b\x00')
 
     def get_image(self) -> bytes | None:
-        """Deprecated, use images.any instead."""
+        """Deprecated, use 'images.any' instead."""
         from warnings import warn  # pylint: disable=import-outside-toplevel
-        warn('get_image() is deprecated, and will be removed in a future 2.x '
-             'release. Use images.any instead.',
+        warn('get_image() is deprecated, and will be removed in the future. '
+             "Use 'images.any' instead.",
              DeprecationWarning, stacklevel=2)
         image = self.images.any
         return image.data if image is not None else None
@@ -340,26 +341,32 @@ class TinyTag:
     def audio_offset(self) -> None:
         """Obsolete."""
         from warnings import warn  # pylint: disable=import-outside-toplevel
-        warn('audio_offset attribute is obsolete, and will be '
-             'removed in a future 2.x release',
+        warn("'audio_offset' attribute is obsolete, and will be "
+             'removed in the future',
              DeprecationWarning, stacklevel=2)
 
-
-class Extra(_Extra):
-    """A dictionary containing additional metadata fields of an audio file."""
+    @property
+    def extra(self) -> dict[str, str]:
+        """Deprecated, use 'other' instead."""
+        from warnings import warn  # pylint: disable=import-outside-toplevel
+        warn("'extra' attribute is deprecated, and will be "
+             "removed in the future. Use 'other' instead.",
+             DeprecationWarning, stacklevel=2)
+        extra_keys = {'copyright', 'initial_key', 'isrc', 'lyrics', 'url'}
+        return {k: v[0] for k, v in self.other.items() if k in extra_keys}
 
 
 class Images:
     """A class containing images embedded in an audio file."""
-    _EXTRA_PREFIX = 'extra.'
+    _OTHER_PREFIX = 'other.'
 
     def __init__(self) -> None:
         self.front_cover: Image | None = None
         self.back_cover: Image | None = None
         self.media: Image | None = None
 
-        self.extra = ImagesExtra()
-        self.__dict__: dict[str, Image | ImagesExtra]
+        self.other = OtherImages()
+        self.__dict__: dict[str, Image | OtherImages]
 
     @property
     def any(self) -> Image | None:
@@ -367,9 +374,9 @@ class Images:
         If not present, fall back to any other available image.
         """
         for value in self.__dict__.values():
-            if isinstance(value, ImagesExtra):
-                for extra_images in value.values():
-                    for image in extra_images:
+            if isinstance(value, OtherImages):
+                for other_images in value.values():
+                    for image in other_images:
                         return image
                 continue
             if value is not None:
@@ -380,26 +387,26 @@ class Images:
         """Return a flat dictionary representation of available images."""
         images: dict[str, list[Image]] = {}
         for key, value in self.__dict__.items():
-            if not isinstance(value, ImagesExtra):
+            if not isinstance(value, OtherImages):
                 if value is not None:
                     images[key] = [value]
                 continue
-            for extra_key, extra_values in value.items():
-                extra_images = images.get(extra_key)
-                if not isinstance(extra_images, list):
-                    extra_images = images[extra_key] = []
-                extra_images += extra_values
+            for other_key, other_values in value.items():
+                other_images = images.get(other_key)
+                if not isinstance(other_images, list):
+                    other_images = images[other_key] = []
+                other_images += other_values
         return images
 
     def _set_field(self, fieldname: str, value: Image) -> None:
         old_value = self.__dict__.get(fieldname)
-        if fieldname.startswith(self._EXTRA_PREFIX) or old_value is not None:
-            fieldname = fieldname[len(self._EXTRA_PREFIX):]
-            extra_values = self.extra.get(fieldname, [])
-            extra_values.append(value)
+        if fieldname.startswith(self._OTHER_PREFIX) or old_value is not None:
+            fieldname = fieldname[len(self._OTHER_PREFIX):]
+            other_values = self.other.get(fieldname, [])
+            other_values.append(value)
             if DEBUG:
-                print(f'Setting extra image field "{fieldname}"')
-            self.extra[fieldname] = extra_values
+                print(f'Setting other image field "{fieldname}"')
+            self.other[fieldname] = other_values
             return
         if DEBUG:
             print(f'Setting image field "{fieldname}"')
@@ -407,19 +414,14 @@ class Images:
 
     def _update(self, other: Images) -> None:
         for key, value in other.__dict__.items():
-            if isinstance(value, ImagesExtra):
-                for extra_key, extra_values in value.items():
-                    for image_extra in extra_values:
+            if isinstance(value, OtherImages):
+                for other_key, other_values in value.items():
+                    for image_other in other_values:
                         self._set_field(
-                            self._EXTRA_PREFIX + extra_key, image_extra)
+                            self._OTHER_PREFIX + other_key, image_other)
                 continue
             if value is not None:
                 self._set_field(key, value)
-
-
-class ImagesExtra(_ImagesExtra):
-    """A dictionary containing additional images embedded in an audio
-    file."""
 
 
 class Image:
@@ -438,7 +440,16 @@ class Image:
         data = variables.get("data")
         if data is not None:
             variables["data"] = (data[:45] + b'..') if len(data) > 45 else data
-        return str(variables)
+        data_str = ', '.join(f'{k}={v!r}' for k, v in variables.items())
+        return f'{type(self).__name__}({data_str})'
+
+
+class OtherFields(_OtherFields):
+    """A dictionary containing additional metadata fields of an audio file."""
+
+
+class OtherImages(_OtherImages):
+    """A dictionary containing additional images embedded in an audio file."""
 
 
 class _MP4(TinyTag):
@@ -450,17 +461,17 @@ class _MP4(TinyTag):
 
     _CUSTOM_FIELD_NAME_MAPPING = {
         'artists': 'artist',
-        'conductor': 'extra.conductor',
-        'discsubtitle': 'extra.set_subtitle',
-        'initialkey': 'extra.initial_key',
-        'isrc': 'extra.isrc',
-        'language': 'extra.language',
-        'lyricist': 'extra.lyricist',
-        'media': 'extra.media',
-        'website': 'extra.url',
-        'license': 'extra.license',
-        'barcode': 'extra.barcode',
-        'catalognumber': 'extra.catalog_number',
+        'conductor': 'other.conductor',
+        'discsubtitle': 'other.set_subtitle',
+        'initialkey': 'other.initial_key',
+        'isrc': 'other.isrc',
+        'language': 'other.language',
+        'lyricist': 'other.lyricist',
+        'media': 'other.media',
+        'website': 'other.url',
+        'license': 'other.license',
+        'barcode': 'other.barcode',
+        'catalognumber': 'other.catalog_number',
     }
     _IMAGE_MIME_TYPES = {
         13: 'image/jpeg',
@@ -504,26 +515,26 @@ class _MP4(TinyTag):
                 b'\xa9ART': {b'data': _MP4._data_parser('artist')},
                 b'\xa9alb': {b'data': _MP4._data_parser('album')},
                 b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
-                b'\xa9con': {b'data': _MP4._data_parser('extra.conductor')},
+                b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
                 # need test-data for this
-                # b'cpil':  {b'data': _MP4._data_parser('extra.compilation')},
+                # b'cpil':  {b'data': _MP4._data_parser('other.compilation')},
                 b'\xa9day': {b'data': _MP4._data_parser('year')},
-                b'\xa9des': {b'data': _MP4._data_parser('extra.description')},
-                b'\xa9dir': {b'data': _MP4._data_parser('extra.director')},
+                b'\xa9des': {b'data': _MP4._data_parser('other.description')},
+                b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
                 b'\xa9gen': {b'data': _MP4._data_parser('genre')},
-                b'\xa9lyr': {b'data': _MP4._data_parser('extra.lyrics')},
+                b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
                 b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
                 b'\xa9nam': {b'data': _MP4._data_parser('title')},
-                b'\xa9pub': {b'data': _MP4._data_parser('extra.publisher')},
-                b'\xa9too': {b'data': _MP4._data_parser('extra.encoded_by')},
+                b'\xa9pub': {b'data': _MP4._data_parser('other.publisher')},
+                b'\xa9too': {b'data': _MP4._data_parser('other.encoded_by')},
                 b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
                 b'aART': {b'data': _MP4._data_parser('albumartist')},
-                b'cprt': {b'data': _MP4._data_parser('extra.copyright')},
-                b'desc': {b'data': _MP4._data_parser('extra.description')},
+                b'cprt': {b'data': _MP4._data_parser('other.copyright')},
+                b'desc': {b'data': _MP4._data_parser('other.description')},
                 b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
                 b'gnre': {b'data': _MP4._parse_id3v1_genre},
                 b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
-                b'tmpo': {b'data': _MP4._data_parser('extra.bpm')},
+                b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
                 b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
             }}}}}
@@ -649,7 +660,7 @@ class _MP4(TinyTag):
                 field_name = atom_value.decode('utf-8', 'replace')
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
-                    field_name, TinyTag._EXTRA_PREFIX + field_name)
+                    field_name, TinyTag._OTHER_PREFIX + field_name)
             elif atom_type == b'data':
                 data_atom = fh.read(atom_size)
             else:
@@ -725,28 +736,28 @@ class _ID3(TinyTag):
         'TPOS': 'disc', 'TPA': 'disc',
         'TPE2': 'albumartist', 'TP2': 'albumartist',
         'TCOM': 'composer', 'TCM': 'composer',
-        'WOAR': 'extra.url', 'WAR': 'extra.url',
-        'TSRC': 'extra.isrc', 'TRC': 'extra.isrc',
-        'TCOP': 'extra.copyright', 'TCR': 'extra.copyright',
-        'TBPM': 'extra.bpm', 'TBP': 'extra.bpm',
-        'TKEY': 'extra.initial_key', 'TKE': 'extra.initial_key',
-        'TLAN': 'extra.language', 'TLA': 'extra.language',
-        'TPUB': 'extra.publisher', 'TPB': 'extra.publisher',
-        'USLT': 'extra.lyrics', 'ULT': 'extra.lyrics',
-        'TPE3': 'extra.conductor', 'TP3': 'extra.conductor',
-        'TEXT': 'extra.lyricist', 'TXT': 'extra.lyricist',
-        'TSST': 'extra.set_subtitle',
-        'TENC': 'extra.encoded_by', 'TEN': 'extra.encoded_by',
-        'TSSE': 'extra.encoder_settings', 'TSS': 'extra.encoder_settings',
-        'TMED': 'extra.media', 'TMT': 'extra.media',
-        'WCOP': 'extra.license',
+        'WOAR': 'other.url', 'WAR': 'other.url',
+        'TSRC': 'other.isrc', 'TRC': 'other.isrc',
+        'TCOP': 'other.copyright', 'TCR': 'other.copyright',
+        'TBPM': 'other.bpm', 'TBP': 'other.bpm',
+        'TKEY': 'other.initial_key', 'TKE': 'other.initial_key',
+        'TLAN': 'other.language', 'TLA': 'other.language',
+        'TPUB': 'other.publisher', 'TPB': 'other.publisher',
+        'USLT': 'other.lyrics', 'ULT': 'other.lyrics',
+        'TPE3': 'other.conductor', 'TP3': 'other.conductor',
+        'TEXT': 'other.lyricist', 'TXT': 'other.lyricist',
+        'TSST': 'other.set_subtitle',
+        'TENC': 'other.encoded_by', 'TEN': 'other.encoded_by',
+        'TSSE': 'other.encoder_settings', 'TSS': 'other.encoder_settings',
+        'TMED': 'other.media', 'TMT': 'other.media',
+        'WCOP': 'other.license',
     }
     _ID3_MAPPING_CUSTOM = {
         'artists': 'artist',
-        'director': 'extra.director',
-        'license': 'extra.license',
-        'barcode': 'extra.barcode',
-        'catalognumber': 'extra.catalog_number',
+        'director': 'other.director',
+        'license': 'other.license',
+        'barcode': 'other.barcode',
+        'catalognumber': 'other.catalog_number',
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -805,29 +816,29 @@ class _ID3(TinyTag):
         'png': 'image/png',
     }
     _IMAGE_TYPES = (
-        'extra.other',
-        'extra.icon',
-        'extra.other_icon',
+        'other.generic',
+        'other.icon',
+        'other.alt_icon',
         'front_cover',
         'back_cover',
-        'extra.leaflet',
+        'other.leaflet',
         'media',
-        'extra.lead_artist',
-        'extra.artist',
-        'extra.conductor',
-        'extra.band',
-        'extra.composer',
-        'extra.lyricist',
-        'extra.recording_location',
-        'extra.during_recording',
-        'extra.during_performance',
-        'extra.screen_capture',
-        'extra.bright_colored_fish',
-        'extra.illustration',
-        'extra.band_logo',
-        'extra.publisher_logo',
+        'other.lead_artist',
+        'other.artist',
+        'other.conductor',
+        'other.band',
+        'other.composer',
+        'other.lyricist',
+        'other.recording_location',
+        'other.during_recording',
+        'other.during_performance',
+        'other.screen_capture',
+        'other.bright_colored_fish',
+        'other.illustration',
+        'other.band_logo',
+        'other.publisher_logo',
     )
-    _UNKNOWN_IMAGE_TYPE = 'extra.unknown'
+    _UNKNOWN_IMAGE_TYPE = 'other.unknown'
 
     # see this page for the magic values used in mp3:
     # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
@@ -1065,7 +1076,7 @@ class _ID3(TinyTag):
         if custom_field_name_lower and separator and value:
             field_name = self._ID3_MAPPING_CUSTOM.get(
                 custom_field_name_lower,
-                self._EXTRA_PREFIX + custom_field_name_lower)
+                self._OTHER_PREFIX + custom_field_name_lower)
             self._set_field(field_name, value)
             return True
         return False
@@ -1080,8 +1091,8 @@ class _ID3(TinyTag):
         if 0 <= pic_type <= len(cls._IMAGE_TYPES):
             field_name = cls._IMAGE_TYPES[pic_type]
         name = field_name
-        if field_name.startswith(cls._EXTRA_PREFIX):
-            name = field_name[len(cls._EXTRA_PREFIX):]
+        if field_name.startswith(cls._OTHER_PREFIX):
+            name = field_name[len(cls._OTHER_PREFIX):]
         image = Image(name, data)
         if mime_type:
             image.mime_type = mime_type
@@ -1120,7 +1131,7 @@ class _ID3(TinyTag):
         if fieldname:
             if not self._parse_tags:
                 return frame_size
-            language = fieldname in {'comment', 'extra.lyrics'}
+            language = fieldname in {'comment', 'other.lyrics'}
             value = self._decode_string(content, language)
             if not value:
                 return frame_size
@@ -1188,12 +1199,12 @@ class _ID3(TinyTag):
                 # pylint: disable=protected-access
                 self.images._set_field(field_name, image)
         elif frame_id not in self._DISALLOWED_FRAME_IDS:
-            # unknown, try to add to extra dict
+            # unknown, try to add to other dict
             if self._parse_tags:
                 value = self._decode_string(content)
                 if value:
                     self._set_field(
-                        self._EXTRA_PREFIX + frame_id.lower(), value)
+                        self._OTHER_PREFIX + frame_id.lower(), value)
         return frame_size
 
     def _decode_string(self, value: bytes, language: bool = False) -> str:
@@ -1221,7 +1232,7 @@ class _ID3(TinyTag):
             # strip the bom if it exists
             if value.startswith(b'\xfe\xff') or value.startswith(b'\xff\xfe'):
                 value = value[2:] if len(value) % 2 == 0 else value[2:-1]
-            # remove ADDITIONAL EXTRA BOM :facepalm:
+            # remove ADDITIONAL OTHER BOM :facepalm:
             if value.startswith(b'\x00\x00\xff\xfe'):
                 value = value[4:]
         elif first_byte == b'\x02':  # UTF-16 without BOM
@@ -1264,26 +1275,26 @@ class _Ogg(TinyTag):
         'comment': 'comment',
         'comments': 'comment',
         'composer': 'composer',
-        'bpm': 'extra.bpm',
-        'copyright': 'extra.copyright',
-        'isrc': 'extra.isrc',
-        'lyrics': 'extra.lyrics',
-        'publisher': 'extra.publisher',
-        'language': 'extra.language',
-        'director': 'extra.director',
-        'website': 'extra.url',
-        'conductor': 'extra.conductor',
-        'lyricist': 'extra.lyricist',
-        'discsubtitle': 'extra.set_subtitle',
-        'setsubtitle': 'extra.set_subtitle',
-        'initialkey': 'extra.initial_key',
-        'key': 'extra.initial_key',
-        'encodedby': 'extra.encoded_by',
-        'encodersettings': 'extra.encoder_settings',
-        'media': 'extra.media',
-        'license': 'extra.license',
-        'barcode': 'extra.barcode',
-        'catalognumber': 'extra.catalog_number',
+        'bpm': 'other.bpm',
+        'copyright': 'other.copyright',
+        'isrc': 'other.isrc',
+        'lyrics': 'other.lyrics',
+        'publisher': 'other.publisher',
+        'language': 'other.language',
+        'director': 'other.director',
+        'website': 'other.url',
+        'conductor': 'other.conductor',
+        'lyricist': 'other.lyricist',
+        'discsubtitle': 'other.set_subtitle',
+        'setsubtitle': 'other.set_subtitle',
+        'initialkey': 'other.initial_key',
+        'key': 'other.initial_key',
+        'encodedby': 'other.encoded_by',
+        'encodersettings': 'other.encoder_settings',
+        'media': 'other.media',
+        'license': 'other.license',
+        'barcode': 'other.barcode',
+        'catalognumber': 'other.catalog_number',
     }
 
     def __init__(self) -> None:
@@ -1401,7 +1412,7 @@ class _Ogg(TinyTag):
                     if DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
                     fieldname = self._VORBIS_MAPPING.get(
-                        key_lower, self._EXTRA_PREFIX + key_lower)
+                        key_lower, self._OTHER_PREFIX + key_lower)
                     if fieldname in {
                         'track', 'disc', 'track_total', 'disc_total'
                     }:
@@ -1459,23 +1470,23 @@ class _Wave(TinyTag):
         b'TITL': 'title',
         b'IPRD': 'album',
         b'IART': 'artist',
-        b'IBPM': 'extra.bpm',
+        b'IBPM': 'other.bpm',
         b'ICMT': 'comment',
         b'IMUS': 'composer',
-        b'ICOP': 'extra.copyright',
+        b'ICOP': 'other.copyright',
         b'ICRD': 'year',
         b'IGNR': 'genre',
-        b'ILNG': 'extra.language',
-        b'ISRC': 'extra.isrc',
-        b'IPUB': 'extra.publisher',
+        b'ILNG': 'other.language',
+        b'ISRC': 'other.isrc',
+        b'IPUB': 'other.publisher',
         b'IPRT': 'track',
         b'ITRK': 'track',
         b'TRCK': 'track',
-        b'IBSU': 'extra.url',
+        b'IBSU': 'other.url',
         b'YEAR': 'year',
-        b'IWRI': 'extra.lyricist',
-        b'IENC': 'extra.encoded_by',
-        b'IMED': 'extra.media',
+        b'IWRI': 'other.lyricist',
+        b'IENC': 'other.encoded_by',
+        b'IMED': 'other.media',
     }
 
     def _determine_duration(self, fh: BinaryIO) -> None:
@@ -1659,22 +1670,22 @@ class _Wma(TinyTag):
         'WM/Genre': 'genre',
         'WM/AlbumTitle': 'album',
         'WM/Composer': 'composer',
-        'WM/Publisher': 'extra.publisher',
-        'WM/BeatsPerMinute': 'extra.bpm',
-        'WM/InitialKey': 'extra.initial_key',
-        'WM/Lyrics': 'extra.lyrics',
-        'WM/Language': 'extra.language',
-        'WM/Director': 'extra.director',
-        'WM/AuthorURL': 'extra.url',
-        'WM/ISRC': 'extra.isrc',
-        'WM/Conductor': 'extra.conductor',
-        'WM/Writer': 'extra.lyricist',
-        'WM/SetSubTitle': 'extra.set_subtitle',
-        'WM/EncodedBy': 'extra.encoded_by',
-        'WM/EncodingSettings': 'extra.encoder_settings',
-        'WM/Media': 'extra.media',
-        'WM/Barcode': 'extra.barcode',
-        'WM/CatalogNo': 'extra.catalog_number',
+        'WM/Publisher': 'other.publisher',
+        'WM/BeatsPerMinute': 'other.bpm',
+        'WM/InitialKey': 'other.initial_key',
+        'WM/Lyrics': 'other.lyrics',
+        'WM/Language': 'other.language',
+        'WM/Director': 'other.director',
+        'WM/AuthorURL': 'other.url',
+        'WM/ISRC': 'other.isrc',
+        'WM/Conductor': 'other.conductor',
+        'WM/Writer': 'other.lyricist',
+        'WM/SetSubTitle': 'other.set_subtitle',
+        'WM/EncodedBy': 'other.encoded_by',
+        'WM/EncodingSettings': 'other.encoder_settings',
+        'WM/Media': 'other.media',
+        'WM/Barcode': 'other.barcode',
+        'WM/CatalogNo': 'other.catalog_number',
     }
     _UNPACK_FORMATS = {
         1: '<B',
@@ -1718,7 +1729,7 @@ class _Wma(TinyTag):
                 data_blocks = {
                     'title': title_length,
                     'artist': author_length,
-                    'extra.copyright': copyright_length,
+                    'other.copyright': copyright_length,
                     'comment': description_length,
                     '_rating': rating_length,
                 }
@@ -1753,7 +1764,7 @@ class _Wma(TinyTag):
                     if field_name is None:  # custom field
                         if name.startswith('WM/'):
                             name = name[3:]
-                        field_name = self._EXTRA_PREFIX + name.lower()
+                        field_name = self._OTHER_PREFIX + name.lower()
                     if field_name in {'track', 'disc'}:
                         if isinstance(value, int) or value.isdecimal():
                             self._set_field(field_name, int(value))
@@ -1807,7 +1818,7 @@ class _Aiff(TinyTag):
         b'NAME': 'title',
         b'AUTH': 'artist',
         b'ANNO': 'comment',
-        b'(c) ': 'extra.copyright',
+        b'(c) ': 'other.copyright',
     }
 
     def _parse_tag(self, fh: BinaryIO) -> None:

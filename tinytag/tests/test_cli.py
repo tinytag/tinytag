@@ -21,7 +21,7 @@ assert os.path.exists(mp3_with_img)
 tinytag_attributes = {
     'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
     'channels', 'comment', 'composer', 'disc', 'disc_total', 'duration',
-    'extra', 'filesize', 'filename', 'genre', 'samplerate', 'title', 'track',
+    'filesize', 'filename', 'genre', 'samplerate', 'title', 'track',
     'track_total', 'year'
 }
 
