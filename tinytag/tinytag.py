@@ -106,12 +106,6 @@ class TinyTag:
         self._tags_parsed = False
         self.__dict__: dict[str, str | float | Extra | Images]
 
-    def __repr__(self) -> str:
-        return str({
-            key: value for key, value in self.__dict__.items()
-            if not key.startswith('_')
-        })
-
     @classmethod
     def get(cls,
             filename: bytes | str | PathLike[Any] | None = None,
@@ -366,12 +360,6 @@ class Images:
 
         self.extra = ImagesExtra()
         self.__dict__: dict[str, Image | ImagesExtra]
-
-    def __repr__(self) -> str:
-        return str({
-            key: value for key, value in self.__dict__.items()
-            if not key.startswith('_')
-        })
 
     @property
     def any(self) -> Image | None:

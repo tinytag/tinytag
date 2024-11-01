@@ -1598,30 +1598,22 @@ def test_deprecations() -> None:
         assert tag.get_image() == tag.images.any.data
 
 
-def test_to_str() -> None:
+def test_str_vars() -> None:
     tag = TinyTag.get(
         os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
-    assert str(tag).endswith(
-        "'filesize': 2824, 'duration': 0.1, 'channels': 1, 'bitrate': 225.92, "
+    assert (
+        "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
+        "'channels': 1, 'bitrate': 225.92, "
         "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
         "'albumartist': None, 'composer': None, 'album': 'album 1', "
         "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
         "'track_total': None, 'genre': 'genre 1', 'year': None, "
         "'comment': None, 'extra': {'artist': ['artist 2', 'artist 3'], "
         "'album': ['album 2'], 'genre': ['genre 2'], "
-        "'url': ['https://example.com']}, 'images': {'front_cover': "
-        "{'name': 'front_cover', 'data': b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF"
-        "\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_"
-        "PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', 'mime_type': "
-        "'image/jpeg', 'description': 'some image ë'}, 'back_cover': None, "
-        "'media': None, 'extra': "
-        "{'bright_colored_fish': [{'name': 'bright_colored_fish', 'data': "
-        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
-        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
-        "\\x02\\xa0lcm..', 'mime_type': 'image/jpeg', 'description': "
-        "'some image ë'}]}}}"
-    )
-    assert str(tag.images) == (
+        "'url': ['https://example.com']}, 'images': <tinytag.tinytag.Images "
+        "object at "
+    ) in str(vars(tag))
+    assert str(vars(tag.images)).startswith(
         "{'front_cover': {'name': 'front_cover', 'data': b'\\xff\\xd8\\xff"
         "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
         "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
@@ -1635,11 +1627,12 @@ def test_to_str() -> None:
     )
 
 
-def test_to_str_flat_dict() -> None:
+def test_str_flat_dict() -> None:
     tag = TinyTag.get(
         os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
     assert str(tag.as_dict()).endswith(
-        "'filesize': 2824, 'duration': 0.1, 'channels': 1, 'bitrate': 225.92, "
+        "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
+        "'channels': 1, 'bitrate': 225.92, "
         "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
         "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], 'genre': "
         "['genre 1', 'genre 2'], 'url': ['https://example.com']}"
