@@ -763,6 +763,7 @@ class _ID3(TinyTag):
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
     _IGNORED_FRAME_IDS = {
         'AENC', 'CRA',
+        'ATXT',
         'CHAP',
         'COMR',
         'CRM',
