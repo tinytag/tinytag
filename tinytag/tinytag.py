@@ -26,7 +26,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-"""Audio file metadata reader"""
+"""Audio file metadata reader."""
 
 from __future__ import annotations
 from binascii import a2b_base64
@@ -338,12 +338,13 @@ class TinyTag:
         return image.data if image is not None else None
 
     @property
-    def audio_offset(self) -> None:
+    def audio_offset(self) -> None:  # pylint: disable=useless-return
         """Obsolete."""
         from warnings import warn  # pylint: disable=import-outside-toplevel
         warn("'audio_offset' attribute is obsolete, and will be "
              'removed in the future',
              DeprecationWarning, stacklevel=2)
+        return None
 
     @property
     def extra(self) -> dict[str, str]:
@@ -453,7 +454,7 @@ class OtherImages(_OtherImages):
 
 
 class _MP4(TinyTag):
-    """MP4 Audio Parser
+    """MP4 Audio Parser.
 
     https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
     https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html
@@ -715,13 +716,13 @@ class _MP4(TinyTag):
         # jump over flags, create & mod times
         if version == 0:  # uses 32 bit integers for timestamps
             time_scale, duration = unpack('>II', data[12:20])
-        else:  # version == 1:  # uses 64 bit integers for timestamps
+        else:  # version == 1:  # uses 64-bit integers for timestamps
             time_scale, duration = unpack('>IQ', data[20:32])
         return {'duration': duration / time_scale}
 
 
 class _ID3(TinyTag):
-    """MP3 Parser"""
+    """MP3 Parser."""
 
     _ID3_MAPPING = {
         # Mapping from Frame ID to a field of the TinyTag
@@ -979,7 +980,7 @@ class _ID3(TinyTag):
                         return
                 walker.seek(walker_offset)
 
-            frames += 1  # it's most probably an mp3 frame
+            frames += 1  # it's most probably a mp3 frame
             bitrate_accu += frame_br
             if frames == 1:
                 audio_offset = file_offset + walker.tell()
@@ -1268,7 +1269,7 @@ class _ID3(TinyTag):
 
 
 class _Ogg(TinyTag):
-    """OGG Parser"""
+    """OGG Parser."""
 
     _VORBIS_MAPPING = {
         'album': 'album',
@@ -1474,7 +1475,7 @@ class _Ogg(TinyTag):
 
 
 class _Wave(TinyTag):
-    """WAVE Parser
+    """WAVE Parser.
 
     https://sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html
     """
@@ -1574,7 +1575,7 @@ class _Wave(TinyTag):
 
 
 class _Flac(TinyTag):
-    """FLAC Parser"""
+    """FLAC Parser."""
 
     _STREAMINFO = 0
     _VORBIS_COMMENT = 4
@@ -1669,7 +1670,7 @@ class _Flac(TinyTag):
 
 
 class _Wma(TinyTag):
-    """WMA Parser
+    """WMA Parser.
 
     http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx
     http://uguisu.skr.jp/Windows/format_asf.html
@@ -1807,7 +1808,7 @@ class _Wma(TinyTag):
 
 
 class _Aiff(TinyTag):
-    """"AIFF Parser
+    """AIFF Parser.
 
     https://en.wikipedia.org/wiki/Audio_Interchange_File_Format#Data_format
     https://web.archive.org/web/20171118222232/http://www-mmsp.ece.mcgill.ca/documents/audioformats/aiff/aiff.html
@@ -1817,7 +1818,7 @@ class _Aiff(TinyTag):
 
     * IFF strings are not supposed to be null terminated, but sometimes
       are.
-    * Some tools might throw more metadata into the ANNO chunk but it is
+    * Some tools might throw more metadata into the ANNO chunk, but it is
       wildly unreliable to count on it. In fact, the official spec
       recommends against using it. That said... this code throws the
       ANNO field into comment and hopes for the best.
