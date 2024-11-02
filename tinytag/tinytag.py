@@ -776,6 +776,7 @@ class _ID3(TinyTag):
         'RGAD',
         'STC', 'SYTC'
     }
+    _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
@@ -991,8 +992,8 @@ class _ID3(TinyTag):
                       and len(last_bitrates) == 1)
             if frames == max_estimation_frames or is_cbr:
                 # try to estimate duration
-                fh.seek(-128, 2)  # jump to last byte (leaving out id3v1 tag)
-                stream_size = fh.tell() - audio_offset
+                stream_size = (
+                    self.filesize - audio_offset - self._ID3V1_TAG_SIZE)
                 est_frame_count = stream_size / (frame_size_accu / frames)
                 samples = est_frame_count * self._SAMPLES_PER_FRAME
                 self.duration = samples / samplerate
@@ -1006,8 +1007,9 @@ class _ID3(TinyTag):
 
     def _parse_tag(self, fh: BinaryIO) -> None:
         self._parse_id3v2(fh)
-        if self.filesize > 128:
-            fh.seek(-128, SEEK_END)  # try parsing id3v1 in last 128 bytes
+        if self.filesize >= self._ID3V1_TAG_SIZE:
+            # try parsing id3v1 at the end of file
+            fh.seek(self.filesize - self._ID3V1_TAG_SIZE)
             self._parse_id3v1(fh)
 
     def _parse_id3v2_header(self, fh: BinaryIO) -> tuple[int, bool, int]:
