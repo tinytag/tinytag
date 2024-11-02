@@ -31,7 +31,7 @@
 from __future__ import annotations
 from binascii import a2b_base64
 from io import BytesIO
-from os import PathLike, SEEK_CUR, SEEK_END, SEEK_SET, environ, fsdecode
+from os import PathLike, SEEK_CUR, SEEK_END, environ, fsdecode
 from struct import unpack
 
 # Lazy imports for type checking
@@ -1039,7 +1039,7 @@ class _ID3(TinyTag):
             if frame_size == 0:
                 break
             parsed_size += frame_size
-        fh.seek(end_pos, SEEK_SET)
+        fh.seek(end_pos)
 
     def _parse_id3v1(self, fh: BinaryIO) -> None:
         if fh.read(3) != b'TAG':  # check if this is an ID3 v1 tag
