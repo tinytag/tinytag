@@ -761,8 +761,19 @@ class _ID3(TinyTag):
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
-    _DISALLOWED_FRAME_IDS = {
-        'CHAP', 'CTOC', 'PRIV', 'RGAD', 'GEOB', 'GEO'
+    _IGNORED_FRAME_IDS = {
+        'AENC', 'CRA',
+        'CHAP',
+        'COMR',
+        'CRM',
+        'CTOC',
+        'ENCR',
+        'GEOB', 'GEO',
+        'GRID',
+        'MCDI', 'MCI',
+        'PRIV',
+        'RGAD',
+        'STC', 'SYTC'
     }
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -1198,7 +1209,7 @@ class _ID3(TinyTag):
                     content[desc_end_pos:], pic_type, mime_type, desc)
                 # pylint: disable=protected-access
                 self.images._set_field(field_name, image)
-        elif frame_id not in self._DISALLOWED_FRAME_IDS:
+        elif frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
             if self._parse_tags:
                 value = self._decode_string(content)

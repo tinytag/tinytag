@@ -1016,12 +1016,6 @@ TEST_FILES = dict([
     }),
     ('with_padded_id3_header2.flac', {
         'other': {
-            'mcdi': [
-                '2\x01\x05\x00\x10\x01\x00\x00\x00\x00\x00\x00\x10\x02\x00'
-                '\x00\x00W5\x00\x10\x03\x00\x00\x00\x90\x0c\x00\x10\x04\x00'
-                '\x00\x00ä7\x00\x10\x05\x00\x00\x013«\x00\x10ª\x00\x00\x01'
-                '\x8c\xa0'
-            ],
             'tlen': ['297666'],
             'encoded_by': ['Exact Audio Copy   (Sicherer Modus)'],
             'encoder_settings': [
