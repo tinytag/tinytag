@@ -10,7 +10,7 @@ name = "tinytag"
 version = "2.0.0"
 description = "Read audio file metadata"
 authors = [
-    {name = "Tom Wallroth", email = "tomwallroth@gmail.com"},
+    {name = "Tom Wallroth"},
     {name = "Mat (mathiascode)"}
 ]
 keywords = [
