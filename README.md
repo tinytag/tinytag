@@ -386,7 +386,7 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
-### 2.0.0  (Unreleased)
+### 2.0.0  (2024-11-03)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
 - **BREAKING:** 'as_dict()' method (previously undocumented) returns tag field values in list form
