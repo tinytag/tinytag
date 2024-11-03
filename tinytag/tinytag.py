@@ -34,10 +34,8 @@ from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, environ, fsdecode
 from struct import unpack
 
-# Lazy imports for type checking. Define TYPE_CHECKING here instead of using
-# typing.TYPE_CHECKING to avoid importing the typing module on runtime.
-TYPE_CHECKING = False
-if TYPE_CHECKING:
+# Lazy imports for type checking
+if False:  # pylint: disable=using-constant-test
     from collections.abc import Callable, Iterator
     from typing import Any, BinaryIO, Dict, List
 
