@@ -46,7 +46,7 @@ else:
     _ImageListDict = dict
 
 # some of the parsers can print debug info
-DEBUG = bool(environ.get('TINYTAG_DEBUG'))
+_DEBUG = bool(environ.get('TINYTAG_DEBUG'))
 
 
 class TinyTagException(Exception):
@@ -276,7 +276,7 @@ class TinyTag:
             if not isinstance(value, str) or value in other_values:
                 return
             other_values.append(value)
-            if DEBUG:
+            if _DEBUG:
                 print(
                     f'Setting other field "{fieldname}" to "{other_values!r}"')
             self.other[fieldname] = other_values
@@ -298,7 +298,7 @@ class TinyTag:
         elif not new_value and old_value:
             # Prioritize non-zero integer values
             return
-        if DEBUG:
+        if _DEBUG:
             print(f'Setting field "{fieldname}" to "{new_value!r}"')
         self.__dict__[fieldname] = new_value
 
@@ -406,11 +406,11 @@ class Images:
             fieldname = fieldname[len(self._OTHER_PREFIX):]
             other_values = self.other.get(fieldname, [])
             other_values.append(value)
-            if DEBUG:
+            if _DEBUG:
                 print(f'Setting other image field "{fieldname}"')
             self.other[fieldname] = other_values
             return
-        if DEBUG:
+        if _DEBUG:
             print(f'Setting image field "{fieldname}"')
         self.__dict__[fieldname] = value
 
@@ -557,7 +557,7 @@ class _MP4(TinyTag):
             if atom_size <= 0:  # empty atom, jump to next one
                 atom_header = fh.read(header_len)
                 continue
-            if DEBUG:
+            if _DEBUG:
                 print(f'{" " * 4 * len(curr_path)} '
                       f'pos: {fh.tell() - header_len} '
                       f'atom: {atom_type!r} len: {atom_size + header_len}')
@@ -574,7 +574,7 @@ class _MP4(TinyTag):
             # if the path-leaf is a callable, call it on the atom data
             elif callable(sub_path):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
-                    if DEBUG:
+                    if _DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if fieldname.startswith('images.'):
                         if self._load_image:
@@ -1022,7 +1022,7 @@ class _ID3(TinyTag):
         # check if there is an ID3v2 tag at the beginning of the file
         if header.startswith(b'ID3'):
             major = header[3]
-            if DEBUG:
+            if _DEBUG:
                 print(f'Found id3 v2.{major}')
             extended = (header[5] & 0x40) > 0
             size = self._unsynchsafe(unpack('4B', header[6:10]))
@@ -1135,7 +1135,7 @@ class _ID3(TinyTag):
             frame_size = self._unsynchsafe(unpack('4B', header[4:8]))
         else:
             frame_size = unpack('>I', header[4:8])[0]
-        if DEBUG:
+        if _DEBUG:
             print(f'Found id3 Frame {frame_id} at '
                   f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
         if frame_size > total_size:
@@ -1418,14 +1418,14 @@ class _Ogg(TinyTag):
                 key_lower = key.lower()
                 if key_lower == "metadata_block_picture":
                     if self._load_image:
-                        if DEBUG:
+                        if _DEBUG:
                             print('Found Vorbis Image', key, value[:64])
                         # pylint: disable=protected-access
                         fieldname, fieldvalue = _Flac._parse_image(
                             BytesIO(a2b_base64(value)))
                         self.images._set_field(fieldname, fieldvalue)
                 else:
-                    if DEBUG:
+                    if _DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
                     fieldname = self._VORBIS_MAPPING.get(
                         key_lower, self._OTHER_PREFIX + key_lower)
