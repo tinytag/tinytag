@@ -41,10 +41,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from typing import Any, BinaryIO, Dict, List
 
-    _OtherFields = Dict[str, List[str]]
-    _OtherImages = Dict[str, List["Image"]]
+    _StringListDict = Dict[str, List[str]]
+    _ImageListDict = Dict[str, List["Image"]]
 else:
-    _OtherFields = _OtherImages = dict
+    _StringListDict = dict
+    _ImageListDict = dict
 
 # some of the parsers can print debug info
 DEBUG = bool(environ.get('TINYTAG_DEBUG'))
@@ -99,7 +100,7 @@ class TinyTag:
         self.comment: str | None = None
 
         self.images = Images()
-        self.other = OtherFields()
+        self.other: _StringListDict = OtherFields()
 
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # override for some formats
@@ -368,7 +369,7 @@ class Images:
         self.back_cover: Image | None = None
         self.media: Image | None = None
 
-        self.other = OtherImages()
+        self.other: _ImageListDict = OtherImages()
         self.__dict__: dict[str, Image | OtherImages]
 
     @property
@@ -447,11 +448,11 @@ class Image:
         return f'{type(self).__name__}({data_str})'
 
 
-class OtherFields(_OtherFields):
+class OtherFields(_StringListDict):
     """A dictionary containing additional metadata fields of an audio file."""
 
 
-class OtherImages(_OtherImages):
+class OtherImages(_ImageListDict):
     """A dictionary containing additional images embedded in an audio file."""
 
 
