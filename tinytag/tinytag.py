@@ -42,8 +42,7 @@ if False:  # pylint: disable=using-constant-test
     _StringListDict = Dict[str, List[str]]
     _ImageListDict = Dict[str, List["Image"]]
 else:
-    _StringListDict = dict
-    _ImageListDict = dict
+    _StringListDict = _ImageListDict = dict
 
 # some of the parsers can print debug info
 _DEBUG = bool(environ.get('TINYTAG_DEBUG'))
