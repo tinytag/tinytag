@@ -327,7 +327,7 @@ Output:
 
 > [!WARNING]  
 > `tag.images.any` has replaced `tag.get_image()` in tinytag 2.0.0.
-> `tag.get_image()` will be removed in a future tinytag 2.x release.
+> `tag.get_image()` will be removed in the future.
 
 To receive a common image, e.g. `front_cover`:
 
