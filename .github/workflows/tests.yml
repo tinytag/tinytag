@@ -6,7 +6,6 @@ name: Tests
 on: [push, pull_request]
 
 jobs:
-
   tests:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -27,8 +26,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
@@ -37,7 +34,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: python -m pip install build flit reuse .[tests]
+        run: python -m pip install build flit .[tests]
 
       - name: PEP 8 style checks
         run: python -m pycodestyle .
@@ -58,10 +55,6 @@ jobs:
 
       - name: Build package without isolation
         run: python -m build --no-isolation
-
-      - name: REUSE compliance
-        if: matrix.python != '3.7'
-        run: python -m reuse lint
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2

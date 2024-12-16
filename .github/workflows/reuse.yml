@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2024 tinytag Contributors
+# SPDX-License-Identifier: MIT
+
+name: REUSE Compliance
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: REUSE compliance
+        uses: fsfe/reuse-action@v5
