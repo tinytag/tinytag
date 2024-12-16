@@ -36,7 +36,7 @@ from struct import unpack
 
 # Lazy imports for type checking
 if False:  # pylint: disable=using-constant-test
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator  # pylint: disable-all
     from typing import Any, BinaryIO, Dict, List
 
     _StringListDict = Dict[str, List[str]]
