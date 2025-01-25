@@ -679,7 +679,8 @@ TEST_FILES = dict([
         'track': 1,
         'disc': 1,
         'title': 'Bad Apple!!',
-        'duration': 2.0,
+        'duration': 0.9935,
+        'bitrate': 51.5832913940614,
         'year': '2008.05.25',
         'filesize': 10000,
         'artist': 'nomico',
@@ -695,7 +696,8 @@ TEST_FILES = dict([
         'filesize': 7251,
         'channels': 1,
         'samplerate': 48000,
-        'duration': 5.0065,
+        'duration': 5.0,
+        'bitrate': 9.5952
     }),
     ('test_flac.oga', {
         'other': {
