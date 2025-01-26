@@ -1314,14 +1314,21 @@ class _Ogg(TinyTag):
 
     def __init__(self) -> None:
         super().__init__()
-        self._max_samplenum = 0  # maximum sample position ever read
+        self._granule_pos = 0
+        self._pre_skip = 0  # number of samples to skip in opus stream
+        self._audio_size: int | None = None  # size of opus audio stream
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         if not self._tags_parsed:
             self._parse_tag(fh)  # determine sample rate
         if self.duration is not None or not self.samplerate:
             return  # either ogg flac or invalid file
-        self.duration = self._max_samplenum / self.samplerate
+        self.duration = max(
+            (self._granule_pos - self._pre_skip) / self.samplerate, 0
+        )
+        if self._audio_size is None or not self.duration:
+            return  # not an opus file
+        self.bitrate = self._audio_size * 8 / self.duration / 1000
 
     def _parse_tag(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
@@ -1341,15 +1348,17 @@ class _Ogg(TinyTag):
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
                     # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
-                    version, ch = unpack("BB", packet[8:10])
+                    version, ch, pre_skip = unpack("<BBH", packet[8:12])
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
-                        self.samplerate = 48000  # opus always uses 48khz
+                        self.samplerate = 48000
+                        self._pre_skip = pre_skip
             elif packet.startswith(b'OpusTags'):
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
                     walker.seek(8)  # jump over header name
                     self._parse_vorbis_comment(walker)
+                self._audio_size = 0  # start counting size of audio stream
             elif packet.startswith(b'\x7fFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
                 walker = BytesIO(packet)
@@ -1392,7 +1401,7 @@ class _Ogg(TinyTag):
                 check_speex_second_packet = False
             else:
                 # Optimization: If we need to determine the duration, read
-                # max_samplenum of remaining pages, but skip contents of
+                # granule_pos of remaining pages, but skip contents of
                 # segments. If we don't need the duration, stop here.
                 self._tags_parsed = True
                 if not self._parse_duration:
@@ -1444,6 +1453,9 @@ class _Ogg(TinyTag):
     def _parse_pages(self, fh: BinaryIO) -> Iterator[bytes]:
         # for the spec, see: https://wiki.xiph.org/Ogg
         packet_data = bytearray()
+        current_serial = None
+        last_granule_pos = 0
+        last_audio_size = 0
         header_len = 27
         page_header = fh.read(header_len)  # read ogg page header
         while len(page_header) == header_len:
@@ -1451,26 +1463,43 @@ class _Ogg(TinyTag):
             if page_header[:4] != b'OggS' or version != 0:
                 raise ParseError('Invalid OGG header')
             # https://xiph.org/ogg/doc/framing.html
-            pos = unpack('<q', page_header[6:14])[0]
+            header_type = page_header[5]
+            eos = header_type & 0x04
+            granule_pos, serial = unpack('<qI', page_header[6:18])
+            if current_serial is None:
+                current_serial = serial
+            serial_match = serial == current_serial
+            if serial_match and granule_pos > 0:
+                if eos:
+                    self._granule_pos = granule_pos
+                else:
+                    self._granule_pos = last_granule_pos
+                    last_granule_pos = granule_pos
             segments = page_header[26]
-            # pylint: disable=consider-using-max-builtin
-            if pos > self._max_samplenum:
-                self._max_samplenum = pos
             seg_sizes = unpack('B' * segments, fh.read(segments))
             read_size = 0
+            audio_size = 0
             for seg_size in seg_sizes:  # read all segments
                 read_size += seg_size
+                if self._audio_size is not None:
+                    audio_size += seg_size
                 # less than 255 bytes means end of packet
-                if seg_size < 255 and not self._tags_parsed:
+                if seg_size < 255 and serial_match and not self._tags_parsed:
                     packet_data += fh.read(read_size)
                     yield packet_data
                     packet_data.clear()
                     read_size = 0
             if read_size:
-                if self._tags_parsed:
+                if not serial_match or self._tags_parsed:
                     fh.seek(read_size, SEEK_CUR)
                 else:  # packet continues on next page
                     packet_data += fh.read(read_size)
+            if serial_match and self._audio_size is not None:
+                if eos:
+                    self._audio_size += last_audio_size + audio_size
+                else:
+                    self._audio_size += last_audio_size
+                    last_audio_size = audio_size
             page_header = fh.read(header_len)
 
 
@@ -1635,7 +1664,7 @@ class _Flac(TinyTag):
                 self.duration = duration = tot_samples / sr
                 self.samplerate = sr
                 if duration > 0:
-                    self.bitrate = self.filesize / duration * 8 / 1000
+                    self.bitrate = self.filesize * 8 / duration / 1000
             elif block_type == self._VORBIS_COMMENT and self._parse_tags:
                 # pylint: disable=protected-access
                 walker = BytesIO(fh.read(size))
