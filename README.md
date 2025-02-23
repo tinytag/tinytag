@@ -386,6 +386,11 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
+### 2.1.0  (2025-02-23)
+
+- Opus: Calculate audio bitrate
+- Opus: Take pre-skip into account when calculating the duration
+
 ### 2.0.0  (2024-11-03)
 
 - **BREAKING:** Store 'disc', 'disc_total', 'track' and 'track_total' values as int instead of str
