@@ -41,6 +41,10 @@ python3 -m pip install tinytag
   * Pure Python, no dependencies
   * Supports Python 3.7 or higher
 
+> [!IMPORTANT]  
+> Support for changing/writing metadata will not be added. Use another library
+> such as [Mutagen](https://mutagen.readthedocs.io/) for this.
+
 
 ## Usage
 
@@ -93,9 +97,6 @@ Alternatively you can use tinytag directly on the command line:
 
 Check `python3 -m tinytag --help` for all CLI options, for example other
 output formats.
-
-Support for changing/writing metadata will not be added. Use another library
-such as [Mutagen](https://mutagen.readthedocs.io/) for this.
 
 ### Supported Files
 
