@@ -32,7 +32,7 @@ from __future__ import annotations
 from binascii import a2b_base64
 from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, environ, fsdecode
-from struct import unpack
+from struct import unpack, pack
 
 # Lazy imports for type checking
 if False:  # pylint: disable=using-constant-test
@@ -355,6 +355,29 @@ class TinyTag:
              DeprecationWarning, stacklevel=2)
         extra_keys = {'copyright', 'initial_key', 'isrc', 'lyrics', 'url'}
         return {k: v[0] for k, v in self.other.items() if k in extra_keys}
+
+    def write(self, file_obj: BinaryIO=None):
+        raise NotImplementedError
+
+    def _set_filehandler_for_writing(self, file_obj: BinaryIO) -> bool:
+        should_close_file = file_obj is None and not self._filehandler.writable()
+
+        if self.filename is None and should_close_file:
+            raise ValueError(
+                "You must specify a new file object that is in write mode. "
+                "(Has to be from the same file as specified while creating this TinyTag instance.)"
+            )
+
+        if file_obj is not None and not self._filehandler.closed():
+            self._filehandler.close()
+
+        if file_obj is not None:
+            self._filehandler = file_obj
+
+        else:
+            self._filehandler = open(self.filename, "rb+")
+
+        return should_close_file
 
 
 class Images:
@@ -1266,6 +1289,85 @@ class _ID3(TinyTag):
     @staticmethod
     def _unsynchsafe(ints: tuple[int, ...]) -> int:
         return (ints[0] << 21) + (ints[1] << 14) + (ints[2] << 7) + ints[3]
+
+    @staticmethod
+    def _synchsafe(unsynchsafe_int: int) -> tuple[int, ...]:
+        ints = (
+            (unsynchsafe_int >> 21) & 0x7F,
+            (unsynchsafe_int >> 14) & 0x7F,
+            (unsynchsafe_int >> 7) & 0x7F,
+            unsynchsafe_int & 0x7F
+        )
+
+        return ints
+
+    def write(self, file_obj: BinaryIO=None):
+        should_close_file = self._set_filehandler_for_writing(file_obj)
+
+        # change keys to values in the mapping dict
+        self._ID3_WRITE_MAPPING = {}
+        for frame_id, name in self._ID3_MAPPING.items():
+            if len(frame_id) == 4:
+                self._ID3_WRITE_MAPPING[name] = frame_id
+
+        new_frames = self._compose_id3v2_frames()
+
+        size = len(new_frames)
+
+        new_header = self._compose_id3v2_header(size)
+
+        new_tag = new_header + new_frames
+
+        size, extended, major = self._parse_id3v2_header(self._filehandler)
+
+        file_content = self._filehandler.read()
+        audio = file_content[size:]
+
+        self._filehandler.seek(0)
+        self._filehandler.write(new_tag + audio)
+        self._filehandler.truncate()
+
+        if should_close_file:
+            self._filehandler.close()
+
+    def _compose_id3v2_header(self, size: int):
+        header = b"ID3\x04\x00\x00"
+
+        synchsafe_size = self._synchsafe(size)
+        header += pack("4B", *synchsafe_size)
+
+        return header
+
+    def _compose_id3v2_frames(self):
+        tag_dict = self.as_dict()
+
+        frames = b""
+
+        for field_name, field_value in tag_dict.items():
+            if field_name not in self._ID3_WRITE_MAPPING:
+                continue
+
+            frames += self._compose_id3v2_frame(field_name, field_value)
+
+        return frames
+
+    def _compose_id3v2_frame(self, field_name, field_value):
+        frame_id = bytes(self._ID3_WRITE_MAPPING[field_name], "ISO-8859-1")
+
+        field_value = field_value[0]
+
+        if isinstance(field_value, str):
+            frame_value = bytes(field_value, "ISO-8859-1")
+
+        else:
+            print(f"Writing of {field_name} is not implemented.")
+            return b""
+
+        frame_size = pack("4B", *self._synchsafe(len(frame_value) + 1))
+
+        frame_data = frame_id + frame_size + b"\x00\x00\x00" + frame_value
+
+        return frame_data
 
 
 class _Ogg(TinyTag):
