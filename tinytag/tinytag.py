@@ -326,7 +326,7 @@ class TinyTag:
     @staticmethod
     def _unpad(s: str) -> str:
         # certain strings *may* be terminated with a zero byte at the end
-        return s.strip('b\x00')
+        return s.strip('\x00')
 
     def get_image(self) -> bytes | None:
         """Deprecated, use 'images.any' instead."""
