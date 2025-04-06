@@ -1,18 +1,20 @@
 # SPDX-FileCopyrightText: 2019-2025 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=missing-function-docstring,missing-module-docstring
+# pylint: disable=missing-class-docstring,missing-function-docstring
+# pylint: disable=missing-module-docstring,too-many-public-methods
 
 from __future__ import annotations
 
 import os.path
 
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
+from math import isclose
 from pathlib import Path
 from platform import python_implementation, system
+from sys import stdout
 from typing import Any
-
-import pytest
+from unittest import skipIf, TestCase
 
 from tinytag import TinyTag, TinyTagException
 from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
@@ -1319,334 +1321,347 @@ TEST_FILES = dict([
 SAMPLE_FOLDER = os.path.join(os.path.dirname(__file__), 'samples')
 
 
-def compare_tag(results: dict[str, Any],
-                expected: dict[str, Any],
-                file: str, prev_path: str | None = None) -> None:
-    def compare_values(path: str,
-                       result_val: str | float,
-                       expected_val: str | float) -> bool:
-        # lets not copy *all* the lyrics inside the fixture
-        if (path == 'other.lyrics'
-                and isinstance(expected_val, list)
-                and isinstance(result_val, list)):
-            return result_val[0].startswith(expected_val[0])
-        if isinstance(expected_val, float):
-            return result_val == pytest.approx(expected_val)
-        return result_val == expected_val
+class TestAll(TestCase):
 
-    def error_fmt(value: str | float) -> str:
-        return f'{repr(value)} ({type(value)})'
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Use utf-8 encoding for debug print()
+        if isinstance(stdout, TextIOWrapper):
+            stdout.reconfigure(encoding='utf-8')
 
-    assert isinstance(results, dict)
-    missing_keys = set(expected.keys()) - set(results)
-    assert not missing_keys, f'Missing data in fixture \n{missing_keys}'
+    def compare_tag(self, results: dict[str, Any],
+                    expected: dict[str, Any],
+                    file: str, prev_path: str | None = None) -> None:
+        def compare_values(path: str,
+                           result_val: str | float,
+                           expected_val: str | float) -> bool:
+            # lets not copy *all* the lyrics inside the fixture
+            if (path == 'other.lyrics'
+                    and isinstance(expected_val, list)
+                    and isinstance(result_val, list)):
+                return result_val[0].startswith(expected_val[0])
+            if (isinstance(result_val, float)
+                    and isinstance(expected_val, float)):
+                return isclose(result_val, expected_val)
+            return result_val == expected_val
 
-    for key, result_val in results.items():
-        path = prev_path + '.' + key if prev_path else key
-        expected_val = expected[key]
-        # recurse if the result and expected values are a dict:
-        if isinstance(result_val, dict) and isinstance(expected_val, dict):
-            compare_tag(result_val, expected_val, file, prev_path=key)
-        else:
-            fmt_string = 'field "%s": got %s expected %s in %s!'
-            fmt_values = (key, error_fmt(result_val), error_fmt(expected_val),
-                          file)
-            assert compare_values(path, result_val, expected_val), \
-                   fmt_string % fmt_values
+        def error_fmt(value: str | float) -> str:
+            return f'{repr(value)} ({type(value)})'
 
+        self.assertIsInstance(results, dict)
+        missing_keys = set(expected.keys()) - set(results)
+        self.assertFalse(
+            missing_keys, f'Missing data in fixture \n{missing_keys}')
 
-@pytest.mark.parametrize("testfile,expected", TEST_FILES.items())
-def test_file_reading_all(testfile: str,
-                          expected: dict[str, dict[str, Any]]) -> None:
-    filename = os.path.join(SAMPLE_FOLDER, testfile)
-    tag = TinyTag.get(filename, tags=True, duration=True, image=True)
-    results = {
-        key: val for key, val in tag.__dict__.items()
-        if not key.startswith('_') and val is not None
-    }
-    for attr_name in ('filename', 'images'):
-        del results[attr_name]
-    compare_tag(results, expected, filename)
+        for key, result_val in results.items():
+            path = prev_path + '.' + key if prev_path else key
+            expected_val = expected[key]
+            # recurse if the result and expected values are a dict:
+            if isinstance(result_val, dict) and isinstance(expected_val, dict):
+                self.compare_tag(result_val, expected_val, file, prev_path=key)
+            else:
+                fmt_string = 'field "%s": got %s expected %s in %s!'
+                fmt_values = (
+                    key, error_fmt(result_val), error_fmt(expected_val), file)
+                self.assertTrue(
+                    compare_values(path, result_val, expected_val),
+                    fmt_string % fmt_values)
 
+    def test_file_reading_all(self) -> None:
+        for testfile, expected in TEST_FILES.items():
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                tag = TinyTag.get(
+                    filename, tags=True, duration=True, image=True)
+                results = {
+                    key: val for key, val in tag.__dict__.items()
+                    if not key.startswith('_') and val is not None
+                }
+                for attr_name in ('filename', 'images'):
+                    del results[attr_name]
+                self.compare_tag(results, expected, filename)
 
-@pytest.mark.parametrize("testfile,expected", TEST_FILES.items())
-def test_file_reading_tags(testfile: str,
-                           expected: dict[str, dict[str, Any]]) -> None:
-    filename = os.path.join(SAMPLE_FOLDER, testfile)
-    excluded_attrs = {
-        'bitdepth', 'bitrate', 'channels', 'duration', 'samplerate'
-    }
-    tag = TinyTag.get(filename, tags=True, duration=False)
-    results = {
-        key: val for key, val in tag.__dict__.items()
-        if not key.startswith('_') and val is not None
-    }
-    for attr_name in ('filename', 'images'):
-        del results[attr_name]
-    expected = {
-        key: val for key, val in expected.items() if key not in excluded_attrs
-    }
-    compare_tag(results, expected, filename)
-    assert tag.images.any is None
+    def test_file_reading_tags(self) -> None:
+        for testfile, expected in TEST_FILES.items():
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                excluded_attrs = {
+                    'bitdepth', 'bitrate', 'channels', 'duration', 'samplerate'
+                }
+                tag = TinyTag.get(filename, tags=True, duration=False)
+                results = {
+                    key: val for key, val in tag.__dict__.items()
+                    if not key.startswith('_') and val is not None
+                }
+                for attr_name in ('filename', 'images'):
+                    del results[attr_name]
+                filtered_expected = {
+                    key: val for key, val in expected.items()
+                    if key not in excluded_attrs
+                }
+                self.compare_tag(results, filtered_expected, filename)
+                assert tag.images.any is None
 
+    def test_file_reading_duration(self) -> None:
+        for testfile, expected in TEST_FILES.items():
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                allowed_attrs = {
+                    'bitdepth', 'bitrate', 'channels', 'duration',
+                    'filesize', 'samplerate'}
+                tag = TinyTag.get(filename, tags=False, duration=True)
+                results = {
+                    key: val for key, val in tag.__dict__.items()
+                    if not key.startswith('_') and val is not None
+                }
+                for attr_name in ('filename', 'other', 'images'):
+                    del results[attr_name]
+                filtered_expected = {
+                    key: val for key, val in expected.items()
+                    if key in allowed_attrs
+                }
+                self.compare_tag(results, filtered_expected, filename)
+                assert tag.images.any is None
 
-@pytest.mark.parametrize("testfile,expected", TEST_FILES.items())
-def test_file_reading_duration(testfile: str,
-                               expected: dict[str, dict[str, Any]]) -> None:
-    filename = os.path.join(SAMPLE_FOLDER, testfile)
-    allowed_attrs = {
-        'bitdepth', 'bitrate', 'channels', 'duration',
-        'filesize', 'samplerate'}
-    tag = TinyTag.get(filename, tags=False, duration=True)
-    results = {
-        key: val for key, val in tag.__dict__.items()
-        if not key.startswith('_') and val is not None
-    }
-    for attr_name in ('filename', 'other', 'images'):
-        del results[attr_name]
-    expected = {
-        key: val for key, val in expected.items() if key in allowed_attrs
-    }
-    compare_tag(results, expected, filename)
-    assert tag.images.any is None
+    def test_pathlib_compatibility(self) -> None:
+        testfile = next(iter(TEST_FILES.keys()))
+        filename = Path(SAMPLE_FOLDER) / testfile
+        TinyTag.get(filename)
+        self.assertTrue(TinyTag.is_supported(filename))
 
+    def test_file_obj_compatibility(self) -> None:
+        testfile = next(iter(TEST_FILES.keys()))
+        filename = os.path.join(SAMPLE_FOLDER, testfile)
+        with open(filename, 'rb') as file_handle:
+            tag = TinyTag.get(file_obj=file_handle)
+            file_handle.seek(0)
+            tag_bytesio = TinyTag.get(file_obj=BytesIO(file_handle.read()))
+            self.assertEqual(tag.filesize, tag_bytesio.filesize)
 
-def test_pathlib_compatibility() -> None:
-    testfile = next(iter(TEST_FILES.keys()))
-    filename = Path(SAMPLE_FOLDER) / testfile
-    TinyTag.get(filename)
-    assert TinyTag.is_supported(filename)
-
-
-def test_file_obj_compatibility() -> None:
-    testfile = next(iter(TEST_FILES.keys()))
-    filename = os.path.join(SAMPLE_FOLDER, testfile)
-    with open(filename, 'rb') as file_handle:
-        tag = TinyTag.get(file_obj=file_handle)
-        file_handle.seek(0)
-        tag_bytesio = TinyTag.get(file_obj=BytesIO(file_handle.read()))
-        assert tag.filesize == tag_bytesio.filesize
-
-
-@pytest.mark.skipif(
-    system() == 'Windows' and python_implementation() == 'PyPy',
-    reason='PyPy on Windows not supported'
-)
-def test_binary_path_compatibility() -> None:
-    binary_file_path = os.path.join(
-        SAMPLE_FOLDER, 'non_ascii_filename_äää.mp3').encode('utf-8')
-    tag = TinyTag.get(binary_file_path)
-    assert tag.samplerate == 44100
-    assert tag.other['encoder_settings'] == ['Lavf58.20.100']
-
-
-def test_unsupported_extension() -> None:
-    bogus_file = os.path.join(SAMPLE_FOLDER, 'there_is_no_such_ext.bogus')
-    with pytest.raises(TinyTagException):
-        TinyTag.get(bogus_file)
-
-
-def test_override_encoding() -> None:
-    chinese_id3 = os.path.join(SAMPLE_FOLDER, 'chinese_id3.mp3')
-    tag = TinyTag.get(chinese_id3, encoding='gbk')
-    assert tag.artist == '苏云'
-    assert tag.album == '角落之歌'
-
-
-def test_unsubclassed_tinytag_load() -> None:
-    # pylint: disable=protected-access
-    tag = TinyTag()
-    tag._load(tags=True, duration=True)
-    assert not tag._tags_parsed
-
-
-def test_unsubclassed_tinytag_duration() -> None:
-    # pylint: disable=protected-access
-    tag = TinyTag()
-    with pytest.raises(NotImplementedError):
-        tag._determine_duration(None)  # type: ignore
-
-
-def test_unsubclassed_tinytag_parse_tag() -> None:
-    # pylint: disable=protected-access
-    tag = TinyTag()
-    with pytest.raises(NotImplementedError):
-        tag._parse_tag(None)  # type: ignore
-
-
-def test_mp3_length_estimation() -> None:
-    # pylint: disable=protected-access
-    _ID3._MAX_ESTIMATION_SEC = 0.7
-    tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'silence-44-s-v1.mp3'))
-    assert tag.duration is not None
-    assert 3.5 < tag.duration < 4.0
-
-
-@pytest.mark.parametrize("path,cls", [
-    ('silence-44-s-v1.mp3', _Flac),
-    ('flac1.5sStereo.flac', _Ogg),
-    ('flac1.5sStereo.flac', _Wave),
-    ('flac1.5sStereo.flac', _Wma),
-    ('ilbm.aiff', _Aiff),
-])
-def test_invalid_file(path: str, cls: type[TinyTag]) -> None:
-    with pytest.raises(TinyTagException):
-        cls.get(os.path.join(SAMPLE_FOLDER, path))
-
-
-@pytest.mark.parametrize('path,expected_size,desc', [
-    ('image-text-encoding.mp3', 5708, 'cover'),
-    ('id3v22_with_image.mp3', 1220, 'some image ë'),
-    ('mpeg4_with_image.m4a', 1220, None),
-    ('flac_with_image.flac', 1220, 'some image ë'),
-    ('wav_with_image.wav', 4627, 'some image ë'),
-    ('aiff_with_image.aiff', 1220, 'some image ë'),
-])
-def test_image_loading(path: str, expected_size: int, desc: str) -> None:
-    tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, path), image=True)
-    image = tag.images.any
-    manual_image = tag.images.front_cover
-    if manual_image is None:
-        manual_image = tag.images.other['generic'][0]
-    assert image is not None
-    assert manual_image is not None
-    assert image.name in {'front_cover', 'generic'}
-    assert image.data is not None
-    assert image.data == manual_image.data
-    with pytest.warns(DeprecationWarning):
-        assert image.data == tag.get_image()
-    image_size = len(image.data)
-    assert image_size == expected_size, \
-           f'Image is {image_size} bytes but should be {expected_size} bytes'
-    assert image.data.startswith(b'\xff\xd8\xff\xe0'), \
-           'The image data must start with a jpeg header'
-    assert image.mime_type == 'image/jpeg'
-    assert image.description == desc
-
-
-def test_image_loading_other() -> None:
-    tag = TinyTag.get(
-        os.path.join(SAMPLE_FOLDER, 'ogg_with_image.ogg'), image=True)
-    image = tag.images.other['bright_colored_fish'][0]
-    assert image.data is not None
-    assert tag.images.any is not None
-    assert tag.images.any.data == image.data
-    with pytest.warns(DeprecationWarning):
-        assert image.data == tag.get_image()
-    assert image.mime_type == 'image/jpeg'
-    assert image.name == 'bright_colored_fish'
-    assert image.description == 'some image ë'
-    assert len(image.data) == 1220
-    assert str(image) == (
-        "Image(name='bright_colored_fish', data=b'\\xff\\xd8\\xff\\xe0\\x00"
-        "\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02"
-        "\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "mime_type='image/jpeg', description='some image ë')"
+    @skipIf(
+        system() == 'Windows' and python_implementation() == 'PyPy',
+        reason='PyPy on Windows not supported'
     )
+    def test_binary_path_compatibility(self) -> None:
+        binary_file_path = os.path.join(
+            SAMPLE_FOLDER, 'non_ascii_filename_äää.mp3').encode('utf-8')
+        tag = TinyTag.get(binary_file_path)
+        self.assertEqual(tag.samplerate, 44100)
+        self.assertEqual(tag.other['encoder_settings'], ['Lavf58.20.100'])
 
+    def test_unsupported_extension(self) -> None:
+        bogus_file = os.path.join(SAMPLE_FOLDER, 'there_is_no_such_ext.bogus')
+        with self.assertRaises(TinyTagException):
+            TinyTag.get(bogus_file)
 
-def test_mp3_utf_8_invalid_string() -> None:
-    tag = TinyTag.get(
-        os.path.join(SAMPLE_FOLDER, 'utf-8-id3v2-invalid-string.mp3'))
-    # the title used to be Gran dia, but I replaced the first byte with 0xFF,
-    # which should be ignored here
-    assert tag.title == '�ran día'
+    def test_override_encoding(self) -> None:
+        chinese_id3 = os.path.join(SAMPLE_FOLDER, 'chinese_id3.mp3')
+        tag = TinyTag.get(chinese_id3, encoding='gbk')
+        self.assertEqual(tag.artist, '苏云')
+        self.assertEqual(tag.album, '角落之歌')
 
+    def test_unsubclassed_tinytag_load(self) -> None:
+        # pylint: disable=protected-access
+        tag = TinyTag()
+        tag._load(tags=True, duration=True)
+        self.assertFalse(tag._tags_parsed)
 
-@pytest.mark.parametrize("testfile,expected", [
-    ('detect_mp3_id3.x', _ID3),
-    ('detect_mp3_fffb.x', _ID3),
-    ('detect_ogg_flac.x', _Ogg),
-    ('detect_ogg_opus.x', _Ogg),
-    ('detect_ogg_vorbis.x', _Ogg),
-    ('detect_wav.x', _Wave),
-    ('detect_flac.x', _Flac),
-    ('detect_wma.x', _Wma),
-    ('detect_mp4_m4a.x', _MP4),
-    ('detect_aiff.x', _Aiff),
-])
-def test_detect_magic_headers(testfile: str, expected: type[TinyTag]) -> None:
-    # pylint: disable=protected-access
-    filename = os.path.join(SAMPLE_FOLDER, testfile)
-    with open(filename, 'rb') as file_handle:
-        parser = TinyTag._get_parser_class(filename, file_handle)
-    assert parser == expected
+    def test_unsubclassed_tinytag_duration(self) -> None:
+        # pylint: disable=protected-access
+        tag = TinyTag()
+        with self.assertRaises(NotImplementedError):
+            tag._determine_duration(None)  # type: ignore
 
+    def test_unsubclassed_tinytag_parse_tag(self) -> None:
+        # pylint: disable=protected-access
+        tag = TinyTag()
+        with self.assertRaises(NotImplementedError):
+            tag._parse_tag(None)  # type: ignore
 
-def test_show_hint_for_wrong_usage() -> None:
-    with pytest.raises(ValueError) as exc:
-        TinyTag.get()
-    assert exc.type == ValueError
-    assert exc.value.args[0] == ('Either filename or file_obj argument '
-                                 'is required')
+    def test_mp3_length_estimation(self) -> None:
+        # pylint: disable=protected-access
+        _ID3._MAX_ESTIMATION_SEC = 0.7
+        tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'silence-44-s-v1.mp3'))
+        assert tag.duration is not None
+        self.assertGreater(tag.duration, 3.5)
+        self.assertLess(tag.duration, 4.0)
 
+    def test_invalid_file(self) -> None:
+        for path, cls in (
+            ('silence-44-s-v1.mp3', _Flac),
+            ('flac1.5sStereo.flac', _Ogg),
+            ('flac1.5sStereo.flac', _Wave),
+            ('flac1.5sStereo.flac', _Wma),
+            ('ilbm.aiff', _Aiff),
+        ):
+            with self.subTest(path=path, cls=cls):
+                with self.assertRaises(TinyTagException):
+                    cls.get(os.path.join(SAMPLE_FOLDER, path))
 
-def test_deprecations() -> None:
-    file_path = os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac')
-    with pytest.warns(DeprecationWarning):
-        tag = TinyTag.get(filename=file_path, image=True, ignore_errors=True)
-    with pytest.warns(DeprecationWarning):
-        tag = TinyTag.get(filename=file_path, image=True, ignore_errors=False)
-    with pytest.warns(DeprecationWarning):
-        assert tag.audio_offset is None
-    with pytest.warns(DeprecationWarning):
-        assert str(tag.extra) == "{'url': 'https://example.com'}"
-    with pytest.warns(DeprecationWarning):
+    def test_image_loading(self) -> None:
+        for path, expected_size, desc in (
+            ('image-text-encoding.mp3', 5708, 'cover'),
+            ('id3v22_with_image.mp3', 1220, 'some image ë'),
+            ('mpeg4_with_image.m4a', 1220, None),
+            ('flac_with_image.flac', 1220, 'some image ë'),
+            ('wav_with_image.wav', 4627, 'some image ë'),
+            ('aiff_with_image.aiff', 1220, 'some image ë'),
+        ):
+            with self.subTest(path=path, expected_size=expected_size,
+                              desc=desc):
+                tag = TinyTag.get(
+                    os.path.join(SAMPLE_FOLDER, path), image=True)
+                image = tag.images.any
+                manual_image = tag.images.front_cover
+                if manual_image is None:
+                    manual_image = tag.images.other['generic'][0]
+                assert image is not None
+                assert manual_image is not None
+                self.assertIn(image.name, {'front_cover', 'generic'})
+                assert image.data is not None
+                self.assertEqual(image.data, manual_image.data)
+                with self.assertWarns(DeprecationWarning):
+                    self.assertEqual(image.data, tag.get_image())
+                image_size = len(image.data)
+                self.assertEqual(
+                    image_size, expected_size,
+                    (f'Image is {image_size} bytes but should be '
+                     f'{expected_size} bytes')
+                )
+                self.assertTrue(
+                    image.data.startswith(b'\xff\xd8\xff\xe0'),
+                    'The image data must start with a jpeg header'
+                )
+                self.assertEqual(image.mime_type, 'image/jpeg')
+                self.assertEqual(image.description, desc)
+
+    def test_image_loading_other(self) -> None:
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'ogg_with_image.ogg'), image=True)
+        image = tag.images.other['bright_colored_fish'][0]
+        assert image.data is not None
         assert tag.images.any is not None
-        assert tag.get_image() == tag.images.any.data
+        self.assertEqual(tag.images.any.data, image.data)
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(image.data, tag.get_image())
+        self.assertEqual(image.mime_type, 'image/jpeg')
+        self.assertEqual(image.name, 'bright_colored_fish')
+        self.assertEqual(image.description, 'some image ë')
+        self.assertEqual(len(image.data), 1220)
+        self.assertEqual(
+            str(image),
+            "Image(name='bright_colored_fish', data=b'\\xff\\xd8\\xff\\xe0"
+            "\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
+            "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
+            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')"
+        )
 
+    def test_mp3_utf_8_invalid_string(self) -> None:
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'utf-8-id3v2-invalid-string.mp3'))
+        # the title used to be Gran dia, but I replaced the first byte with
+        # 0xFF, which should be ignored here
+        self.assertEqual(tag.title, '�ran día')
 
-def test_str_vars() -> None:
-    tag = TinyTag.get(
-        os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
-    vars_str = str(vars(tag))
-    assert (
-        "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
-        "'channels': 1, 'bitrate': 225.92, "
-        "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
-        "'albumartist': None, 'composer': None, 'album': 'album 1', "
-        "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
-        "'track_total': None, 'genre': 'genre 1', 'year': None, "
-        "'comment': None, 'images': <tinytag.tinytag.Images "
-        "object at "
-    ) in vars_str
-    assert (
-        "'other': {'artist': ['artist 2', 'artist 3'], "
-        "'album': ['album 2'], 'genre': ['genre 2'], "
-        "'url': ['https://example.com']}"
-    ) in vars_str
-    assert str(vars(tag.images)) == (
-        "{'front_cover': Image(name='front_cover', data=b'\\xff\\xd8\\xff"
-        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
-        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "mime_type='image/jpeg', description='some image ë'), "
-        "'back_cover': None, 'media': None, 'other': "
-        "{'bright_colored_fish': [Image(name='bright_colored_fish', data="
-        "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
-        "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00"
-        "\\x02\\xa0lcm..', mime_type='image/jpeg', description="
-        "'some image ë')]}}"
-    )
+    def test_detect_magic_headers(self) -> None:
+        # pylint: disable=protected-access
+        for testfile, expected in (
+            ('detect_mp3_id3.x', _ID3),
+            ('detect_mp3_fffb.x', _ID3),
+            ('detect_ogg_flac.x', _Ogg),
+            ('detect_ogg_opus.x', _Ogg),
+            ('detect_ogg_vorbis.x', _Ogg),
+            ('detect_wav.x', _Wave),
+            ('detect_flac.x', _Flac),
+            ('detect_wma.x', _Wma),
+            ('detect_mp4_m4a.x', _MP4),
+            ('detect_aiff.x', _Aiff),
+        ):
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                with open(filename, 'rb') as file_handle:
+                    parser = TinyTag._get_parser_class(filename, file_handle)
+                self.assertEqual(parser, expected)
 
+    def test_show_hint_for_wrong_usage(self) -> None:
+        with self.assertRaises(ValueError) as exc:
+            TinyTag.get()
+        self.assertEqual(type(exc.exception), ValueError)
+        self.assertEqual(
+            str(exc.exception),
+            'Either filename or file_obj argument is required'
+        )
 
-def test_str_flat_dict() -> None:
-    tag = TinyTag.get(
-        os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
-    assert str(tag.as_dict()).endswith(
-        "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
-        "'channels': 1, 'bitrate': 225.92, "
-        "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
-        "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], 'genre': "
-        "['genre 1', 'genre 2'], 'url': ['https://example.com']}"
-    )
-    assert str(tag.images.as_dict()) == (
-        "{'front_cover': [Image(name='front_cover', data=b'\\xff\\xd8\\xff"
-        "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
-        "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
-        "mime_type='image/jpeg', description='some image ë')], "
-        "'bright_colored_fish': [Image(name='bright_colored_fish', "
-        "data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
-        "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
-        "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', "
-        "description='some image ë')]}"
-    )
+    def test_deprecations(self) -> None:
+        file_path = os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac')
+        with self.assertWarns(DeprecationWarning):
+            tag = TinyTag.get(
+                filename=file_path, image=True, ignore_errors=True)
+        with self.assertWarns(DeprecationWarning):
+            tag = TinyTag.get(
+                filename=file_path, image=True, ignore_errors=False)
+        with self.assertWarns(DeprecationWarning):
+            assert tag.audio_offset is None
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(str(tag.extra), "{'url': 'https://example.com'}")
+        with self.assertWarns(DeprecationWarning):
+            assert tag.images.any is not None
+            self.assertEqual(tag.get_image(), tag.images.any.data)
+
+    def test_str_vars(self) -> None:
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+        vars_str = str(vars(tag))
+        self.assertIn(
+            "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
+            "'channels': 1, 'bitrate': 225.92, "
+            "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
+            "'albumartist': None, 'composer': None, 'album': 'album 1', "
+            "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
+            "'track_total': None, 'genre': 'genre 1', 'year': None, "
+            "'comment': None, 'images': <tinytag.tinytag.Images "
+            "object at ",
+            vars_str
+        )
+        self.assertIn(
+            "'other': {'artist': ['artist 2', 'artist 3'], "
+            "'album': ['album 2'], 'genre': ['genre 2'], "
+            "'url': ['https://example.com']}",
+            vars_str
+        )
+        self.assertEqual(
+            str(vars(tag.images)),
+            "{'front_cover': Image(name='front_cover', data=b'\\xff\\xd8\\xff"
+            "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00"
+            "\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
+            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë'),"
+            " 'back_cover': None, 'media': None, 'other': "
+            "{'bright_colored_fish': [Image(name='bright_colored_fish', data="
+            "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
+            "\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
+            "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description="
+            "'some image ë')]}}"
+        )
+
+    def test_str_flat_dict(self) -> None:
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+        self.assertTrue(str(tag.as_dict()).endswith(
+            "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
+            "'channels': 1, 'bitrate': 225.92, "
+            "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
+            "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
+            "'genre': ['genre 1', 'genre 2'], 'url': ['https://example.com']}"
+        ))
+        self.assertEqual(
+            str(tag.images.as_dict()),
+            "{'front_cover': [Image(name='front_cover', data=b'\\xff\\xd8\\xff"
+            "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00"
+            "\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
+            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')]"
+            ", 'bright_colored_fish': [Image(name='bright_colored_fish', "
+            "data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
+            "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01"
+            "\\x01\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', "
+            "description='some image ë')]}"
+        )

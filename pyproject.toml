@@ -59,8 +59,7 @@ tests = [
     "coverage",
     "mypy",
     "pycodestyle",
-    "pylint",
-    "pytest"
+    "pylint"
 ]
 
 [tool.flit.sdist]
