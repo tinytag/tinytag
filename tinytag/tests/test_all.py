@@ -16,7 +16,8 @@ from sys import stdout
 from typing import Any
 from unittest import skipIf, TestCase
 
-from tinytag import TinyTag, TinyTagException
+from tinytag import ParseError, TinyTagException, UnsupportedFormatError
+from tinytag import TinyTag
 from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 
@@ -1451,8 +1452,9 @@ class TestAll(TestCase):
 
     def test_unsupported_extension(self) -> None:
         bogus_file = os.path.join(SAMPLE_FOLDER, 'there_is_no_such_ext.bogus')
-        with self.assertRaises(TinyTagException):
+        with self.assertRaises(UnsupportedFormatError) as context:
             TinyTag.get(bogus_file)
+        self.assertIsInstance(context.exception, TinyTagException)
 
     def test_override_encoding(self) -> None:
         chinese_id3 = os.path.join(SAMPLE_FOLDER, 'chinese_id3.mp3')
@@ -1495,8 +1497,9 @@ class TestAll(TestCase):
             ('ilbm.aiff', _Aiff),
         ):
             with self.subTest(path=path, cls=cls):
-                with self.assertRaises(TinyTagException):
+                with self.assertRaises(ParseError) as context:
                     cls.get(os.path.join(SAMPLE_FOLDER, path))
+                self.assertIsInstance(context.exception, TinyTagException)
 
     def test_image_loading(self) -> None:
         for path, expected_size, desc in (
@@ -1584,11 +1587,11 @@ class TestAll(TestCase):
                 self.assertEqual(parser, expected)
 
     def test_show_hint_for_wrong_usage(self) -> None:
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(ValueError) as context:
             TinyTag.get()
-        self.assertEqual(type(exc.exception), ValueError)
+        self.assertIsInstance(context.exception, ValueError)
         self.assertEqual(
-            str(exc.exception),
+            str(context.exception),
             'Either filename or file_obj argument is required'
         )
 
