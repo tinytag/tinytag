@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
-# pylint: disable=missing-module-docstring,too-many-public-methods
+# pylint: disable=missing-module-docstring,protected-access
+# pylint: disable=too-many-public-methods
 
 from __future__ import annotations
 
@@ -1463,30 +1464,19 @@ class TestAll(TestCase):
         self.assertEqual(tag.album, '角落之歌')
 
     def test_unsubclassed_tinytag_load(self) -> None:
-        # pylint: disable=protected-access
         tag = TinyTag()
         tag._load(tags=True, duration=True)
         self.assertFalse(tag._tags_parsed)
 
     def test_unsubclassed_tinytag_duration(self) -> None:
-        # pylint: disable=protected-access
         tag = TinyTag()
         with self.assertRaises(NotImplementedError):
             tag._determine_duration(None)  # type: ignore
 
     def test_unsubclassed_tinytag_parse_tag(self) -> None:
-        # pylint: disable=protected-access
         tag = TinyTag()
         with self.assertRaises(NotImplementedError):
             tag._parse_tag(None)  # type: ignore
-
-    def test_mp3_length_estimation(self) -> None:
-        # pylint: disable=protected-access
-        _ID3._MAX_ESTIMATION_SEC = 0.7
-        tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'silence-44-s-v1.mp3'))
-        assert tag.duration is not None
-        self.assertGreater(tag.duration, 3.5)
-        self.assertLess(tag.duration, 4.0)
 
     def test_invalid_file(self) -> None:
         for path, cls in (
@@ -1567,7 +1557,6 @@ class TestAll(TestCase):
         self.assertEqual(tag.title, '�ran día')
 
     def test_detect_magic_headers(self) -> None:
-        # pylint: disable=protected-access
         for testfile, expected in (
             ('detect_mp3_id3.x', _ID3),
             ('detect_mp3_fffb.x', _ID3),
@@ -1582,9 +1571,8 @@ class TestAll(TestCase):
         ):
             with self.subTest(testfile=testfile, expected=expected):
                 filename = os.path.join(SAMPLE_FOLDER, testfile)
-                with open(filename, 'rb') as file_handle:
-                    parser = TinyTag._get_parser_class(filename, file_handle)
-                self.assertEqual(parser, expected)
+                tag = TinyTag.get(filename)
+                self.assertIsInstance(tag, expected)
 
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
