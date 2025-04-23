@@ -387,6 +387,11 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
+### 2.1.1  (2025-04-23)
+
+- ID3: Stop removing 'b' character from strings
+- Port unit tests from pytest to built-in unittest module
+
 ### 2.1.0  (2025-02-23)
 
 - Opus: Calculate audio bitrate
