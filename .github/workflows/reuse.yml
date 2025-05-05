@@ -1,9 +1,9 @@
-# SPDX-FileCopyrightText: 2024 tinytag Contributors
+# SPDX-FileCopyrightText: 2024-2025 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
 name: REUSE Compliance
-
 on: [push, pull_request]
+permissions: {}
 
 jobs:
   check:

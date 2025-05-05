@@ -1,9 +1,9 @@
-# SPDX-FileCopyrightText: 2022-2024 tinytag Contributors
+# SPDX-FileCopyrightText: 2022-2025 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
 name: Tests
-
 on: [push, pull_request]
+permissions: {}
 
 jobs:
   tests:
