@@ -1450,7 +1450,7 @@ class _Ogg(TinyTag):
                     elif value:
                         self._set_field(fieldname, value)
 
-    def _parse_pages(self, fh: BinaryIO) -> Iterator[bytes]:
+    def _parse_pages(self, fh: BinaryIO) -> Iterator[bytearray]:
         # for the spec, see: https://wiki.xiph.org/Ogg
         packet_data = bytearray()
         current_serial = None
