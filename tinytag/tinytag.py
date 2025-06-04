@@ -34,15 +34,19 @@ from io import BytesIO
 from os import PathLike, SEEK_CUR, SEEK_END, environ, fsdecode
 from struct import unpack
 
+TYPE_CHECKING = False
+
 # Lazy imports for type checking
-if False:  # pylint: disable=using-constant-test
+if TYPE_CHECKING:
     from collections.abc import Callable, Iterator  # pylint: disable-all
-    from typing import Any, BinaryIO, Dict, List
+    from typing import Any, BinaryIO, Dict, List, Union
 
     _StringListDict = Dict[str, List[str]]
     _ImageListDict = Dict[str, List["Image"]]
+    _DataTreeDict = Dict[
+        bytes, Union['_DataTreeDict', Callable[..., Dict[str, Any]]]]
 else:
-    _StringListDict = _ImageListDict = dict
+    _StringListDict = _ImageListDict = _DataTreeDict = dict
 
 # some of the parsers can print debug info
 _DEBUG = bool(environ.get('TINYTAG_DEBUG'))
@@ -487,8 +491,8 @@ class _MP4(TinyTag):
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
 
-    _audio_data_tree: dict[bytes, Any] | None = None
-    _meta_data_tree: dict[bytes, Any] | None = None
+    _audio_data_tree: _DataTreeDict | None = None
+    _meta_data_tree: _DataTreeDict | None = None
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
@@ -543,7 +547,7 @@ class _MP4(TinyTag):
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
-                        path: dict[bytes, Any],
+                        path: _DataTreeDict,
                         stop_pos: int | None = None,
                         curr_path: list[bytes] | None = None) -> None:
         header_len = 8
