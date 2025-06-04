@@ -42,8 +42,11 @@ jobs:
       - name: Linting
         run: python -m pylint --recursive=y .
 
-      - name: Typing
+      - name: Typing (mypy)
         run: python -m mypy -p tinytag
+
+      - name: Typing (pyright)
+        run: python -m pyright
 
       - name: Unit tests
         run: python -m coverage run -m unittest
