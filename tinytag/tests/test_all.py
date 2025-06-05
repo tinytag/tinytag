@@ -1240,6 +1240,21 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'bitrate': 0.0,
     }),
+    ('multi_value.m4a', {
+        'other': OtherFields({
+            'artist': ['another artist', 'yet another artist'],
+            'custom': ['value1', 'value2', 'value3'],
+            'encoded_by': ['Lavf61.7.100']
+        }),
+        'artist': 'some artist',
+        'title': 'some title',
+        'album': 'some album',
+        'filesize': 1995,
+        'samplerate': 44100,
+        'duration': 0.524,
+        'channels': 1,
+        'bitrate': 1.666,
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
         'channels': 2,
