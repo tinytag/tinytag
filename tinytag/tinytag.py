@@ -109,7 +109,7 @@ class TinyTag:
         self._parse_tags = True
         self._load_image = False
         self._tags_parsed = False
-        self.__dict__: dict[str, str | float | Images | OtherFields]
+        self.__dict__: dict[str, str | float | Images | OtherFields | None]
 
     @classmethod
     def get(cls,
@@ -368,7 +368,7 @@ class Images:
         self.media: Image | None = None
 
         self.other: _ImageListDict = OtherImages()
-        self.__dict__: dict[str, Image | OtherImages]
+        self.__dict__: dict[str, Image | OtherImages | None]
 
     @property
     def any(self) -> Image | None:
