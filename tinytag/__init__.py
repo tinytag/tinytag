@@ -3,6 +3,8 @@
 
 """Audio file metadata reader."""
 
+__version__ = '2.1.1'
+
 from .tinytag import (
     TinyTag, Image, Images, OtherFields, OtherImages,
     TinyTagException, ParseError, UnsupportedFormatError

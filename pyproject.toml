@@ -7,7 +7,6 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "tinytag"
-version = "2.1.1"
 description = "Read audio file metadata"
 authors = [
     {name = "Tom Wallroth"},
@@ -50,6 +49,7 @@ classifiers = [
 license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.7"
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/tinytag/tinytag"
