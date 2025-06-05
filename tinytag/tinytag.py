@@ -275,14 +275,11 @@ class TinyTag:
             fieldname = fieldname[len(self._OTHER_PREFIX):]
             if check_conflict and fieldname in self.__dict__:
                 fieldname = '_' + fieldname
-            other_values = self.other.get(fieldname, [])
-            if not isinstance(value, str) or value in other_values:
-                return
-            other_values.append(value)
+            if fieldname not in self.other:
+                self.other[fieldname] = []
+            self.other[fieldname].append(str(value))
             if _DEBUG:
-                print(
-                    f'Setting other field "{fieldname}" to "{other_values!r}"')
-            self.other[fieldname] = other_values
+                print(f'Adding value "{value} to field "{fieldname}"')
             return
         old_value = self.__dict__.get(fieldname)
         new_value = value
@@ -579,12 +576,15 @@ class _MP4(TinyTag):
                 for fieldname, value in sub_path(fh.read(atom_size)).items():
                     if _DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
-                    if fieldname.startswith('images.'):
+                    if isinstance(value, Image):
                         if self._load_image:
                             # pylint: disable=protected-access
                             self.images._set_field(
                                 fieldname[len('images.'):], value)
-                    elif fieldname:
+                    elif isinstance(value, list):
+                        for subval in value:
+                            self._set_field(fieldname, subval)
+                    else:
                         self._set_field(fieldname, value)
             # if no action was specified using dict or callable, jump over atom
             else:
@@ -595,12 +595,8 @@ class _MP4(TinyTag):
             atom_header = fh.read(header_len)  # read next atom
 
     @classmethod
-    def _data_parser(
-        cls, fieldname: str
-    ) -> Callable[[bytes], dict[str, int | str | bytes | None]]:
-        def _parse_data_atom(
-            data_atom: bytes
-        ) -> dict[str, int | str | bytes | None]:
+    def _data_parser(cls, fieldname: str) -> Callable[[bytes], dict[str, str]]:
+        def _parse_data_atom(data_atom: bytes) -> dict[str, str]:
             data_type = unpack('>I', data_atom[:4])[0]
             data = data_atom[8:]
             value = None
@@ -611,7 +607,9 @@ class _MP4(TinyTag):
                 data_len = len(data)
                 if data_len in fmts:
                     value = str(unpack(fmts[data_len], data)[0])
-            return {fieldname: value}
+            if value:
+                return {fieldname: value}
+            return {}
         return _parse_data_atom
 
     @classmethod
@@ -649,13 +647,11 @@ class _MP4(TinyTag):
                 break
 
     @classmethod
-    def _parse_custom_field(
-        cls, data: bytes
-    ) -> dict[str, int | str | bytes | None]:
+    def _parse_custom_field(cls, data: bytes) -> dict[str, list[str]]:
         fh = BytesIO(data)
         header_len = 8
         field_name = None
-        data_atom = b''
+        values = []
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
             atom_size = unpack('>I', atom_header[:4])[0] - header_len
@@ -666,15 +662,18 @@ class _MP4(TinyTag):
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
                     field_name, TinyTag._OTHER_PREFIX + field_name)
-            elif atom_type == b'data':
+            elif atom_type == b'data' and field_name:
                 data_atom = fh.read(atom_size)
+                parser = cls._data_parser(field_name)
+                atom_values = parser(data_atom)
+                if field_name in atom_values:
+                    values.append(atom_values[field_name])
             else:
                 fh.seek(atom_size, SEEK_CUR)
             atom_header = fh.read(header_len)  # read next atom
-        if len(data_atom) < 8 or field_name is None:
-            return {}
-        parser = cls._data_parser(field_name)
-        return parser(data_atom)
+        if field_name and values:
+            return {field_name: values}
+        return {}
 
     @classmethod
     def _parse_audio_sample_entry_mp4a(cls, data: bytes) -> dict[str, int]:
