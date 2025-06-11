@@ -120,3 +120,8 @@ strict = true
 exclude_lines = [
     "if TYPE_CHECKING:"
 ]
+precision = 2
+show_missing = true
+
+[tool.coverage.run]
+relative_files = true

@@ -4,6 +4,8 @@
 name: Tests
 on: [push, pull_request]
 permissions: {}
+env:
+  MIN_COVERAGE_PERCENTAGE: 100
 
 jobs:
   tests:
@@ -49,9 +51,15 @@ jobs:
         run: python -m pyright
 
       - name: Unit tests
-        run: python -m coverage run -m unittest
+        run: python -m coverage run --parallel-mode -m unittest
         env:
           TINYTAG_DEBUG: true
+
+      - name: Coverage report
+        run: |
+          coverage combine --keep --quiet
+          coverage report
+          coverage html --quiet
 
       - name: Build package
         run: python -m build
@@ -59,19 +67,47 @@ jobs:
       - name: Build package without isolation
         run: python -m build --no-isolation
 
-      - name: Coveralls
-        uses: coverallsapp/github-action@v2
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
         with:
-          flag-name: run-${{ join(matrix.*, '-') }}
-          file: .coverage
-          parallel: true
+          name: coverage-${{ matrix.os }}-${{ matrix.python }}
+          include-hidden-files: true
+          path: |
+            .coverage.*
+            htmlcov
 
-  finish:
+  coverage:
     needs: tests
-    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Coveralls finished
-        uses: coverallsapp/github-action@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
         with:
-          parallel-finished: true
+          pattern: coverage-*
+          merge-multiple: true
+
+      - name: Set up cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: coverage
+
+      - name: Install dependencies
+        run: python -m pip install coverage
+
+      - name: Generate coverage report
+        run: |
+          coverage combine --quiet
+          coverage html --quiet
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-coverage-report
+          path: htmlcov
+
+      - name: Show coverage report
+        run: coverage report --fail-under=${MIN_COVERAGE_PERCENTAGE}
