@@ -1144,6 +1144,8 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'bpm': ['0'],
             'encoded_by': ['iTunes 10.5'],
+            'cpil': ['0'],
+            'pgap': ['0'],
         }),
         'samplerate': 44100,
         'duration': 314.97868480725623,
