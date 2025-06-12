@@ -487,6 +487,7 @@ class _MP4(TinyTag):
     }
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
+    _ILST_PATH = [b'ftyp', b'moov', b'udta', b'meta', b'ilst']
 
     _audio_data_tree: _DataTreeDict | None = None
     _meta_data_tree: _DataTreeDict | None = None
@@ -518,8 +519,6 @@ class _MP4(TinyTag):
                 b'\xa9alb': {b'data': _MP4._data_parser('album')},
                 b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
                 b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
-                # need test-data for this
-                # b'cpil':  {b'data': _MP4._data_parser('other.compilation')},
                 b'\xa9day': {b'data': _MP4._data_parser('year')},
                 b'\xa9des': {b'data': _MP4._data_parser('other.description')},
                 b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
@@ -586,6 +585,16 @@ class _MP4(TinyTag):
                             self._set_field(fieldname, subval)
                     else:
                         self._set_field(fieldname, value)
+            # unknown data atom, try to parse it
+            elif curr_path == self._ILST_PATH:
+                atom_end_pos = fh.tell() + atom_size
+                field_name = self._OTHER_PREFIX + atom_type.decode(
+                    'utf-8', 'replace')
+                fh.seek(-header_len, SEEK_CUR)
+                self._traverse_atoms(
+                    fh,
+                    path={atom_type: {b'data': self._data_parser(field_name)}},
+                    stop_pos=atom_end_pos, curr_path=curr_path + [atom_type])
             # if no action was specified using dict or callable, jump over atom
             else:
                 fh.seek(atom_size, SEEK_CUR)
