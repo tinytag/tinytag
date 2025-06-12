@@ -12,5 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: reuse
+
+      - name: Install dependencies
+        run: python -m pip install reuse
+
       - name: REUSE compliance
-        uses: fsfe/reuse-action@v5
+        run: python -m reuse lint
