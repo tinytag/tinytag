@@ -1250,7 +1250,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'custom': ['value1', 'value2', 'value3'],
             'encoded_by': ['Lavf61.7.100'],
-            '�grp': ['grouping', 'second grouping']
+            '©grp': ['grouping', 'second grouping']
         }),
         'artist': 'some artist',
         'title': 'some title',
