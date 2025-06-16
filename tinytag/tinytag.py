@@ -518,6 +518,7 @@ class _MP4(TinyTag):
                 b'\xa9ART': {b'data': _MP4._data_parser('artist')},
                 b'\xa9alb': {b'data': _MP4._data_parser('album')},
                 b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
+                b'\xa9com': {b'data': _MP4._data_parser('composer')},
                 b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
                 b'\xa9day': {b'data': _MP4._data_parser('year')},
                 b'\xa9des': {b'data': _MP4._data_parser('other.description')},

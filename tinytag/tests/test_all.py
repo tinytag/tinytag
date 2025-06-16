@@ -1245,12 +1245,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('multi_value.m4a', {
         'other': OtherFields({
             'artist': ['another artist', 'yet another artist'],
+            'composer': [
+                'another composer', 'yet another composer', 'last composer'
+            ],
             'custom': ['value1', 'value2', 'value3'],
-            'encoded_by': ['Lavf61.7.100']
+            'encoded_by': ['Lavf61.7.100'],
+            '�grp': ['grouping', 'second grouping']
         }),
         'artist': 'some artist',
         'title': 'some title',
         'album': 'some album',
+        'composer': 'some composer',
         'filesize': 1995,
         'samplerate': 44100,
         'duration': 0.524,
