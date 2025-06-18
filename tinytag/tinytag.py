@@ -548,9 +548,14 @@ class _MP4(TinyTag):
                         stop_pos: int | None = None,
                         curr_path: list[bytes] | None = None) -> None:
         header_len = 8
+        large_size_len = 8
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size = unpack('>I', atom_header[:4])[0]
+            if atom_size == 1: # Indicates 64 bit size value will be packed after the header
+                large_size_header = fh.read(large_size_len)
+                atom_size = unpack('>Q', large_size_header[:8])[0] - large_size_len
+            atom_size = atom_size - header_len
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
