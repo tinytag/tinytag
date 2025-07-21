@@ -1539,6 +1539,7 @@ class TestAll(TestCase):
         for path, expected_size, desc in (
             ('image-text-encoding.mp3', 5708, 'cover'),
             ('id3v22_with_image.mp3', 1220, 'some image ë'),
+            ('id3v22_with_image_stray_null.mp3', 1220, 'some image ë'),
             ('mpeg4_with_image.m4a', 1220, None),
             ('flac_with_image.flac', 1220, 'some image ë'),
             ('wav_with_image.wav', 4627, 'some image ë'),
