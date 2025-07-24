@@ -936,13 +936,10 @@ class _ID3(TinyTag):
         # seek to first position after id3 tag (speedup for large header)
         first_mpeg_id = None
         fh.seek(self._bytepos_after_id3v2)
-        file_offset = fh.tell()
-        walker = BytesIO(fh.read())
         while True:
             # reading through garbage until 11 '1' sync-bits are found
-            header = walker.read(4)
+            header = fh.read(4)
             header_len = len(header)
-            walker.seek(-header_len, SEEK_CUR)
             if header_len < 4:
                 if frames:
                     self.bitrate = bitrate_accu / frames
@@ -961,10 +958,8 @@ class _ID3(TinyTag):
                     or mpeg_id == 1):
                 # invalid frame, find next sync header
                 idx = header.find(b'\xFF', 1)
-                if idx == -1:
-                    # not found: jump over the current peek buffer
-                    idx = header_len
-                walker.seek(max(idx, 1), SEEK_CUR)
+                if idx != -1:
+                    fh.seek(idx - header_len, SEEK_CUR)
                 continue
             if first_mpeg_id is None:
                 first_mpeg_id = mpeg_id
@@ -976,12 +971,12 @@ class _ID3(TinyTag):
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
             if frames == 0 and self._USE_XING_HEADER:
-                walker_offset = walker.tell()
-                frame_content = walker.read(frame_length)
+                prev_offset = fh.tell()
+                frame_content = fh.read(frame_length)
                 xing_header_offset = frame_content.find(b'Xing')
                 if xing_header_offset != -1:
-                    walker.seek(walker_offset + xing_header_offset)
-                    xframes, byte_count = self._parse_xing_header(walker)
+                    fh.seek(prev_offset + xing_header_offset)
+                    xframes, byte_count = self._parse_xing_header(fh)
                     if xframes > 0 and byte_count > 0:
                         # MPEG-2 Audio Layer III uses 576 samples per frame
                         samples_pf = self._SAMPLES_PER_FRAME
@@ -990,12 +985,12 @@ class _ID3(TinyTag):
                         self.duration = dur = xframes * samples_pf / samplerate
                         self.bitrate = byte_count * 8 / dur / 1000
                         return
-                walker.seek(walker_offset)
+                fh.seek(prev_offset)
 
             frames += 1  # it's most probably a mp3 frame
             bitrate_accu += frame_br
             if frames == 1:
-                audio_offset = file_offset + walker.tell()
+                audio_offset = fh.tell() - header_len
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.add(frame_br)
 
@@ -1014,7 +1009,7 @@ class _ID3(TinyTag):
                 return
 
             if frame_length > 1:  # jump over current frame body
-                walker.seek(frame_length, SEEK_CUR)
+                fh.seek(frame_length - header_len, SEEK_CUR)
         if self.samplerate:
             self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
 
