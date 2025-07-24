@@ -929,7 +929,7 @@ class _ID3(TinyTag):
         max_estimation_frames = (
             (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
         frame_size_accu = 0
-        audio_offset = 0
+        audio_offset = self._bytepos_after_id3v2
         frames = 0  # count frames for determining mp3 duration
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
         last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
@@ -958,8 +958,12 @@ class _ID3(TinyTag):
                     or mpeg_id == 1):
                 # invalid frame, find next sync header
                 idx = header.find(b'\xFF', 1)
+                next_offset = header_len
                 if idx != -1:
+                    next_offset -= idx
                     fh.seek(idx - header_len, SEEK_CUR)
+                if frames == 0:
+                    audio_offset += next_offset
                 continue
             if first_mpeg_id is None:
                 first_mpeg_id = mpeg_id
@@ -971,7 +975,7 @@ class _ID3(TinyTag):
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
             if frames == 0 and self._USE_XING_HEADER:
-                prev_offset = fh.tell()
+                prev_offset = header_len + audio_offset
                 frame_content = fh.read(frame_length)
                 xing_header_offset = frame_content.find(b'Xing')
                 if xing_header_offset != -1:
@@ -989,8 +993,6 @@ class _ID3(TinyTag):
 
             frames += 1  # it's most probably a mp3 frame
             bitrate_accu += frame_br
-            if frames == 1:
-                audio_offset = fh.tell() - header_len
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.add(frame_br)
 
@@ -1052,7 +1054,8 @@ class _ID3(TinyTag):
         fh.seek(end_pos)
 
     def _parse_id3v1(self, fh: BinaryIO) -> None:
-        if fh.read(3) != b'TAG':  # check if this is an ID3 v1 tag
+        content = fh.read(3 + 30 + 30 + 30 + 4 + 30 + 1)
+        if content[:3] != b'TAG':  # check if this is an ID3 v1 tag
             return
 
         def asciidecode(x: bytes) -> str:
@@ -1060,24 +1063,23 @@ class _ID3(TinyTag):
                 x.decode(self._default_encoding or 'latin1', 'replace'))
         # Only set fields that were not set by ID3v2 tags, as ID3v1
         # tags are more likely to be outdated or have encoding issues
-        fields = fh.read(30 + 30 + 30 + 4 + 30 + 1)
         if not self.title:
-            value = asciidecode(fields[:30])
+            value = asciidecode(content[3:33])
             if value:
                 self._set_field('title', value)
         if not self.artist:
-            value = asciidecode(fields[30:60])
+            value = asciidecode(content[33:63])
             if value:
                 self._set_field('artist', value)
         if not self.album:
-            value = asciidecode(fields[60:90])
+            value = asciidecode(content[63:93])
             if value:
                 self._set_field('album', value)
         if not self.year:
-            value = asciidecode(fields[90:94])
+            value = asciidecode(content[93:97])
             if value:
                 self._set_field('year', value)
-        comment = fields[94:124]
+        comment = content[97:127]
         if b'\x00\x00' < comment[-2:] < b'\x01\x00':
             if self.track is None:
                 self._set_field('track', ord(comment[-1:]))
@@ -1087,7 +1089,7 @@ class _ID3(TinyTag):
             if value:
                 self._set_field('comment', value)
         if not self.genre:
-            genre_id = ord(fields[124:125])
+            genre_id = ord(content[127:128])
             if genre_id < len(self._ID3V1_GENRES):
                 self._set_field('genre', self._ID3V1_GENRES[genre_id])
 
@@ -1147,14 +1149,13 @@ class _ID3(TinyTag):
         if frame_size > total_size:
             # invalid frame size, stop here
             return 0
-        content = fh.read(frame_size)
-        fieldname = self._ID3_MAPPING.get(frame_id)
         should_set_field = True
-        if fieldname:
+        if frame_id in self._ID3_MAPPING:
             if not self._parse_tags:
                 return frame_size
+            fieldname = self._ID3_MAPPING[frame_id]
             language = fieldname in {'comment', 'other.lyrics'}
-            value = self._decode_string(content, language)
+            value = self._decode_string(fh.read(frame_size), language)
             if not value:
                 return frame_size
             if fieldname == "comment":
@@ -1186,12 +1187,13 @@ class _ID3(TinyTag):
         elif frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
             if self._parse_tags:
-                value = self._decode_string(content)
+                value = self._decode_string(fh.read(frame_size))
                 if value:
                     self.__parse_custom_field(value)
         elif frame_id in self._IMAGE_FRAME_IDS:
             if self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
+                content = fh.read(frame_size)
                 encoding = content[:1]
                 if frame_id == 'PIC':  # ID3 v2.2:
                     imgformat = self._decode_string(content[1:4]).lower()
@@ -1223,10 +1225,12 @@ class _ID3(TinyTag):
         elif frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
             if self._parse_tags:
-                value = self._decode_string(content)
+                value = self._decode_string(fh.read(frame_size))
                 if value:
                     self._set_field(
                         self._OTHER_PREFIX + frame_id.lower(), value)
+        else:  # skip frame
+            fh.seek(frame_size, SEEK_CUR)
         return frame_size
 
     def _decode_string(self, value: bytes, language: bool = False) -> str:
@@ -1589,8 +1593,8 @@ class _Wave(TinyTag):
                         data_length += data_length % 2
                         # strip zero-byte
                         data = walker.read(data_length).split(b'\x00', 1)[0]
-                        fieldname = self._RIFF_MAPPING.get(field)
-                        if fieldname:
+                        if field in self._RIFF_MAPPING:
+                            fieldname = self._RIFF_MAPPING[field]
                             value = data.decode('utf-8', 'replace')
                             if fieldname == 'track':
                                 if value.isdecimal():
@@ -1811,8 +1815,9 @@ class _Wma(TinyTag):
                         walker.seek(value_len, SEEK_CUR)  # skip other values
                         continue
                     # try to get normalized field name
-                    field_name = self._ASF_MAPPING.get(name)
-                    if field_name is None:  # custom field
+                    if name in self._ASF_MAPPING:
+                        field_name = self._ASF_MAPPING[name]
+                    else:  # custom field
                         if name.startswith('WM/'):
                             name = name[3:]
                         field_name = self._OTHER_PREFIX + name.lower()
