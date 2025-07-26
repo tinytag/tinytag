@@ -261,7 +261,7 @@ class TinyTag:
         self._parse_duration = duration
         self._load_image = image
         if self._filehandler is None:
-            return
+            raise ValueError("File handle is required")
         if tags:
             self._parse_tag(self._filehandler)
         if duration:

@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
-# pylint: disable=missing-module-docstring,protected-access
-# pylint: disable=too-many-public-methods
+# pylint: disable=missing-module-docstring
 
 from __future__ import annotations
 
@@ -24,7 +23,7 @@ TYPE_CHECKING = False
 
 # Lazy imports for type checking
 if TYPE_CHECKING:
-    from typing import Mapping, Union
+    from typing import BinaryIO, Mapping, Union
     ExpectedTag = Mapping[str, Union[str, float, OtherFields]]
 else:
     ExpectedTag = dict
@@ -1507,21 +1506,6 @@ class TestAll(TestCase):
         self.assertEqual(tag.artist, '苏云')
         self.assertEqual(tag.album, '角落之歌')
 
-    def test_unsubclassed_tinytag_load(self) -> None:
-        tag = TinyTag()
-        tag._load(tags=True, duration=True)
-        self.assertFalse(tag._tags_parsed)
-
-    def test_unsubclassed_tinytag_duration(self) -> None:
-        tag = TinyTag()
-        with self.assertRaises(NotImplementedError):
-            tag._determine_duration(None)  # type: ignore
-
-    def test_unsubclassed_tinytag_parse_tag(self) -> None:
-        tag = TinyTag()
-        with self.assertRaises(NotImplementedError):
-            tag._parse_tag(None)  # type: ignore
-
     def test_invalid_file(self) -> None:
         for path, cls in (
             ('silence-44-s-v1.mp3', _Flac),
@@ -1626,6 +1610,22 @@ class TestAll(TestCase):
             str(context.exception),
             'Either filename or file_obj argument is required'
         )
+
+    def test_unimplemented_load(self) -> None:
+        class IncompleteTag(TinyTag):  # pylint: disable=abstract-method
+            def load(self,
+                     file_handle: BinaryIO | None,
+                     tags: bool,
+                     duration: bool) -> None:
+                self._filehandler = file_handle
+                self._load(tags=tags, duration=duration)
+        tag = IncompleteTag()
+        with self.assertRaises(ValueError):
+            tag.load(file_handle=None, tags=True, duration=True)
+        with self.assertRaises(NotImplementedError):
+            tag.load(file_handle=BytesIO(), tags=True, duration=False)
+        with self.assertRaises(NotImplementedError):
+            tag.load(file_handle=BytesIO(), tags=False, duration=True)
 
     def test_deprecations(self) -> None:
         file_path = os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac')
