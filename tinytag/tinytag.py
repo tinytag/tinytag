@@ -1216,6 +1216,11 @@ class _ID3(TinyTag):
                         if content[i:i + 2] == b'\x00\x00':
                             desc_end_pos = i + 2
                             break
+                    # skip stray null byte in broken file
+                    if (desc_end_pos + 1 < len(content)
+                            and content[desc_end_pos] == 0
+                            and content[desc_end_pos + 1] != 0):
+                        desc_end_pos += 1
                 desc = self._decode_string(
                     encoding + content[desc_start_pos:desc_end_pos])
                 field_name, image = self._create_tag_image(
