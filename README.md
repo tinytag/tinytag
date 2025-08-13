@@ -385,6 +385,18 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
+### 2.1.2  (2025-08-14)
+
+- M4A: Add a few missing additional metadata fields
+- M4A: Support '©com' composer atom
+- M4A: Fix reading of multi-value custom fields
+- M4A: Use correct encoding when reading data names
+- ID3: Don't read entire file to determine duration
+- ID3: Skip stray null byte before image data
+- Add missing `__version__` attribute
+- Avoid some unnecessary work in hot code paths
+- Improve a few incomplete type hints
+
 ### 2.1.1  (2025-04-23)
 
 - ID3: Stop removing 'b' character from strings
