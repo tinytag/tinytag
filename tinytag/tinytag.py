@@ -97,6 +97,8 @@ class TinyTag:
         self.track: int | None = None
         self.track_total: int | None = None
         self.genre: str | None = None
+        self._genre_text: str | None = None  # From ©gen text atom
+        self._genre_binary: str | None = None  # From gnre binary atom
         self.year: str | None = None
         self.comment: str | None = None
 
@@ -264,10 +266,20 @@ class TinyTag:
             raise ValueError("File handle is required")
         if tags:
             self._parse_tag(self._filehandler)
+            self._cleanup_internal_fields()
         if duration:
             if tags:  # rewind file if the tags were already parsed
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
+
+    def _cleanup_internal_fields(self) -> None:
+        """Clean up internal fields that shouldn't be exposed in
+           string representation."""
+        # Remove genre processing fields
+        if hasattr(self, '_genre_text'):
+            delattr(self, '_genre_text')
+        if hasattr(self, '_genre_binary'):
+            delattr(self, '_genre_binary')
 
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
@@ -523,7 +535,7 @@ class _MP4(TinyTag):
                 b'\xa9day': {b'data': _MP4._data_parser('year')},
                 b'\xa9des': {b'data': _MP4._data_parser('other.description')},
                 b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
-                b'\xa9gen': {b'data': _MP4._data_parser('genre')},
+                b'\xa9gen': {b'data': _MP4._data_parser('_genre_text')},
                 b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
                 b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
                 b'\xa9nam': {b'data': _MP4._data_parser('title')},
@@ -534,13 +546,27 @@ class _MP4(TinyTag):
                 b'cprt': {b'data': _MP4._data_parser('other.copyright')},
                 b'desc': {b'data': _MP4._data_parser('other.description')},
                 b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
-                b'gnre': {b'data': _MP4._parse_id3v1_genre},
+                b'gnre': {b'data': _MP4._parse_id3v1_genre_to_binary},
                 b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
                 b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
                 b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
             }}}}}
         self._traverse_atoms(fh, path=_MP4._meta_data_tree)
+        # Apply genre priority: prefer ©gen text over gnre binary
+        self._resolve_mp4_genre()
+
+    def _resolve_mp4_genre(self) -> None:
+        """Apply MP4 genre priority: prefer ©gen text over gnre binary."""
+        if self._genre_text:
+            # Use text genre from ©gen atom (preferred)
+            self.genre = self._genre_text
+        elif self._genre_binary:
+            # Fallback to binary genre from gnre atom
+            self.genre = self._genre_binary
+        # Clear temporary fields
+        self._genre_text = None
+        self._genre_binary = None
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
@@ -655,13 +681,15 @@ class _MP4(TinyTag):
         return _parse_nums
 
     @classmethod
-    def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
-        # dunno why genre is offset by -1 but that's how mutagen does it
+    def _parse_id3v1_genre_to_binary(
+        cls, data_atom: bytes
+    ) -> dict[str, str | int | bool | list[str]]:
+        # Parse binary gnre genre and store in separate field
         idx = unpack('>H', data_atom[8:])[0] - 1
-        result = {}
+        result: dict[str, str | int | bool | list[str]] = {}
         # pylint: disable=protected-access
         if idx < len(_ID3._ID3V1_GENRES):
-            result['genre'] = _ID3._ID3V1_GENRES[idx]
+            result['_genre_binary'] = _ID3._ID3V1_GENRES[idx]
         return result
 
     @classmethod

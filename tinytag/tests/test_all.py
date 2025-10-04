@@ -1728,3 +1728,11 @@ class TestAll(TestCase):  # pylint: disable=too-many-public-methods
         tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'mp4_size_zero.m4a'))
         # Should parse without crashing (may or may not get duration)
         self.assertIsNotNone(tag)
+
+    def test_mp4_genre_priority(self) -> None:
+        # Test MP4 genre priority: ©gen text should win over gnre binary
+        # File has both gnre (Rock) and ©gen (Electronic)
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_genre_priority.m4a'))
+        # Should prefer text genre over binary genre
+        self.assertEqual(tag.genre, 'Electronic')
