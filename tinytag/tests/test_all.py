@@ -14,6 +14,7 @@ from pathlib import Path
 from platform import python_implementation, system
 from sys import stdout
 from unittest import skipIf, TestCase
+from unittest.mock import patch
 
 from tinytag import ParseError, TinyTagException, UnsupportedFormatError
 from tinytag import Images, OtherFields, TinyTag
@@ -1736,3 +1737,88 @@ class TestAll(TestCase):  # pylint: disable=too-many-public-methods
             os.path.join(SAMPLE_FOLDER, 'mp4_genre_priority.m4a'))
         # Should prefer text genre over binary genre
         self.assertEqual(tag.genre, 'Electronic')
+
+    def test_mp4_xmp_fallback(self) -> None:
+        # Test XMP metadata as fallback when standard MP4 tags are missing
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_xmp_fallback.m4a'))
+        # Should extract metadata from XMP
+        self.assertEqual(tag.title, 'XMP Fallback Title')
+        self.assertEqual(tag.artist, 'XMP Fallback Artist')
+        self.assertEqual(tag.year, '2025')
+        self.assertEqual(tag.comment, 'XMP Fallback Comment')
+        # Raw XMP should be available in other fields
+        self.assertIn('xmp', tag.other)
+
+    def test_mp4_xmp_subject(self) -> None:
+        # Test XMP dc:subject as comment fallback
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_xmp_subject.m4a'))
+        # Should use dc:subject for comment when dc:description not present
+        self.assertEqual(tag.comment, 'Subject Comment')
+
+    def test_mp4_xmp_empty(self) -> None:
+        # Test handling of empty/malformed XMP data
+        tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'mp4_xmp_empty.m4a'))
+        # Should not crash with empty XMP
+        self.assertIsNotNone(tag)
+        self.assertIsNone(tag.title)
+
+    def test_mp4_xmp_malformed(self) -> None:
+        # Test handling of malformed XMP (triggers exception handler)
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_xmp_malformed.m4a'))
+        # Should not crash with malformed XMP
+        self.assertIsNotNone(tag)
+        # XMP should still be stored in other fields for client access
+        self.assertIn('xmp', tag.other)
+
+    def test_mp4_xmp_album_fallback(self) -> None:
+        # Test XMP album as fallback when missing from standard tags
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_xmp_album_track.m4a'))
+        # Should extract album from XMP
+        self.assertEqual(tag.album, 'XMP Test Album')
+        # Should extract and convert track number from XMP
+        self.assertEqual(tag.track, 5)
+
+    def test_mp4_xmp_invalid_track(self) -> None:
+        # Test XMP with invalid track number (exception handling)
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_xmp_invalid_track.m4a'))
+        # Should not crash and track should remain None
+        self.assertIsNone(tag.track)
+
+    def test_mp4_parse_xmp_metadata_empty(self) -> None:
+        # Test _parse_xmp_metadata with empty/None input
+        # pylint: disable=protected-access
+        result = _MP4._parse_xmp_metadata(b'')
+        self.assertEqual(result, {})
+        result = _MP4._parse_xmp_metadata(None)  # type: ignore[arg-type]
+        self.assertEqual(result, {})
+
+    def test_mp4_parse_xmp_metadata_exception(self) -> None:
+        # Test _parse_xmp_metadata with data that causes exception
+        # Passing wrong type (str instead of bytes) triggers exception
+        # pylint: disable=protected-access
+        result = _MP4._parse_xmp_metadata('not bytes')  # type: ignore
+        # Should return empty dict on exception
+        self.assertEqual(result, {})
+
+    @staticmethod
+    def test_mp4_xmp_set_field_exception() -> None:
+        # Test exception handler in _apply_xmp_metadata_fallback
+        # when _set_field raises an exception
+        # pylint: disable=protected-access
+        # Create a new MP4 instance to test
+        sample_path = os.path.join(SAMPLE_FOLDER, 'mp4_xmp_fallback.m4a')
+        with open(sample_path, 'rb') as f:
+            mp4_tag = _MP4()
+            mp4_tag._filehandler = f
+            mp4_tag._xmp_data = b'test xmp data'
+            # Mock _set_field to raise an exception
+            with patch.object(
+                    mp4_tag, '_set_field', side_effect=Exception('test')):
+                # This should catch the exception and continue
+                mp4_tag._apply_xmp_metadata_fallback()
+        # Test passed if no exception was raised
