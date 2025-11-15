@@ -146,7 +146,7 @@ These are helpful when you need quick access to common metadata.
 
 ### Additional Metadata
 
-For additional values of the same field type, non-common metadata fields, or
+For additional values of the same field type, uncommon metadata fields, or
 metadata specific to certain file formats, use `other`:
 
     tag.other         # a dictionary of additional fields
@@ -166,6 +166,7 @@ present when files provide such metadata:
     director
     encoded_by
     encoder_settings
+    grouping
     initial_key
     isrc
     language
@@ -173,9 +174,14 @@ present when files provide such metadata:
     lyricist
     lyrics
     media
+    movement
+    movement_name
+    movement_total
     publisher
     set_subtitle
+    show_movement
     url
+    work
 
 Additional `other` field names not documented above may be present, but are
 format-specific and may change or disappear in future tinytag releases. If
