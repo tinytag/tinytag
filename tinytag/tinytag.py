@@ -97,6 +97,8 @@ class TinyTag:
         self.track: int | None = None
         self.track_total: int | None = None
         self.genre: str | None = None
+        self._genre_text: str | None = None  # From ©gen text atom
+        self._genre_binary: str | None = None  # From gnre binary atom
         self.year: str | None = None
         self.comment: str | None = None
 
@@ -264,10 +266,20 @@ class TinyTag:
             raise ValueError("File handle is required")
         if tags:
             self._parse_tag(self._filehandler)
+            self._cleanup_internal_fields()
         if duration:
             if tags:  # rewind file if the tags were already parsed
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
+
+    def _cleanup_internal_fields(self) -> None:
+        """Clean up internal fields that shouldn't be exposed in
+           string representation."""
+        # Remove genre processing fields
+        if hasattr(self, '_genre_text'):
+            delattr(self, '_genre_text')
+        if hasattr(self, '_genre_binary'):
+            delattr(self, '_genre_binary')
 
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
@@ -523,7 +535,7 @@ class _MP4(TinyTag):
                 b'\xa9day': {b'data': _MP4._data_parser('year')},
                 b'\xa9des': {b'data': _MP4._data_parser('other.description')},
                 b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
-                b'\xa9gen': {b'data': _MP4._data_parser('genre')},
+                b'\xa9gen': {b'data': _MP4._data_parser('_genre_text')},
                 b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
                 b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
                 b'\xa9nam': {b'data': _MP4._data_parser('title')},
@@ -534,13 +546,27 @@ class _MP4(TinyTag):
                 b'cprt': {b'data': _MP4._data_parser('other.copyright')},
                 b'desc': {b'data': _MP4._data_parser('other.description')},
                 b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
-                b'gnre': {b'data': _MP4._parse_id3v1_genre},
+                b'gnre': {b'data': _MP4._parse_id3v1_genre_to_binary},
                 b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
                 b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
                 b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
             }}}}}
         self._traverse_atoms(fh, path=_MP4._meta_data_tree)
+        # Apply genre priority: prefer ©gen text over gnre binary
+        self._resolve_mp4_genre()
+
+    def _resolve_mp4_genre(self) -> None:
+        """Apply MP4 genre priority: prefer ©gen text over gnre binary."""
+        if self._genre_text:
+            # Use text genre from ©gen atom (preferred)
+            self.genre = self._genre_text
+        elif self._genre_binary:
+            # Fallback to binary genre from gnre atom
+            self.genre = self._genre_binary
+        # Clear temporary fields
+        self._genre_text = None
+        self._genre_binary = None
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
@@ -550,11 +576,31 @@ class _MP4(TinyTag):
         header_len = 8
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size_raw = unpack('>I', atom_header[:4])[0]
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
-            if atom_size <= 0:  # empty atom, jump to next one
+
+            # Handle special atom sizes
+            # Extended size - next 8 bytes contain 64-bit size
+            if atom_size_raw == 1:
+                extended_size_bytes = fh.read(8)
+                if len(extended_size_bytes) == 8:
+                    atom_size = (unpack('>Q', extended_size_bytes)[0] -
+                                 header_len - 8)
+                else:
+                    # Can't read extended size, skip
+                    atom_header = fh.read(header_len)
+                    continue
+            elif atom_size_raw == 0:  # Empty atom or extends to end
+                # For root-level atoms, this means extend to end of file
+                # For nested atoms, skip it
+                atom_header = fh.read(header_len)
+                continue
+            else:
+                atom_size = atom_size_raw - header_len
+
+            if atom_size <= 0:  # Invalid atom size
                 atom_header = fh.read(header_len)
                 continue
             if _DEBUG:
@@ -563,8 +609,10 @@ class _MP4(TinyTag):
                       f'atom: {atom_type!r} len: {atom_size + header_len}')
             if atom_type in self._VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for version/flags bytes in size
             if atom_type in self._FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for flags bytes in size
             sub_path = path.get(atom_type, None)
             # if the path leaf is a dict, traverse deeper into the tree:
             if isinstance(sub_path, dict):
@@ -633,13 +681,15 @@ class _MP4(TinyTag):
         return _parse_nums
 
     @classmethod
-    def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
-        # dunno why genre is offset by -1 but that's how mutagen does it
+    def _parse_id3v1_genre_to_binary(
+        cls, data_atom: bytes
+    ) -> dict[str, str | int | bool | list[str]]:
+        # Parse binary gnre genre and store in separate field
         idx = unpack('>H', data_atom[8:])[0] - 1
-        result = {}
+        result: dict[str, str | int | bool | list[str]] = {}
         # pylint: disable=protected-access
         if idx < len(_ID3._ID3V1_GENRES):
-            result['genre'] = _ID3._ID3V1_GENRES[idx]
+            result['_genre_binary'] = _ID3._ID3V1_GENRES[idx]
         return result
 
     @classmethod

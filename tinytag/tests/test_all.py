@@ -1351,7 +1351,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
 SAMPLE_FOLDER = os.path.join(os.path.dirname(__file__), 'samples')
 
 
-class TestAll(TestCase):
+class TestAll(TestCase):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -1701,3 +1701,38 @@ class TestAll(TestCase):
             "\\x01\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', "
             "description='some image ë')]}"
         )
+
+    def test_mp4_extended_size(self) -> None:
+        # Test parsing MP4 file with extended-size atom (size field = 1)
+        tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'mp4_extended_size.m4a'))
+        # Should parse without crashing and extract metadata
+        self.assertIsNotNone(tag)
+        # Verify it actually parsed the file (not just skipped)
+        self.assertIsNotNone(tag.duration)
+        assert tag.duration is not None  # Type narrowing for mypy
+        self.assertGreater(tag.duration, 0)
+
+    def test_mp4_extended_size_truncated(self) -> None:
+        # Test MP4 with truncated extended size (can't read 8 bytes)
+        # Should skip the malformed atom and continue parsing
+        # This exercises the error handling path in lines 567-568
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_extended_size_truncated.m4a'))
+        # Should parse without crashing (may or may not get duration)
+        self.assertIsNotNone(tag)
+
+    def test_mp4_size_zero(self) -> None:
+        # Test MP4 with atom size = 0 (extends to EOF or should be skipped)
+        # Should skip the size=0 atom and continue parsing
+        # This exercises the error handling path in lines 572-573
+        tag = TinyTag.get(os.path.join(SAMPLE_FOLDER, 'mp4_size_zero.m4a'))
+        # Should parse without crashing (may or may not get duration)
+        self.assertIsNotNone(tag)
+
+    def test_mp4_genre_priority(self) -> None:
+        # Test MP4 genre priority: ©gen text should win over gnre binary
+        # File has both gnre (Rock) and ©gen (Electronic)
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'mp4_genre_priority.m4a'))
+        # Should prefer text genre over binary genre
+        self.assertEqual(tag.genre, 'Electronic')
