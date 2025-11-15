@@ -1261,6 +1261,19 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 1,
         'bitrate': 1.666,
     }),
+    ('mixed_case_atoms.m4a', {
+        'other': OtherFields({
+            'plid': ['1'],
+            'atid': ['2'],
+            'cnid': ['3'],
+            'pgap': ['1']
+        }),
+        'filesize': 1995,
+        'samplerate': 44100,
+        'duration': 0.524,
+        'channels': 1,
+        'bitrate': 1.666,
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
         'channels': 2,
