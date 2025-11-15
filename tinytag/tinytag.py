@@ -524,17 +524,26 @@ class _MP4(TinyTag):
                 b'\xa9des': {b'data': _MP4._data_parser('other.description')},
                 b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
                 b'\xa9gen': {b'data': _MP4._data_parser('genre')},
+                b'\xa9grp': {b'data': _MP4._data_parser('other.grouping')},
                 b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
-                b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
+                b'\xa9mvc': {
+                    b'data': _MP4._data_parser('other.movement_total')
+                },
+                b'\xa9mvi': {b'data': _MP4._data_parser('other.movement')},
+                b'\xa9mvn': {
+                    b'data': _MP4._data_parser('other.movement_name')
+                },
                 b'\xa9nam': {b'data': _MP4._data_parser('title')},
                 b'\xa9pub': {b'data': _MP4._data_parser('other.publisher')},
                 b'\xa9too': {b'data': _MP4._data_parser('other.encoded_by')},
+                b'\xa9wrk': {b'data': _MP4._data_parser('other.work')},
                 b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
                 b'aART': {b'data': _MP4._data_parser('albumartist')},
                 b'cprt': {b'data': _MP4._data_parser('other.copyright')},
                 b'desc': {b'data': _MP4._data_parser('other.description')},
                 b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
                 b'gnre': {b'data': _MP4._parse_id3v1_genre},
+                b'shwm': {b'data': _MP4._data_parser('other.show_movement')},
                 b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
                 b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
                 b'covr': {b'data': _MP4._parse_cover_image},
@@ -764,6 +773,10 @@ class _ID3(TinyTag):
         'TSSE': 'other.encoder_settings', 'TSS': 'other.encoder_settings',
         'TMED': 'other.media', 'TMT': 'other.media',
         'WCOP': 'other.license',
+        'MVNM': 'other.movement_name',
+        'MVIN': 'other.movement',
+        'GRP1': 'modern_grouping', 'GP1': 'modern_grouping',
+        'TIT1': 'legacy_grouping', 'TT1': 'legacy_grouping',
     }
     _ID3_MAPPING_CUSTOM = {
         'artists': 'artist',
@@ -771,6 +784,7 @@ class _ID3(TinyTag):
         'license': 'other.license',
         'barcode': 'other.barcode',
         'catalognumber': 'other.catalog_number',
+        'showmovement': 'other.show_movement'
     }
     _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
@@ -904,6 +918,8 @@ class _ID3(TinyTag):
         super().__init__()
         # save position after the ID3 tag for duration measurement speedup
         self._bytepos_after_id3v2 = -1
+        self._modern_grouping_values: list[str] = []
+        self._legacy_grouping_values: list[str] = []
 
     @staticmethod
     def _parse_xing_header(fh: BinaryIO) -> tuple[int, int]:
@@ -1052,6 +1068,7 @@ class _ID3(TinyTag):
                 break
             parsed_size += frame_size
         fh.seek(end_pos)
+        self._set_grouping_work_fields()
 
     def _parse_id3v1(self, fh: BinaryIO) -> None:
         content = fh.read(3 + 30 + 30 + 30 + 4 + 30 + 1)
@@ -1093,7 +1110,7 @@ class _ID3(TinyTag):
             if genre_id < len(self._ID3V1_GENRES):
                 self._set_field('genre', self._ID3V1_GENRES[genre_id])
 
-    def __parse_custom_field(self, content: str) -> bool:
+    def _parse_custom_field(self, content: str) -> bool:
         custom_field_name, separator, value = content.partition('\x00')
         custom_field_name_lower = custom_field_name.lower()
         value = value.lstrip('\ufeff')
@@ -1104,6 +1121,18 @@ class _ID3(TinyTag):
             self._set_field(field_name, value)
             return True
         return False
+
+    def _set_grouping_work_fields(self) -> None:
+        # iTunes 12.5.4.42 added a new GRP1 frame for 'grouping', and
+        # repurposed the TIT1 frame for 'work'. Handle this mess here.
+        if self._modern_grouping_values:
+            for value in self._modern_grouping_values:
+                self._set_field('other.grouping', value)
+            for value in self._legacy_grouping_values:
+                self._set_field('other.work', value)
+            return
+        for value in self._legacy_grouping_values:
+            self._set_field('other.grouping', value)
 
     @classmethod
     def _create_tag_image(cls,
@@ -1160,8 +1189,8 @@ class _ID3(TinyTag):
                 return frame_size
             if fieldname == "comment":
                 # check if comment is a key-value pair (used by iTunes)
-                should_set_field = not self.__parse_custom_field(value)
-            elif fieldname in {'track', 'disc'}:
+                should_set_field = not self._parse_custom_field(value)
+            elif fieldname in {'track', 'disc', 'other.movement'}:
                 if '/' in value:
                     value, total = value.split('/')[:2]
                     if total.isdecimal():
@@ -1182,6 +1211,12 @@ class _ID3(TinyTag):
                         genre_id = int(parens_text)
                 if 0 <= genre_id < len(self._ID3V1_GENRES):
                     value = self._ID3V1_GENRES[genre_id]
+            elif fieldname == 'modern_grouping':
+                self._modern_grouping_values.append(value)
+                should_set_field = False
+            elif fieldname == 'legacy_grouping':
+                self._legacy_grouping_values.append(value)
+                should_set_field = False
             if should_set_field:
                 self._set_field(fieldname, value)
         elif frame_id in self._CUSTOM_FRAME_IDS:
@@ -1189,7 +1224,7 @@ class _ID3(TinyTag):
             if self._parse_tags:
                 value = self._decode_string(fh.read(frame_size))
                 if value:
-                    self.__parse_custom_field(value)
+                    self._parse_custom_field(value)
         elif frame_id in self._IMAGE_FRAME_IDS:
             if self._load_image:
                 # See section 4.14: http://id3.org/id3v2.4.0-frames
@@ -1326,6 +1361,13 @@ class _Ogg(TinyTag):
         'license': 'other.license',
         'barcode': 'other.barcode',
         'catalognumber': 'other.catalog_number',
+        'movementname': 'other.movement_name',
+        'movement': 'other.movement',
+        'movementtotal': 'other.movement_total',
+        'showmovement': 'other.show_movement',
+        'grouping': 'other.grouping',
+        'contentgroup': 'other.grouping',
+        'work': 'other.work'
     }
 
     def __init__(self) -> None:
@@ -1746,6 +1788,8 @@ class _Wma(TinyTag):
         'WM/Media': 'other.media',
         'WM/Barcode': 'other.barcode',
         'WM/CatalogNo': 'other.catalog_number',
+        'WM/ContentGroupDescription': 'other.grouping',
+        'WM/Work': 'other.work'
     }
     _UNPACK_FORMATS = {
         1: '<B',
