@@ -1082,6 +1082,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'bitdepth': 16,
     }),
+    ('unsynced_lyrics.flac', {
+        'other': OtherFields({
+            'lyrics': ['some lyrics here\nnew line']
+        }),
+        'channels': 2,
+        'duration': 3.684716553287982,
+        'filesize': 4777,
+        'bitrate': 10.371489759747933,
+        'samplerate': 44100,
+        'bitdepth': 16,
+    }),
     ('test2.wma', {
         'other': OtherFields({
             '_track': ['0'],
