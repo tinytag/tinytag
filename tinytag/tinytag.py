@@ -550,11 +550,31 @@ class _MP4(TinyTag):
         header_len = 8
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size_raw = unpack('>I', atom_header[:4])[0]
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
-            if atom_size <= 0:  # empty atom, jump to next one
+
+            # Handle special atom sizes
+            # Extended size - next 8 bytes contain 64-bit size
+            if atom_size_raw == 1:
+                extended_size_bytes = fh.read(8)
+                if len(extended_size_bytes) == 8:
+                    atom_size = (unpack('>Q', extended_size_bytes)[0] -
+                                 header_len - 8)
+                else:
+                    # Can't read extended size, skip
+                    atom_header = fh.read(header_len)
+                    continue
+            elif atom_size_raw == 0:  # Empty atom or extends to end
+                # For root-level atoms, this means extend to end of file
+                # For nested atoms, skip it
+                atom_header = fh.read(header_len)
+                continue
+            else:
+                atom_size = atom_size_raw - header_len
+
+            if atom_size <= 0:  # Invalid atom size
                 atom_header = fh.read(header_len)
                 continue
             if _DEBUG:
@@ -563,8 +583,10 @@ class _MP4(TinyTag):
                       f'atom: {atom_type!r} len: {atom_size + header_len}')
             if atom_type in self._VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for version/flags bytes in size
             if atom_type in self._FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for flags bytes in size
             sub_path = path.get(atom_type, None)
             # if the path leaf is a dict, traverse deeper into the tree:
             if isinstance(sub_path, dict):
