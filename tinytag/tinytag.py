@@ -97,6 +97,9 @@ class TinyTag:
         self.track: int | None = None
         self.track_total: int | None = None
         self.genre: str | None = None
+        self._genre_text: str | None = None  # From ©gen text atom
+        self._genre_binary: str | None = None  # From gnre binary atom
+        self._xmp_data: bytes | None = None  # XMP data from uuid atoms
         self.year: str | None = None
         self.comment: str | None = None
 
@@ -264,10 +267,23 @@ class TinyTag:
             raise ValueError("File handle is required")
         if tags:
             self._parse_tag(self._filehandler)
+            self._cleanup_internal_fields()
         if duration:
             if tags:  # rewind file if the tags were already parsed
                 self._filehandler.seek(0)
             self._determine_duration(self._filehandler)
+
+    def _cleanup_internal_fields(self) -> None:
+        """Clean up internal fields that shouldn't be exposed in
+           string representation."""
+        # Remove genre processing fields
+        if hasattr(self, '_genre_text'):
+            delattr(self, '_genre_text')
+        if hasattr(self, '_genre_binary'):
+            delattr(self, '_genre_binary')
+        # Remove XMP processing fields
+        if hasattr(self, '_xmp_data'):
+            delattr(self, '_xmp_data')
 
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
@@ -506,41 +522,118 @@ class _MP4(TinyTag):
             }
         self._traverse_atoms(fh, path=_MP4._audio_data_tree)
 
+    @staticmethod
+    def _build_ilst_metadata_tree() -> dict[bytes, Any]:
+        """Build the ilst metadata tree for MP4 tag parsing."""
+        # http://atomicparsley.sourceforge.net/mpeg-4files.html
+        # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
+        return {
+            b'\xa9ART': {b'data': _MP4._data_parser('artist')},
+            b'\xa9alb': {b'data': _MP4._data_parser('album')},
+            b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
+            b'\xa9com': {b'data': _MP4._data_parser('composer')},
+            b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
+            b'\xa9day': {b'data': _MP4._data_parser('year')},
+            b'\xa9des': {b'data': _MP4._data_parser('other.description')},
+            b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
+            b'\xa9gen': {b'data': _MP4._data_parser('_genre_text')},
+            b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
+            b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
+            b'\xa9nam': {b'data': _MP4._data_parser('title')},
+            b'\xa9pub': {b'data': _MP4._data_parser('other.publisher')},
+            b'\xa9too': {b'data': _MP4._data_parser('other.encoded_by')},
+            b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
+            b'aART': {b'data': _MP4._data_parser('albumartist')},
+            b'cprt': {b'data': _MP4._data_parser('other.copyright')},
+            b'desc': {b'data': _MP4._data_parser('other.description')},
+            b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
+            b'gnre': {b'data': _MP4._parse_id3v1_genre_to_binary},
+            b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
+            b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
+            b'covr': {b'data': _MP4._parse_cover_image},
+            b'----': _MP4._parse_custom_field,
+        }
+
     def _parse_tag(self, fh: BinaryIO) -> None:
         # The parser tree: Each key is an atom name which is traversed if
         # existing. Leaves of the parser tree are callables which receive
         # the atom data. Callables return {fieldname: value} which is updates
         # the TinyTag.
         if _MP4._meta_data_tree is None:
-            _MP4._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
-                # http://atomicparsley.sourceforge.net/mpeg-4files.html
-                # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
-                b'\xa9ART': {b'data': _MP4._data_parser('artist')},
-                b'\xa9alb': {b'data': _MP4._data_parser('album')},
-                b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
-                b'\xa9com': {b'data': _MP4._data_parser('composer')},
-                b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
-                b'\xa9day': {b'data': _MP4._data_parser('year')},
-                b'\xa9des': {b'data': _MP4._data_parser('other.description')},
-                b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
-                b'\xa9gen': {b'data': _MP4._data_parser('genre')},
-                b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
-                b'\xa9mvn': {b'data': _MP4._data_parser('movement')},
-                b'\xa9nam': {b'data': _MP4._data_parser('title')},
-                b'\xa9pub': {b'data': _MP4._data_parser('other.publisher')},
-                b'\xa9too': {b'data': _MP4._data_parser('other.encoded_by')},
-                b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
-                b'aART': {b'data': _MP4._data_parser('albumartist')},
-                b'cprt': {b'data': _MP4._data_parser('other.copyright')},
-                b'desc': {b'data': _MP4._data_parser('other.description')},
-                b'disk': {b'data': _MP4._nums_parser('disc', 'disc_total')},
-                b'gnre': {b'data': _MP4._parse_id3v1_genre},
-                b'trkn': {b'data': _MP4._nums_parser('track', 'track_total')},
-                b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
-                b'covr': {b'data': _MP4._parse_cover_image},
-                b'----': _MP4._parse_custom_field,
-            }}}}}
+            _MP4._meta_data_tree = {
+                b'uuid': lambda atom_data: {},  # handled by special case
+                b'moov': {
+                    b'udta': {
+                        b'meta': {
+                            b'ilst': _MP4._build_ilst_metadata_tree()
+                        }
+                    }
+                },
+            }
         self._traverse_atoms(fh, path=_MP4._meta_data_tree)
+        # Apply genre priority: prefer ©gen text over gnre binary
+        self._resolve_mp4_genre()
+        # Apply XMP metadata as fallback for missing fields
+        self._apply_xmp_metadata_fallback()
+
+    def _resolve_mp4_genre(self) -> None:
+        """Apply MP4 genre priority: prefer ©gen text over gnre binary."""
+        if self._genre_text:
+            # Use text genre from ©gen atom (preferred)
+            self.genre = self._genre_text
+        elif self._genre_binary:
+            # Fallback to binary genre from gnre atom
+            self.genre = self._genre_binary
+        # Clear temporary fields
+        self._genre_text = None
+        self._genre_binary = None
+
+    def _apply_xmp_metadata_fallback(self) -> None:
+        """Apply XMP metadata as fallback for missing MP4 fields."""
+        # Store raw XMP for client access
+        if self._xmp_data:
+            try:
+                xmp_text = self._xmp_data.decode("utf-8", errors="ignore")
+                self._set_field('other.xmp', xmp_text)
+            except Exception:
+                pass
+
+        # Only process XMP if we have missing metadata and captured XMP data
+        if (self._xmp_data and
+            (not self.title or not self.artist or not self.album or
+             not self.year or not self.comment)):
+
+            # Process the stored XMP data
+            xmp_metadata = self._parse_xmp_metadata(self._xmp_data)
+
+            # Only use XMP data if TinyTag didn't find the corresponding fields
+            title = xmp_metadata.get("title")
+            if title and isinstance(title, str) and not self.title:
+                self.title = title
+            artist = xmp_metadata.get("artist")
+            if artist and isinstance(artist, str) and not self.artist:
+                self.artist = artist
+            album = xmp_metadata.get("album")
+            if album and isinstance(album, str) and not self.album:
+                self.album = album
+            track = xmp_metadata.get("track")
+            if track and not self.track:
+                try:
+                    if isinstance(track, str):
+                        self.track = int(track)
+                    elif isinstance(track, int):
+                        self.track = track
+                except (ValueError, TypeError):
+                    pass
+            year = xmp_metadata.get("year")
+            if year and isinstance(year, str) and not self.year:
+                self.year = year
+            comment = xmp_metadata.get("comment")
+            if comment and isinstance(comment, str) and not self.comment:
+                self.comment = comment
+
+        # Clear XMP data after processing
+        self._xmp_data = None
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
@@ -550,11 +643,31 @@ class _MP4(TinyTag):
         header_len = 8
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size_raw = unpack('>I', atom_header[:4])[0]
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
-            if atom_size <= 0:  # empty atom, jump to next one
+
+            # Handle special atom sizes
+            # Extended size - next 8 bytes contain 64-bit size
+            if atom_size_raw == 1:
+                extended_size_bytes = fh.read(8)
+                if len(extended_size_bytes) == 8:
+                    atom_size = (unpack('>Q', extended_size_bytes)[0] -
+                                 header_len - 8)
+                else:
+                    # Can't read extended size, skip
+                    atom_header = fh.read(header_len)
+                    continue
+            elif atom_size_raw == 0:  # Empty atom or extends to end
+                # For root-level atoms, this means extend to end of file
+                # For nested atoms, skip it
+                atom_header = fh.read(header_len)
+                continue
+            else:
+                atom_size = atom_size_raw - header_len
+
+            if atom_size <= 0:  # Invalid atom size
                 atom_header = fh.read(header_len)
                 continue
             if _DEBUG:
@@ -563,8 +676,10 @@ class _MP4(TinyTag):
                       f'atom: {atom_type!r} len: {atom_size + header_len}')
             if atom_type in self._VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for version/flags bytes in size
             if atom_type in self._FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4  # Account for flags bytes in size
             sub_path = path.get(atom_type, None)
             # if the path leaf is a dict, traverse deeper into the tree:
             if isinstance(sub_path, dict):
@@ -573,7 +688,15 @@ class _MP4(TinyTag):
                                      curr_path=curr_path + [atom_type])
             # if the path-leaf is a callable, call it on the atom data
             elif callable(sub_path):
-                for fieldname, value in sub_path(fh.read(atom_size)).items():
+                atom_data = fh.read(atom_size)
+                # Special handling for UUID atoms to capture XMP data
+                if atom_type == b'uuid':
+                    self._parse_uuid_atom(atom_data)
+                    result_dict = {}
+                else:
+                    result_dict = sub_path(atom_data)
+
+                for fieldname, value in result_dict.items():
                     if _DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if isinstance(value, Image):
@@ -633,13 +756,15 @@ class _MP4(TinyTag):
         return _parse_nums
 
     @classmethod
-    def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
-        # dunno why genre is offset by -1 but that's how mutagen does it
+    def _parse_id3v1_genre_to_binary(
+        cls, data_atom: bytes
+    ) -> dict[str, str | int | bool | list[str]]:
+        # Parse binary gnre genre and store in separate field
         idx = unpack('>H', data_atom[8:])[0] - 1
-        result = {}
+        result: dict[str, str | int | bool | list[str]] = {}
         # pylint: disable=protected-access
         if idx < len(_ID3._ID3V1_GENRES):
-            result['genre'] = _ID3._ID3V1_GENRES[idx]
+            result['_genre_binary'] = _ID3._ID3V1_GENRES[idx]
         return result
 
     @classmethod
@@ -648,6 +773,101 @@ class _MP4(TinyTag):
         image = Image(
             'front_cover', data_atom[8:], cls._IMAGE_MIME_TYPES.get(data_type))
         return {'images.front_cover': image}
+
+    def _parse_uuid_atom(
+        self, atom_data: bytes
+    ) -> dict[str, str | int | bool | list[str]]:
+        """Parse uuid atoms and capture XMP data."""
+        if len(atom_data) >= 16:
+            uuid_bytes = atom_data[:16]
+            content = atom_data[16:]
+
+            # Standard XMP UUID: BE7ACFCB-97A9-42E8-9C71-999491E3AFAC
+            xmp_uuid = bytes.fromhex("BE7ACFCB97A942E89C71999491E3AFAC")
+
+            if (uuid_bytes == xmp_uuid or
+                    content.startswith(b"<?xpacket begin=") or
+                    b"<x:xmpmeta" in content or
+                    b'xmlns:x="adobe:ns:meta/"' in content):
+                # Store XMP data for later processing
+                self._xmp_data = content
+
+        return {}  # uuid atoms don't directly set metadata fields
+
+    @classmethod
+    def _parse_dublin_core_metadata(
+        cls, xmp_text: str
+    ) -> dict[str, str | int | bool | list[str]]:
+        """Parse Dublin Core metadata from XMP text."""
+        import re
+        metadata: dict[str, str | int | bool | list[str]] = {}
+
+        # Look for standard Dublin Core metadata
+        # dc:title → title
+        dc_title_pattern = r"<dc:title[^>]*>.*?<rdf:li[^>]*>(.*?)</rdf:li>"
+        title_matches = re.findall(dc_title_pattern, xmp_text, re.DOTALL)
+        if title_matches:
+            metadata["title"] = title_matches[0].strip()
+
+        # dc:creator → artist
+        dc_creator_pattern = r"<dc:creator[^>]*>.*?<rdf:li[^>]*>(.*?)</rdf:li>"
+        creator_matches = re.findall(dc_creator_pattern, xmp_text, re.DOTALL)
+        if creator_matches:
+            metadata["artist"] = creator_matches[0].strip()
+
+        # dc:date → year
+        dc_date_pattern = r"<dc:date[^>]*>.*?<rdf:li[^>]*>(.*?)</rdf:li>"
+        date_matches = re.findall(dc_date_pattern, xmp_text, re.DOTALL)
+        if date_matches:
+            year_match = re.match(r"(\d{4})", date_matches[0].strip())
+            if year_match:
+                metadata["year"] = year_match.group(1)
+
+        # dc:subject → comments
+        dc_subject_pattern = r"<dc:subject[^>]*>.*?<rdf:li[^>]*>(.*?)</rdf:li>"
+        subject_matches = re.findall(dc_subject_pattern, xmp_text, re.DOTALL)
+        if subject_matches:
+            metadata["comment"] = subject_matches[0].strip()
+
+        # dc:description → comments (overwrites subject)
+        desc_pattern = r"<dc:description[^>]*>.*?<rdf:li[^>]*>(.*?)</rdf:li>"
+        description_matches = re.findall(desc_pattern, xmp_text, re.DOTALL)
+        if description_matches:
+            metadata["comment"] = description_matches[0].strip()
+
+        # xmpDM:album → album
+        album_pattern = r"<xmpDM:album>(.*?)</xmpDM:album>"
+        album_matches = re.findall(album_pattern, xmp_text, re.DOTALL)
+        if album_matches:
+            metadata["album"] = album_matches[0].strip()
+
+        # xmpDM:trackNumber → track
+        track_pattern = r"<xmpDM:trackNumber>(.*?)</xmpDM:trackNumber>"
+        track_matches = re.findall(track_pattern, xmp_text, re.DOTALL)
+        if track_matches:
+            track_str = track_matches[0].strip()
+            try:
+                metadata["track"] = int(track_str)
+            except (ValueError, TypeError):
+                metadata["track"] = track_str
+
+        return metadata
+
+    @classmethod
+    def _parse_xmp_metadata(
+        cls, xmp_content: bytes
+    ) -> dict[str, str | int | bool | list[str]]:
+        """Parse XMP content for music metadata fields."""
+        if not xmp_content:
+            return {}
+
+        try:
+            # Decode XMP content
+            xmp_text = xmp_content.decode("utf-8", errors="ignore")
+            # Parse Dublin Core metadata
+            return cls._parse_dublin_core_metadata(xmp_text)
+        except Exception:
+            return {}
 
     @classmethod
     def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
