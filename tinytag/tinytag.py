@@ -1312,6 +1312,7 @@ class _Ogg(TinyTag):
         'copyright': 'other.copyright',
         'isrc': 'other.isrc',
         'lyrics': 'other.lyrics',
+        'unsyncedlyrics': 'other.lyrics',
         'publisher': 'other.publisher',
         'language': 'other.language',
         'director': 'other.director',
