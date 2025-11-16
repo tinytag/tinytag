@@ -778,6 +778,7 @@ class _ID3(TinyTag):
     _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
     _IGNORED_FRAME_IDS = {
         'AENC', 'CRA',
+        'APIC', 'PIC',
         'ATXT',
         'CHAP',
         'COMR',
@@ -1152,9 +1153,7 @@ class _ID3(TinyTag):
             # invalid frame size, stop here
             return 0
         should_set_field = True
-        if frame_id in self._ID3_MAPPING:
-            if not self._parse_tags:
-                return frame_size
+        if self._parse_tags and frame_id in self._ID3_MAPPING:
             fieldname = self._ID3_MAPPING[frame_id]
             language = fieldname in {'comment', 'other.lyrics'}
             value = self._decode_string(fh.read(frame_size), language)
@@ -1186,56 +1185,53 @@ class _ID3(TinyTag):
                     value = self._ID3V1_GENRES[genre_id]
             if should_set_field:
                 self._set_field(fieldname, value)
-        elif frame_id in self._CUSTOM_FRAME_IDS:
+        elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
-            if self._parse_tags:
-                value = self._decode_string(fh.read(frame_size))
-                if value:
-                    self.__parse_custom_field(value)
-        elif frame_id in self._IMAGE_FRAME_IDS:
-            if self._load_image:
-                # See section 4.14: http://id3.org/id3v2.4.0-frames
-                content = fh.read(frame_size)
-                encoding = content[:1]
-                if frame_id == 'PIC':  # ID3 v2.2:
-                    imgformat = self._decode_string(content[1:4]).lower()
-                    mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
-                    # skip encoding (1), imgformat (3), pictype(1)
-                    desc_start_pos = 5
-                else:  # ID3 v2.3+
-                    mime_end_pos = content.index(b'\x00', 1)
-                    mime_type = self._decode_string(
-                        content[1:mime_end_pos]).lower()
-                    # skip mtype, pictype(1)
-                    desc_start_pos = mime_end_pos + 2
-                pic_type = content[desc_start_pos - 1]
-                # latin1 and utf-8 are 1 byte
-                if encoding in {b'\x00', b'\x03'}:
-                    desc_end_pos = content.find(b'\x00', desc_start_pos) + 1
-                else:
-                    desc_end_pos = 0
-                    for i in range(desc_start_pos, len(content), 2):
-                        if content[i:i + 2] == b'\x00\x00':
-                            desc_end_pos = i + 2
-                            break
-                    # skip stray null byte in broken file
-                    if (desc_end_pos + 1 < len(content)
-                            and content[desc_end_pos] == 0
-                            and content[desc_end_pos + 1] != 0):
-                        desc_end_pos += 1
-                desc = self._decode_string(
-                    encoding + content[desc_start_pos:desc_end_pos])
-                field_name, image = self._create_tag_image(
-                    content[desc_end_pos:], pic_type, mime_type, desc)
-                # pylint: disable=protected-access
-                self.images._set_field(field_name, image)
-        elif frame_id not in self._IGNORED_FRAME_IDS:
+            value = self._decode_string(fh.read(frame_size))
+            if value:
+                self.__parse_custom_field(value)
+        elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
-            if self._parse_tags:
-                value = self._decode_string(fh.read(frame_size))
-                if value:
-                    self._set_field(
-                        self._OTHER_PREFIX + frame_id.lower(), value)
+            value = self._decode_string(fh.read(frame_size))
+            if value:
+                self._set_field(
+                    self._OTHER_PREFIX + frame_id.lower(), value)
+        elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
+            # See section 4.14: http://id3.org/id3v2.4.0-frames
+            content = fh.read(frame_size)
+            encoding = content[:1]
+            if frame_id == 'PIC':  # ID3 v2.2:
+                imgformat = self._decode_string(content[1:4]).lower()
+                mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
+                # skip encoding (1), imgformat (3), pictype(1)
+                desc_start_pos = 5
+            else:  # ID3 v2.3+
+                mime_end_pos = content.index(b'\x00', 1)
+                mime_type = self._decode_string(
+                    content[1:mime_end_pos]).lower()
+                # skip mtype, pictype(1)
+                desc_start_pos = mime_end_pos + 2
+            pic_type = content[desc_start_pos - 1]
+            # latin1 and utf-8 are 1 byte
+            if encoding in {b'\x00', b'\x03'}:
+                desc_end_pos = content.find(b'\x00', desc_start_pos) + 1
+            else:
+                desc_end_pos = 0
+                for i in range(desc_start_pos, len(content), 2):
+                    if content[i:i + 2] == b'\x00\x00':
+                        desc_end_pos = i + 2
+                        break
+                # skip stray null byte in broken file
+                if (desc_end_pos + 1 < len(content)
+                        and content[desc_end_pos] == 0
+                        and content[desc_end_pos + 1] != 0):
+                    desc_end_pos += 1
+            desc = self._decode_string(
+                encoding + content[desc_start_pos:desc_end_pos])
+            field_name, image = self._create_tag_image(
+                content[desc_end_pos:], pic_type, mime_type, desc)
+            # pylint: disable=protected-access
+            self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
         return frame_size

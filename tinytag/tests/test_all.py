@@ -592,6 +592,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'title': 'no bom test ë',
         'artist': 'no bom test 2 ë',
     }),
+    ('title_after_image.mp3', {
+        'other': OtherFields(),
+        'filesize': 2311,
+        'title': 'title after image',
+        'track': 1,
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,
