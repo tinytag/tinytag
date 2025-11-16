@@ -1571,7 +1571,7 @@ class _Wave(TinyTag):
             subchunk_size = unpack('I', chunk_header[4:])[0]
             # IFF chunks are padded to an even number of bytes
             subchunk_size += subchunk_size % 2
-            if subchunk_id == b'fmt ' and self._parse_duration:
+            if self._parse_duration and subchunk_id == b'fmt ':
                 chunk = fh.read(subchunk_size)
                 _format_tag, channels, samplerate = unpack('<HHI', chunk[:8])
                 bitdepth = unpack('<H', chunk[14:16])[0]
@@ -1582,14 +1582,14 @@ class _Wave(TinyTag):
                 self.bitrate = samplerate * channels * bitdepth / 1000
                 self.channels, self.samplerate, self.bitdepth = (
                     channels, samplerate, bitdepth)
-            elif subchunk_id == b'data' and self._parse_duration:
+            elif self._parse_duration and subchunk_id == b'data':
                 if (self.channels is not None and self.samplerate is not None
                         and self.bitdepth is not None):
                     self.duration = (
                         subchunk_size / self.channels / self.samplerate
                         / (self.bitdepth / 8))
                 fh.seek(subchunk_size, SEEK_CUR)
-            elif subchunk_id == b'LIST' and self._parse_tags:
+            elif self._parse_tags and subchunk_id == b'LIST':
                 chunk = fh.read(subchunk_size)
                 if chunk.startswith(b'INFO'):
                     walker = BytesIO(chunk)
@@ -1610,7 +1610,7 @@ class _Wave(TinyTag):
                             else:
                                 self._set_field(fieldname, value)
                         field = walker.read(4)
-            elif subchunk_id in {b'id3 ', b'ID3 '} and self._parse_tags:
+            elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
                 id3 = _ID3()
                 id3._filehandler = fh
@@ -1654,7 +1654,7 @@ class _Flac(TinyTag):
             is_last_block = block_header[0] & 0x80
             size = unpack('>I', b'\x00' + block_header[1:])[0]
             # http://xiph.org/flac/format.html#metadata_block_streaminfo
-            if block_type == self._STREAMINFO and self._parse_duration:
+            if self._parse_duration and block_type == self._STREAMINFO:
                 head = fh.read(size)
                 if len(head) < 34:  # invalid streaminfo
                     break
@@ -1684,13 +1684,13 @@ class _Flac(TinyTag):
                 self.samplerate = sr
                 if duration > 0:
                     self.bitrate = self.filesize * 8 / duration / 1000
-            elif block_type == self._VORBIS_COMMENT and self._parse_tags:
+            elif self._parse_tags and block_type == self._VORBIS_COMMENT:
                 # pylint: disable=protected-access
                 walker = BytesIO(fh.read(size))
                 oggtag = _Ogg()
                 oggtag._parse_vorbis_comment(walker)
                 self._update(oggtag)
-            elif block_type == self._PICTURE and self._load_image:
+            elif self._load_image and block_type == self._PICTURE:
                 fieldname, value = self._parse_image(fh)
                 # pylint: disable=protected-access
                 self.images._set_field(fieldname, value)
@@ -1784,7 +1784,7 @@ class _Wma(TinyTag):
             if object_size == 0 or object_size > self.filesize:
                 break  # invalid object, stop parsing.
             object_id = object_header[:16]
-            if object_id == self._ASF_CONTENT_DESC and self._parse_tags:
+            if self._parse_tags and object_id == self._ASF_CONTENT_DESC:
                 walker = BytesIO(fh.read(object_size - header_len))
                 (title_length, author_length,
                  copyright_length, description_length,
@@ -1801,7 +1801,7 @@ class _Wma(TinyTag):
                         walker.read(length).decode('utf-16', 'replace'))
                     if not i_field_name.startswith('_') and value:
                         self._set_field(i_field_name, value)
-            elif object_id == self._ASF_EXT_CONTENT_DESC and self._parse_tags:
+            elif self._parse_tags and object_id == self._ASF_EXT_CONTENT_DESC:
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
                 walker = BytesIO(fh.read(object_size - header_len))
                 descriptor_count = unpack('<H', walker.read(2))[0]
@@ -1834,13 +1834,13 @@ class _Wma(TinyTag):
                             self._set_field(field_name, int(value))
                     elif value:
                         self._set_field(field_name, value)
-            elif object_id == self._ASF_FILE_PROP and self._parse_duration:
+            elif self._parse_duration and object_id == self._ASF_FILE_PROP:
                 data = fh.read(object_size - header_len)
                 play_duration = unpack('<Q', data[40:48])[0] / 10000000
                 preroll = unpack('<Q', data[56:64])[0] / 1000
                 # subtract the preroll to get the actual duration
                 self.duration = max(play_duration - preroll, 0.0)
-            elif object_id == self._ASF_STREAM_PROPS and self._parse_duration:
+            elif self._parse_duration and object_id == self._ASF_STREAM_PROPS:
                 data = fh.read(object_size - header_len)
                 stream_type = data[:16]
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
@@ -1896,11 +1896,11 @@ class _Aiff(TinyTag):
             subchunk_size = unpack('>I', chunk_header[4:])[0]
             # IFF chunks are padded to an even number of bytes
             subchunk_size += subchunk_size % 2
-            if subchunk_id in self._AIFF_MAPPING and self._parse_tags:
+            if self._parse_tags and subchunk_id in self._AIFF_MAPPING:
                 value = self._unpad(
                     fh.read(subchunk_size).decode('utf-8', 'replace'))
                 self._set_field(self._AIFF_MAPPING[subchunk_id], value)
-            elif subchunk_id == b'COMM' and self._parse_duration:
+            elif self._parse_duration and subchunk_id == b'COMM':
                 chunk = fh.read(subchunk_size)
                 channels, num_frames, bitdepth = unpack('>hLh', chunk[:8])
                 self.channels, self.bitdepth = channels, bitdepth
@@ -1914,7 +1914,7 @@ class _Aiff(TinyTag):
                         sr, duration, bitrate)
                 except OverflowError:
                     pass
-            elif subchunk_id in {b'id3 ', b'ID3 '} and self._parse_tags:
+            elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
                 id3 = _ID3()
                 id3._filehandler = fh
