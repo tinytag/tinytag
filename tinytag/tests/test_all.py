@@ -312,8 +312,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('id3v1_does_not_overwrite_id3v2.mp3', {
         'other': OtherFields({
             'love rating': ['L'],
-            'publisher': ['Century Media'],
-            'popm': ['MusicBee\x00Ä']
+            'publisher': ['Century Media']
         }),
         'filesize': 1130,
         'album': 'Somewhere Far Beyond',

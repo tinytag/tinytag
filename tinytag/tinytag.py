@@ -779,18 +779,32 @@ class _ID3(TinyTag):
     _IGNORED_FRAME_IDS = {
         'AENC', 'CRA',
         'APIC', 'PIC',
+        'ASPI',
         'ATXT',
         'CHAP',
         'COMR',
         'CRM',
         'CTOC',
         'ENCR',
+        'EQU2', 'EQU',
+        'ETCO', 'ETC',
         'GEOB', 'GEO',
         'GRID',
+        'LINK', 'LNK',
         'MCDI', 'MCI',
+        'MLLT', 'MLL',
+        'PCNT', 'CNT',
+        'POPM', 'POP',
+        'POSS',
         'PRIV',
+        'RBUF', 'BUF',
         'RGAD',
-        'STC', 'SYTC'
+        'RVA2', 'RVA',
+        'RVRB', 'REV',
+        'SEEK',
+        'SIGN',
+        'SYTC', 'STC',
+        'SYLT', 'SLT',
     }
     _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0
