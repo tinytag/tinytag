@@ -589,7 +589,9 @@ class _MP4(TinyTag):
             # unknown data atom, try to parse it
             elif curr_path == self._ILST_PATH:
                 atom_end_pos = fh.tell() + atom_size
-                field_name = self._OTHER_PREFIX + atom_type.decode('latin-1')
+                field_name = (
+                    self._OTHER_PREFIX + atom_type.decode('latin-1').lower()
+                )
                 fh.seek(-header_len, SEEK_CUR)
                 self._traverse_atoms(
                     fh,
