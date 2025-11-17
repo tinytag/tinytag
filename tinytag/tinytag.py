@@ -788,6 +788,7 @@ class _ID3(TinyTag):
         'catalognumber': 'other.catalog_number',
         'showmovement': 'other.show_movement'
     }
+    _EMPTY_FRAME_IDS = {b'\x00\x00\x00\x00', b'\x00\x00\x00'}
     _IMAGE_FRAME_IDS = {b'APIC', b'PIC'}
     _CUSTOM_FRAME_IDS = {b'TXXX', b'TXX'}
     _IGNORED_FRAME_IDS = {
@@ -1081,7 +1082,7 @@ class _ID3(TinyTag):
             fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
         while parsed_size < size:
             frame_size = self._parse_frame(fh, size, id3version=major)
-            if frame_size == 0:
+            if frame_size == -1:
                 break
             parsed_size += frame_size
         fh.seek(end_pos)
@@ -1180,8 +1181,10 @@ class _ID3(TinyTag):
         is_synchsafe_int = id3version == 4
         header = fh.read(header_len)
         if len(header) != header_len:
-            return 0
+            return -1
         frame_id = header[:frame_size_bytes]
+        if frame_id in self._EMPTY_FRAME_IDS:
+            return -1
         frame_size: int
         if frame_size_bytes == 3:
             frame_size = unpack('>I', b'\x00' + header[3:6])[0]
@@ -1194,7 +1197,7 @@ class _ID3(TinyTag):
                   f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
         if frame_size > total_size:
             # invalid frame size, stop here
-            return 0
+            return -1
         should_set_field = True
         if self._parse_tags and frame_id in self._ID3_MAPPING:
             fieldname = self._ID3_MAPPING[frame_id]

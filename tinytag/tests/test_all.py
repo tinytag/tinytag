@@ -636,6 +636,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 1,
         'track_total': 2,
     }),
+    ('empty_frame.mp3', {
+        'other': OtherFields(),
+        'filesize': 2005,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+        'album': 'some album',
+        'artist': 'some artist',
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,
