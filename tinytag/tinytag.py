@@ -1190,7 +1190,7 @@ class _ID3(TinyTag):
         else:
             frame_size = unpack('>I', header[4:8])[0]
         if _DEBUG:
-            print(f'Found id3 Frame {frame_id} at '
+            print(f'Found id3 Frame {frame_id!r} at '
                   f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
         if frame_size > total_size:
             # invalid frame size, stop here
