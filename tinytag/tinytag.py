@@ -1171,6 +1171,37 @@ class _ID3(TinyTag):
             image.description = description
         return field_name, image
 
+    def _parse_image(self,
+                     frame_id: bytes,
+                     content: bytes) -> tuple[str, Image]:
+        # See section 4.14: http://id3.org/id3v2.4.0-frames
+        encoding = content[:1]
+        if frame_id == b'PIC':  # ID3 v2.2:
+            imgformat = content[1:4].lower()
+            mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
+            # skip encoding (1), imgformat (3), pictype(1)
+            desc_start_pos = 5
+        else:  # ID3 v2.3+
+            mime_start_pos = 1
+            mime_end_pos = self._find_string_end_pos(
+                content, start_pos=mime_start_pos)
+            mime_type = self._decode_string(
+                content[mime_start_pos:mime_end_pos]).lower()
+            # skip mtype, pictype(1)
+            desc_start_pos = mime_end_pos + 1
+        pic_type = content[desc_start_pos - 1]
+        desc_end_pos = self._find_string_end_pos(
+            content, encoding, desc_start_pos)
+        # skip stray null byte in broken file
+        if (desc_end_pos + 1 < len(content)
+                and content[desc_end_pos] == 0
+                and content[desc_end_pos + 1] != 0):
+            desc_end_pos += 1
+        desc = self._decode_string(
+            encoding + content[desc_start_pos:desc_end_pos])
+        return self._create_tag_image(
+            content[desc_end_pos:], pic_type, mime_type, desc)
+
     def _parse_frame(self,
                      fh: BinaryIO,
                      total_size: int,
@@ -1250,44 +1281,27 @@ class _ID3(TinyTag):
                     self._OTHER_PREFIX + frame_id.decode('latin-1').lower(),
                     value)
         elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
-            # See section 4.14: http://id3.org/id3v2.4.0-frames
-            content = fh.read(frame_size)
-            encoding = content[:1]
-            if frame_id == b'PIC':  # ID3 v2.2:
-                imgformat = content[1:4].lower()
-                mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
-                # skip encoding (1), imgformat (3), pictype(1)
-                desc_start_pos = 5
-            else:  # ID3 v2.3+
-                mime_end_pos = content.index(b'\x00', 1)
-                mime_type = self._decode_string(
-                    content[1:mime_end_pos]).lower()
-                # skip mtype, pictype(1)
-                desc_start_pos = mime_end_pos + 2
-            pic_type = content[desc_start_pos - 1]
-            # latin1 and utf-8 are 1 byte
-            if encoding in {b'\x00', b'\x03'}:
-                desc_end_pos = content.find(b'\x00', desc_start_pos) + 1
-            else:
-                desc_end_pos = 0
-                for i in range(desc_start_pos, len(content), 2):
-                    if content[i:i + 2] == b'\x00\x00':
-                        desc_end_pos = i + 2
-                        break
-                # skip stray null byte in broken file
-                if (desc_end_pos + 1 < len(content)
-                        and content[desc_end_pos] == 0
-                        and content[desc_end_pos + 1] != 0):
-                    desc_end_pos += 1
-            desc = self._decode_string(
-                encoding + content[desc_start_pos:desc_end_pos])
-            field_name, image = self._create_tag_image(
-                content[desc_end_pos:], pic_type, mime_type, desc)
+            field_name, image = self._parse_image(
+                frame_id, fh.read(frame_size))
             # pylint: disable=protected-access
             self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
         return frame_size
+
+    @staticmethod
+    def _find_string_end_pos(content: bytes,
+                             encoding: bytes = b'\x00',
+                             start_pos: int = 0) -> int:
+        # latin1 and utf-8 are 1 byte
+        if encoding in {b'\x00', b'\x03'}:
+            return content.find(b'\x00', start_pos) + 1
+        end_pos = 0
+        for i in range(start_pos, len(content), 2):
+            if content[i:i + 2] == b'\x00\x00':
+                end_pos = i + 2
+                break
+        return end_pos
 
     def _decode_string(self, value: bytes, language: bool = False) -> str:
         default_encoding = 'ISO-8859-1'
