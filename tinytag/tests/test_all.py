@@ -646,6 +646,27 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'album': 'some album',
         'artist': 'some artist',
     }),
+    ('synced_lyrics_milliseconds.mp3', {
+        'other': OtherFields({
+            'lyrics': ['[00:00.00]\n[00:01.00]first line\n[00:01.55]second '
+                       'line\n[00:05.99]third line'],
+        }),
+        'filesize': 2007,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+    }),
+    ('synced_lyrics_invalid.mp3', {
+        'other': OtherFields({
+            'lyrics': ['\nfirst line\nsecond line\nthird line'],
+        }),
+        'filesize': 2007,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,

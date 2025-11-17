@@ -791,6 +791,7 @@ class _ID3(TinyTag):
     _EMPTY_FRAME_IDS = {b'\x00\x00\x00\x00', b'\x00\x00\x00'}
     _IMAGE_FRAME_IDS = {b'APIC', b'PIC'}
     _CUSTOM_FRAME_IDS = {b'TXXX', b'TXX'}
+    _SYNCED_LYRICS_FRAME_IDS = {b'SYLT', b'SLT'}
     _IGNORED_FRAME_IDS = {
         b'AENC', b'CRA',
         b'APIC', b'PIC',
@@ -819,7 +820,6 @@ class _ID3(TinyTag):
         b'SEEK',
         b'SIGN',
         b'SYTC', b'STC',
-        b'SYLT', b'SLT',
     }
     _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0
@@ -1202,6 +1202,44 @@ class _ID3(TinyTag):
         return self._create_tag_image(
             content[desc_end_pos:], pic_type, mime_type, desc)
 
+    @staticmethod
+    def _lrc_timestamp(seconds: float) -> str:
+        cs = int(seconds * 100)
+        minutes, cs = divmod(cs, 6000)
+        seconds, cs = divmod(cs, 100)
+        return f"{minutes:02d}:{seconds:02d}.{cs:02d}"
+
+    def _parse_synced_lyrics(self, content: bytes) -> str:
+        # Convert ID3 synced lyrics to LRC format
+        content_length = len(content)
+        encoding = content[:1]
+        # skip language (3)
+        timestamp_format = content[4:5]
+        # skip content type (1)
+        start_pos = 6
+        end_pos = self._find_string_end_pos(content, encoding, start_pos)
+        lyrics = ""
+        offset = end_pos
+        found_line = False
+        while offset < content_length:
+            end_pos = self._find_string_end_pos(content, encoding, offset)
+            value = self._decode_string(
+                encoding + content[offset:end_pos]).lstrip('\n')
+            offset = end_pos
+            time = unpack('>I', content[offset:offset + 4])[0]
+            offset += 4
+            if found_line:
+                lyrics += '\n'
+            found_line = True
+            if timestamp_format == b'\x02':
+                # time in milliseconds
+                timestamp = self._lrc_timestamp(time / 1000)
+            else:
+                lyrics += value
+                continue
+            lyrics += f'[{timestamp}]{value}'
+        return lyrics
+
     def _parse_frame(self,
                      fh: BinaryIO,
                      total_size: int,
@@ -1268,6 +1306,9 @@ class _ID3(TinyTag):
                 should_set_field = False
             if should_set_field:
                 self._set_field(fieldname, value)
+        elif self._parse_tags and frame_id in self._SYNCED_LYRICS_FRAME_IDS:
+            lyrics = self._parse_synced_lyrics(fh.read(frame_size))
+            self._set_field('other.lyrics', lyrics)
         elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
             value = self._decode_string(fh.read(frame_size))
