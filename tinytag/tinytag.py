@@ -750,35 +750,35 @@ class _ID3(TinyTag):
     _ID3_MAPPING = {
         # Mapping from Frame ID to a field of the TinyTag
         # https://exiftool.org/TagNames/ID3.html
-        'COMM': 'comment', 'COM': 'comment',
-        'TRCK': 'track', 'TRK': 'track',
-        'TYER': 'year', 'TYE': 'year', 'TDRC': 'year',
-        'TALB': 'album', 'TAL': 'album',
-        'TPE1': 'artist', 'TP1': 'artist',
-        'TIT2': 'title', 'TT2': 'title',
-        'TCON': 'genre', 'TCO': 'genre',
-        'TPOS': 'disc', 'TPA': 'disc',
-        'TPE2': 'albumartist', 'TP2': 'albumartist',
-        'TCOM': 'composer', 'TCM': 'composer',
-        'WOAR': 'other.url', 'WAR': 'other.url',
-        'TSRC': 'other.isrc', 'TRC': 'other.isrc',
-        'TCOP': 'other.copyright', 'TCR': 'other.copyright',
-        'TBPM': 'other.bpm', 'TBP': 'other.bpm',
-        'TKEY': 'other.initial_key', 'TKE': 'other.initial_key',
-        'TLAN': 'other.language', 'TLA': 'other.language',
-        'TPUB': 'other.publisher', 'TPB': 'other.publisher',
-        'USLT': 'other.lyrics', 'ULT': 'other.lyrics',
-        'TPE3': 'other.conductor', 'TP3': 'other.conductor',
-        'TEXT': 'other.lyricist', 'TXT': 'other.lyricist',
-        'TSST': 'other.set_subtitle',
-        'TENC': 'other.encoded_by', 'TEN': 'other.encoded_by',
-        'TSSE': 'other.encoder_settings', 'TSS': 'other.encoder_settings',
-        'TMED': 'other.media', 'TMT': 'other.media',
-        'WCOP': 'other.license',
-        'MVNM': 'other.movement_name',
-        'MVIN': 'other.movement',
-        'GRP1': 'modern_grouping', 'GP1': 'modern_grouping',
-        'TIT1': 'legacy_grouping', 'TT1': 'legacy_grouping',
+        b'COMM': 'comment', b'COM': 'comment',
+        b'TRCK': 'track', b'TRK': 'track',
+        b'TYER': 'year', b'TYE': 'year', b'TDRC': 'year',
+        b'TALB': 'album', b'TAL': 'album',
+        b'TPE1': 'artist', b'TP1': 'artist',
+        b'TIT2': 'title', b'TT2': 'title',
+        b'TCON': 'genre', b'TCO': 'genre',
+        b'TPOS': 'disc', b'TPA': 'disc',
+        b'TPE2': 'albumartist', b'TP2': 'albumartist',
+        b'TCOM': 'composer', b'TCM': 'composer',
+        b'WOAR': 'other.url', b'WAR': 'other.url',
+        b'TSRC': 'other.isrc', b'TRC': 'other.isrc',
+        b'TCOP': 'other.copyright', b'TCR': 'other.copyright',
+        b'TBPM': 'other.bpm', b'TBP': 'other.bpm',
+        b'TKEY': 'other.initial_key', b'TKE': 'other.initial_key',
+        b'TLAN': 'other.language', b'TLA': 'other.language',
+        b'TPUB': 'other.publisher', b'TPB': 'other.publisher',
+        b'USLT': 'other.lyrics', b'ULT': 'other.lyrics',
+        b'TPE3': 'other.conductor', b'TP3': 'other.conductor',
+        b'TEXT': 'other.lyricist', b'TXT': 'other.lyricist',
+        b'TSST': 'other.set_subtitle',
+        b'TENC': 'other.encoded_by', b'TEN': 'other.encoded_by',
+        b'TSSE': 'other.encoder_settings', b'TSS': 'other.encoder_settings',
+        b'TMED': 'other.media', b'TMT': 'other.media',
+        b'WCOP': 'other.license',
+        b'MVNM': 'other.movement_name',
+        b'MVIN': 'other.movement',
+        b'GRP1': 'modern_grouping', b'GP1': 'modern_grouping',
+        b'TIT1': 'legacy_grouping', b'TT1': 'legacy_grouping',
     }
     _ID3_MAPPING_CUSTOM = {
         'artists': 'artist',
@@ -788,37 +788,37 @@ class _ID3(TinyTag):
         'catalognumber': 'other.catalog_number',
         'showmovement': 'other.show_movement'
     }
-    _IMAGE_FRAME_IDS = {'APIC', 'PIC'}
-    _CUSTOM_FRAME_IDS = {'TXXX', 'TXX'}
+    _IMAGE_FRAME_IDS = {b'APIC', b'PIC'}
+    _CUSTOM_FRAME_IDS = {b'TXXX', b'TXX'}
     _IGNORED_FRAME_IDS = {
-        'AENC', 'CRA',
-        'APIC', 'PIC',
-        'ASPI',
-        'ATXT',
-        'CHAP',
-        'COMR',
-        'CRM',
-        'CTOC',
-        'ENCR',
-        'EQU2', 'EQU',
-        'ETCO', 'ETC',
-        'GEOB', 'GEO',
-        'GRID',
-        'LINK', 'LNK',
-        'MCDI', 'MCI',
-        'MLLT', 'MLL',
-        'PCNT', 'CNT',
-        'POPM', 'POP',
-        'POSS',
-        'PRIV',
-        'RBUF', 'BUF',
-        'RGAD',
-        'RVA2', 'RVA',
-        'RVRB', 'REV',
-        'SEEK',
-        'SIGN',
-        'SYTC', 'STC',
-        'SYLT', 'SLT',
+        b'AENC', b'CRA',
+        b'APIC', b'PIC',
+        b'ASPI',
+        b'ATXT',
+        b'CHAP',
+        b'COMR',
+        b'CRM',
+        b'CTOC',
+        b'ENCR',
+        b'EQU2', b'EQU',
+        b'ETCO', b'ETC',
+        b'GEOB', b'GEO',
+        b'GRID',
+        b'LINK', b'LNK',
+        b'MCDI', b'MCI',
+        b'MLLT', b'MLL',
+        b'PCNT', b'CNT',
+        b'POPM', b'POP',
+        b'POSS',
+        b'PRIV',
+        b'RBUF', b'BUF',
+        b'RGAD',
+        b'RVA2', b'RVA',
+        b'RVRB', b'REV',
+        b'SEEK',
+        b'SIGN',
+        b'SYTC', b'STC',
+        b'SYLT', b'SLT',
     }
     _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0
@@ -868,9 +868,9 @@ class _ID3(TinyTag):
         'Psybient',
     )
     _ID3V2_2_IMAGE_FORMATS = {
-        'bmp': 'image/bmp',
-        'jpg': 'image/jpeg',
-        'png': 'image/png',
+        b'bmp': 'image/bmp',
+        b'jpg': 'image/jpeg',
+        b'png': 'image/png',
     }
     _IMAGE_TYPES = (
         'other.generic',
@@ -1181,7 +1181,7 @@ class _ID3(TinyTag):
         header = fh.read(header_len)
         if len(header) != header_len:
             return 0
-        frame_id = self._decode_string(header[:frame_size_bytes])
+        frame_id = header[:frame_size_bytes]
         frame_size: int
         if frame_size_bytes == 3:
             frame_size = unpack('>I', b'\x00' + header[3:6])[0]
@@ -1244,13 +1244,14 @@ class _ID3(TinyTag):
             value = self._decode_string(fh.read(frame_size))
             if value:
                 self._set_field(
-                    self._OTHER_PREFIX + frame_id.lower(), value)
+                    self._OTHER_PREFIX + frame_id.decode('latin-1').lower(),
+                    value)
         elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
             # See section 4.14: http://id3.org/id3v2.4.0-frames
             content = fh.read(frame_size)
             encoding = content[:1]
-            if frame_id == 'PIC':  # ID3 v2.2:
-                imgformat = self._decode_string(content[1:4]).lower()
+            if frame_id == b'PIC':  # ID3 v2.2:
+                imgformat = content[1:4].lower()
                 mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
                 # skip encoding (1), imgformat (3), pictype(1)
                 desc_start_pos = 5
