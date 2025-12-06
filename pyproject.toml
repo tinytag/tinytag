@@ -59,6 +59,7 @@ Homepage = "https://github.com/tinytag/tinytag"
 tests = [
     "coverage",
     "mypy",
+    "mypy<1.19.0; platform_python_implementation == 'PyPy'",
     "pycodestyle",
     "pylint",
     "pyright"
