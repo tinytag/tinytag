@@ -1400,6 +1400,27 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 1,
         'track_total': 2,
     }),
+    ('mp4_extended_size.m4a', {
+        'other': OtherFields({
+            'description': ['test description'],
+            'encoded_by': ['Lavf59.27.100']
+        }),
+        'comment': 'test comment',
+        'filesize': 32014,
+        'samplerate': 44100,
+        'duration': 2.36,
+        'channels': 2,
+        'bitrate': 101.038,
+    }),
+    ('mp4_extended_size_truncated.m4a', {
+        'other': OtherFields(),
+        'filesize': 39
+    }),
+    ('mp4_size_zero.m4a', {
+        'other': OtherFields(),
+        'filesize': 152,
+        'duration': 2.0
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
         'channels': 2,

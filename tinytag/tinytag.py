@@ -556,13 +556,18 @@ class _MP4(TinyTag):
                         path: _DataTreeDict,
                         stop_pos: int | None = None,
                         curr_path: list[bytes] | None = None) -> None:
-        header_len = 8
+        header_len = ext_size_len = 8
         atom_header = fh.read(header_len)
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size = unpack('>I', atom_header[:4])[0]
             atom_type = atom_header[4:]
             if curr_path is None:  # keep track how we traversed in the tree
                 curr_path = [atom_type]
+            if atom_size == 1:  # 64-bit size
+                ext_size_header = fh.read(ext_size_len)
+                if len(ext_size_header) == ext_size_len:
+                    atom_size = unpack('>Q', ext_size_header)[0] - ext_size_len
+            atom_size -= header_len
             if atom_size <= 0:  # empty atom, jump to next one
                 atom_header = fh.read(header_len)
                 continue
@@ -572,8 +577,10 @@ class _MP4(TinyTag):
                       f'atom: {atom_type!r} len: {atom_size + header_len}')
             if atom_type in self._VERSIONED_ATOMS:  # jump atom version for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4
             if atom_type in self._FLAGGED_ATOMS:  # jump atom flags for now
                 fh.seek(4, SEEK_CUR)
+                atom_size -= 4
             sub_path = path.get(atom_type, None)
             # if the path leaf is a dict, traverse deeper into the tree:
             if isinstance(sub_path, dict):
