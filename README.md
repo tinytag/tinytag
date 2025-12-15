@@ -391,6 +391,19 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
+### 2.2.0  (2025-12-15)
+
+- Add support for movement, work and grouping fields
+- ID3: Make synced lyrics available in 'other.lyrics' (LRC format)
+- ID3: Continue reading after encountering empty frame
+- ID3: Fix frame reading when image parsing is disabled
+- ID3: Exclude more frames containing binary data
+- ID3: Avoid unnecessary string decoding
+- M4A: Support extended atom sizes
+- M4A: Ensure all field names are lowercase
+- OGG: Stop reading after reaching EOS page
+- Vorbis: Map UNSYNCEDLYRICS field to other.lyrics
+
 ### 2.1.2  (2025-08-14)
 
 - M4A: Add a few missing additional metadata fields
