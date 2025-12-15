@@ -1637,6 +1637,8 @@ class _Ogg(TinyTag):
                 else:
                     self._audio_size += last_audio_size
                     last_audio_size = audio_size
+            if eos:
+                break
             page_header = fh.read(header_len)
 
 

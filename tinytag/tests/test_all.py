@@ -767,6 +767,14 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 1,
         'track_total': 2
     }),
+    ('data_after_eos.ogg', {
+        'other': OtherFields(),
+        'duration': 3.684716553287982,
+        'filesize': 4424,
+        'bitrate': 112.0,
+        'samplerate': 44100,
+        'channels': 2,
+    }),
     ('test.opus', {
         'other': OtherFields({
             'encoder': ['Lavc57.24.102 libopus'],
