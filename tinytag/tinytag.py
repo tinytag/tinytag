@@ -1233,6 +1233,8 @@ class _ID3(TinyTag):
             value = self._decode_string(
                 encoding + content[offset:end_pos]).lstrip('\n')
             offset = end_pos
+            if offset + 4 > content_length:
+                break
             time = unpack('>I', content[offset:offset + 4])[0]
             offset += 4
             if found_line:
