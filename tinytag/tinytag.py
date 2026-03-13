@@ -1343,13 +1343,14 @@ class _ID3(TinyTag):
                              start_pos: int = 0) -> int:
         # latin1 and utf-8 are 1 byte
         if encoding in {b'\x00', b'\x03'}:
-            return content.find(b'\x00', start_pos) + 1
-        end_pos = 0
+            end_pos = content.find(b'\x00', start_pos)
+            return start_pos if end_pos < 0 else end_pos + 1
+        end_pos = -1
         for i in range(start_pos, len(content), 2):
             if content[i:i + 2] == b'\x00\x00':
                 end_pos = i + 2
                 break
-        return end_pos
+        return start_pos if end_pos < 0 else end_pos
 
     def _decode_string(self, value: bytes, language: bool = False) -> str:
         default_encoding = 'ISO-8859-1'
