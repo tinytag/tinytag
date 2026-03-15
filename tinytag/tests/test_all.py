@@ -667,6 +667,33 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 0.1306122448979592,
         'samplerate': 44100,
     }),
+    ('synced_lyrics_no_terminator_latin1.mp3', {
+        'other': OtherFields({
+            'lyrics': ['[18246:35.58]\n[18246:35.58]\n[18246:35.58]\n'
+                       '[18246:35.58]\n[18246:35.58]\n[18246:35.58]\n'
+                       '[18246:35.58]\n[18246:35.58]\n[18246:35.58]\n'
+                       '[18246:35.58]\n[18246:35.58]\n[18246:35.58]'],
+        }),
+        'filesize': 498,
+        'bitrate': 128.0,
+        'channels': 2,
+        'duration': 0.026122448979591838,
+        'samplerate': 44100,
+    }),
+    ('synced_lyrics_no_terminator_utf16.mp3', {
+        'other': OtherFields({
+            'lyrics': ['[71580:52.86]\n[18175:35.68]\n[18175:35.68]\n'
+                       '[18175:35.68]\n[18175:35.68]\n[18175:35.68]\n'
+                       '[18175:35.68]\n[18175:35.68]\n[18175:35.68]\n'
+                       '[18175:35.68]\n[18175:35.68]\n[18175:35.68]\n'
+                       '[18175:35.68]'],
+        }),
+        'filesize': 507,
+        'bitrate': 128.0,
+        'channels': 2,
+        'duration': 0.026122448979591838,
+        'samplerate': 44100,
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,
