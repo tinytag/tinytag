@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2019-2025 tinytag Contributors
+# SPDX-FileCopyrightText: 2019-2026 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=missing-class-docstring,missing-function-docstring

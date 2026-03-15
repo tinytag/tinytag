@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014-2024 tinytag Contributors
+# SPDX-FileCopyrightText: 2014-2026 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
 """Audio file metadata reader."""

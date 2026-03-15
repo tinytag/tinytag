@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014-2025 tinytag Contributors
+# SPDX-FileCopyrightText: 2014-2026 tinytag Contributors
 # SPDX-License-Identifier: MIT
 
 # tinytag - an audio file metadata reader
@@ -6,7 +6,7 @@
 
 # MIT License
 
-# Copyright (c) 2014-2025 Tom Wallroth, Mat (mathiascode), et al.
+# Copyright (c) 2014-2026 Tom Wallroth, Mat (mathiascode), et al.
 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
