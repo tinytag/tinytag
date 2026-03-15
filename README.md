@@ -391,6 +391,10 @@ TinyTag.get(file_obj=your_file_obj)
 
 ## Changelog
 
+### 2.2.1  (2026-03-15)
+
+- ID3: Prevent infinite loop due to malformed SYLT strings
+
 ### 2.2.0  (2025-12-15)
 
 - Add support for movement, work and grouping fields
