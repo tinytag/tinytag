@@ -1477,6 +1477,41 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 152,
         'duration': 2.0
     }),
+    ('xmp_data.m4a', {
+        'other': OtherFields({
+            'xmp': [
+                "<?xpacket begin='\ufeff' id='W5M0MpCehiHzreSzNTczkc9d'?>\n"
+                "<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Image::ExifTool "
+                "13.55'>\n<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf"
+                "-syntax-ns#'>\n\n <rdf:Description rdf:about=''\n  xmlns:xmp="
+                "'http://ns.adobe.com/xap/1.0/'>\n  <xmp:CreateDate>2026-06-03"
+                "T00:00:00</xmp:CreateDate>\n </rdf:Description>\n</rdf:RDF>\n"
+                "</x:xmpmeta>"
+            ],
+            'encoded_by': ['Lavf61.7.100']
+        }),
+        'artist': 'some artist',
+        'title': 'some title',
+        'album': 'some album',
+        'filesize': 4826,
+        'samplerate': 44100,
+        'duration': 0.524,
+        'channels': 1,
+        'bitrate': 1.666,
+    }),
+    ('xmp_empty.m4a', {
+        'other': OtherFields({
+            'encoded_by': ['Lavf61.7.100']
+        }),
+        'artist': 'some artist',
+        'title': 'some title',
+        'album': 'some album',
+        'filesize': 2019,
+        'samplerate': 44100,
+        'duration': 0.524,
+        'channels': 1,
+        'bitrate': 1.666,
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
         'channels': 2,
@@ -1601,7 +1636,7 @@ class TestAll(TestCase):
                 path, error_fmt(result_val), error_fmt(expected_val), file)
             values_match = False
             # lets not copy *all* the lyrics inside the fixture
-            if (path == 'other.lyrics'
+            if (path in {'other.lyrics', 'other.xmp'}
                     and isinstance(expected_val, list)
                     and isinstance(result_val, list)):
                 values_match = result_val[0].startswith(expected_val[0])
