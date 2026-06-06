@@ -548,7 +548,7 @@ class _MP4(TinyTag):
                 b'tmpo': {b'data': _MP4._data_parser('other.bpm')},
                 b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
-            }}}}}
+            }}}}, b'uuid': _MP4._parse_uuid}
         self._traverse_atoms(fh, path=_MP4._meta_data_tree)
 
     def _traverse_atoms(self,
@@ -688,7 +688,7 @@ class _MP4(TinyTag):
                 field_name = atom_value.decode('utf-8', 'replace')
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(
-                    field_name, TinyTag._OTHER_PREFIX + field_name)
+                    field_name, cls._OTHER_PREFIX + field_name)
             elif atom_type == b'data' and field_name:
                 data_atom = fh.read(atom_size)
                 parser = cls._data_parser(field_name)
@@ -701,6 +701,18 @@ class _MP4(TinyTag):
         if field_name and values:
             return {field_name: values}
         return {}
+
+    @classmethod
+    def _parse_uuid(cls, data_atom: bytes) -> dict[str, str]:
+        result: dict[str, str] = {}
+        uuid_len = 16
+        if len(data_atom) <= uuid_len:
+            return result
+        uuid = data_atom[:uuid_len]
+        if uuid == b'\xbez\xcf\xcb\x97\xa9B\xe8\x9cq\x99\x94\x91\xe3\xaf\xac':
+            result[cls._OTHER_PREFIX + 'xmp'] = data_atom[uuid_len:].decode(
+                'utf-8', 'replace')
+        return result
 
     @classmethod
     def _parse_audio_sample_entry_mp4a(cls, data: bytes) -> dict[str, int]:

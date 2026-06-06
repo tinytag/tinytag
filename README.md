@@ -182,6 +182,7 @@ present when files provide such metadata:
     show_movement
     url
     work
+    xmp
 
 Additional `other` field names not documented above may be present, but are
 format-specific and may change or disappear in future tinytag releases. If
