@@ -2067,6 +2067,12 @@ class _Aiff(TinyTag):
                 id3._filehandler = fh
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
+            elif self._parse_tags and subchunk_id == b'APPL':
+                chunk = fh.read(subchunk_size)
+                application_signature = chunk[:4]
+                if application_signature == b'XMP ':
+                    value = self._unpad(chunk[4:].decode('utf-8', 'replace'))
+                    self._set_field(self._OTHER_PREFIX + 'xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)

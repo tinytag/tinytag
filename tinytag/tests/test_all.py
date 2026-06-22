@@ -1642,6 +1642,35 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 8,
         'title': 'image',
     }),
+    ('xmp_data.aiff', {
+        'other': OtherFields({
+            'xmp': [
+                '<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:'
+                'xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 6'
+                '.0.0">\n   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-r'
+                'df-syntax-ns#">\n      <rdf:Description rdf:about=""\n       '
+                '     xmlns:dc="http://purl.org/dc/elements/1.1/"\n           '
+                ' xmlns:xmpDM="http://ns.adobe.com/xmp/1.0/DynamicMedia/">\n  '
+                '       <dc:title>\n            <rdf:Alt>\n               <rdf'
+                ':li xml:lang="x-default">Pluck</rdf:li>\n            </rdf:Al'
+                't>\n         </dc:title>\n         <dc:creator>\n            '
+                '<rdf:Bag>\n               <rdf:li>Serhiy Storchaka</rdf:li>\n'
+                '            </rdf:Bag>\n         </dc:creator>\n         <dc:'
+                'test>value</dc:test>\n         <xmpDM:logComment>Audacity Plu'
+                'ck + Wahwah</xmpDM:logComment>\n      </rdf:Description>\n   '
+                '</rdf:RDF>\n</x:xmpmeta>'
+            ]
+        }),
+        'channels': 2,
+        'duration': 0.2999546485260771,
+        'filesize': 9612,
+        'artist': 'Serhiy Storchaka',
+        'title': 'Pluck',
+        'bitrate': 176.4,
+        'samplerate': 11025,
+        'bitdepth': 8,
+        'comment': 'Audacity Pluck + Wahwah',
+    }),
 ])
 
 SAMPLE_FOLDER = os.path.join(os.path.dirname(__file__), 'samples')
