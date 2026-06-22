@@ -1912,6 +1912,7 @@ class _Wma(TinyTag):
     _ASF_STREAM_PROPS = (b'\x91\x07\xdc\xb7\xb7\xa9\xcf\x11\x8e\xe6\x00\xc0'
                          b'\x0c Se')
     _STREAM_TYPE_ASF_AUDIO_MEDIA = b'@\x9ei\xf8M[\xcf\x11\xa8\xfd\x00\x80_\\D+'
+    _XMP_METADATA = b'\xcb\xcfz\xbe\xa9\x97\xe8B\x9cq\x99\x94\x91\xe3\xaf\xac'
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         if not self._tags_parsed:
@@ -1996,6 +1997,10 @@ class _Wma(TinyTag):
                     self.bitrate = avg_bytes_per_second * 8 / 1000
                     if codec_id_format_tag == 355:  # lossless
                         self.bitdepth = unpack('<H', data[68:70])[0]
+            elif self._parse_tags and object_id == self._XMP_METADATA:
+                value = fh.read(
+                    object_size - header_len).decode('utf-8', 'replace')
+                self._set_field(self._OTHER_PREFIX + 'xmp', value)
             else:
                 # skip unknown object ids
                 fh.seek(object_size - header_len, SEEK_CUR)
