@@ -694,6 +694,29 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 0.026122448979591838,
         'samplerate': 44100,
     }),
+    ('xmp_data.mp3', {
+        'other': OtherFields({
+            'xmp': [
+                '<?xpacket begin="ï»¿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmp'
+                'meta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 6.0.'
+                '0">\n <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-sy'
+                'ntax-ns#">\n  <rdf:Description rdf:about=""\n    xmlns:xmpDM='
+                '"http://ns.adobe.com/xmp/1.0/DynamicMedia/"\n    xmlns:dc="ht'
+                'tp://purl.org/dc/elements/1.1/"\n   xmpDM:artist="some artist'
+                '"\n   xmpDM:album="some album"\n   dc:test="value">\n   <dc:t'
+                'itle>\n    <rdf:Alt>\n     <rdf:li xml:lang="x-default">some '
+                'title</rdf:li>\n    </rdf:Alt>\n   </dc:title>\n  </rdf:Descr'
+                'iption>\n </rdf:RDF>\n</x:xmpmeta>'],
+        }),
+        'filesize': 5712,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+        'title': 'some title',
+        'album': 'some album',
+        'artist': 'some artist',
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,

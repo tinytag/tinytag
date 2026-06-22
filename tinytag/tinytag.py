@@ -831,7 +831,6 @@ class _ID3(TinyTag):
         b'PCNT', b'CNT',
         b'POPM', b'POP',
         b'POSS',
-        b'PRIV',
         b'RBUF', b'BUF',
         b'RGAD',
         b'RVA2', b'RVA',
@@ -1335,6 +1334,13 @@ class _ID3(TinyTag):
             value = self._decode_string(fh.read(frame_size))
             if value:
                 self._parse_custom_field(value)
+        elif self._parse_tags and frame_id == b'PRIV':
+            content = fh.read(frame_size)
+            owner_id_end_pos = self._find_string_end_pos(content)
+            owner_id = content[:owner_id_end_pos - 1]
+            if owner_id == b'XMP':
+                value = self._decode_string(content[owner_id_end_pos:])
+                self._set_field(self._OTHER_PREFIX + 'xmp', value)
         elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
             value = self._decode_string(fh.read(frame_size))
