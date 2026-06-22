@@ -1751,6 +1751,10 @@ class _Wave(TinyTag):
                 id3._filehandler = fh
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
+            elif self._parse_tags and subchunk_id == b'_PMX':
+                value = self._unpad(
+                    fh.read(subchunk_size).decode('utf-8', 'replace'))
+                self._set_field(self._OTHER_PREFIX + 'xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)

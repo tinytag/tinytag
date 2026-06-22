@@ -1024,6 +1024,28 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
         'bitdepth': 8,
     }),
+    ('xmp_data.wav', {
+        'other': OtherFields({
+            'xmp': [
+                "<?xpacket begin='\ufeff' id='W5M0MpCehiHzreSzNTczkc9d'?>\n"
+                "<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Image::ExifTool "
+                "13.55'>\n<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf"
+                "-syntax-ns#'>\n\n <rdf:Description rdf:about=''\n  xmlns:xmp="
+                "'http://ns.adobe.com/xap/1.0/'>\n  <xmp:CreateDate>2026-06-03"
+                "T00:00:00</xmp:CreateDate>\n </rdf:Description>\n</rdf:RDF>\n"
+                "</x:xmpmeta>"
+            ]
+        }),
+        'artist': 'some artist',
+        'title': 'some title',
+        'album': 'some album',
+        'filesize': 11752,
+        'samplerate': 44100,
+        'duration': 0.1,
+        'channels': 1,
+        'bitrate': 705.6,
+        'bitdepth': 16,
+    }),
     ('flac1sMono.flac', {
         'other': OtherFields(),
         'genre': 'Avantgarde',
