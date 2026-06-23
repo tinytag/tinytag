@@ -828,6 +828,7 @@ class _ID3(TinyTag):
         b'LINK', b'LNK',
         b'MCDI', b'MCI',
         b'MLLT', b'MLL',
+        b'OWNE',
         b'PCNT', b'CNT',
         b'POPM', b'POP',
         b'POSS',
@@ -838,6 +839,8 @@ class _ID3(TinyTag):
         b'SEEK',
         b'SIGN',
         b'SYTC', b'STC',
+        b'USER',
+        b'WXXX', b'WXX',
     }
     _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0

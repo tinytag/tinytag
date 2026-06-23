@@ -154,9 +154,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'publisher': ['4AD'],
             'tdat': ['1105'],
-            'wxxx': [
-                'WIKIPEDIA_RELEASE\x00http://en.wikipedia.org/wiki/High_Violet'
-            ],
             'media': ['Digital'],
             'tlen': ['203733'],
             'encoder_settings': [
