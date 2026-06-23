@@ -1330,6 +1330,34 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'artist': 'some artist',
         'year': '2025',
     }),
+    ('xmp_data.wma', {
+        'other': OtherFields({
+            'xmp': [
+                '<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:'
+                'xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 6'
+                '.0.0">\n <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf'
+                '-syntax-ns#">\n  <rdf:Description rdf:about=""\n    xmlns:xmp'
+                '="http://ns.adobe.com/xap/1.0/"\n    xmlns:dc="http://purl.or'
+                'g/dc/elements/1.1/"\n    xmlns:asf="http://ns.adobe.com/asf/1'
+                '.0/"\n   xmp:CreateDate="1970-01-01T00:00:00Z"\n   dc:test="v'
+                'alue"\n   asf:NativeDigest="0,1,2,3,4;97E16F15A2F14D88FB93680'
+                'F9D2428A1">\n   <dc:title>\n    <rdf:Alt>\n     <rdf:li xml:l'
+                'ang="x-default">some title</rdf:li>\n    </rdf:Alt>\n   </dc:'
+                'title>\n   <dc:creator>\n    <rdf:Seq>\n     <rdf:li>some art'
+                'ist</rdf:li>\n    </rdf:Seq>\n   </dc:creator>\n  </rdf:Descr'
+                'iption>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end="r"?>'
+            ],
+            'encoder_settings': ['Lavf60.16.100'],
+        }),
+        'filesize': 4723,
+        'bitrate': 128.0,
+        'duration': 2.1409999999999996,
+        'samplerate': 44100,
+        'channels': 1,
+        'title': 'some title',
+        'album': 'some album',
+        'artist': 'some artist',
+    }),
     ('test.m4a', {
         'other': OtherFields({
             'itunsmpb': [
