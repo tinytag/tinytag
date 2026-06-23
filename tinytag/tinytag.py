@@ -1339,7 +1339,8 @@ class _ID3(TinyTag):
             owner_id_end_pos = self._find_string_end_pos(content)
             owner_id = content[:owner_id_end_pos - 1]
             if owner_id == b'XMP':
-                value = self._decode_string(content[owner_id_end_pos:])
+                value = self._unpad(
+                    content[owner_id_end_pos:].decode('utf-8', 'replace'))
                 self._set_field(self._OTHER_PREFIX + 'xmp', value)
         elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
