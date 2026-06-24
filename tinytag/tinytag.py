@@ -224,9 +224,7 @@ class TinyTag:
             return _ID3
         if header.startswith(b'fLaC'):
             return _Flac
-        if ((header[4:8] == b'ftyp'
-             and header[8:11] in {b'M4A', b'M4B', b'aax'})
-                or b'\xff\xf1' in header):
+        if header[4:8] == b'ftyp':
             return _MP4
         if (header.startswith(b'OggS')
             and (header[29:33] == b'FLAC' or header[29:35] == b'vorbis'
@@ -586,7 +584,12 @@ class _MP4(TinyTag):
         while len(atom_header) == header_len:
             atom_size = unpack('>I', atom_header[:4])[0]
             atom_type = atom_header[4:]
-            if curr_path is None:  # keep track how we traversed in the tree
+            if curr_path is None:
+                # Should be safe enough for a quick header check. Newer MP4
+                # files tend to start with an 'ftyp' atom. Older files don't,
+                # but their initial atom type only seem to use ASCII chars.
+                if not atom_type.isascii():
+                    raise ParseError('Invalid MP4 header')
                 curr_path = [atom_type]
             if atom_size == 1:  # 64-bit size
                 ext_size_header = fh.read(ext_size_len)
@@ -971,6 +974,7 @@ class _ID3(TinyTag):
         (_NONE, _V1L3, _V1L2, _V1L1),  # MPEG Version 1
     )
     _SAMPLES_PER_FRAME = 1152  # the default frame size for mp3
+    _MAX_INVALID_FRAMES = 200
     _CHANNELS_PER_CHANNEL_MODE = (
         2,  # 00 Stereo
         2,  # 01 Joint stereo (Stereo)
@@ -1018,6 +1022,7 @@ class _ID3(TinyTag):
             (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
         frame_size_accu = 0
         frames = 0  # count frames for determining mp3 duration
+        invalid_frames = 0
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
         last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
         # seek to first position after id3 tag (speedup for large header)
@@ -1051,6 +1056,9 @@ class _ID3(TinyTag):
                     fh.seek(idx - header_len, SEEK_CUR)
                 if frames == 0:
                     audio_offset += next_offset
+                    invalid_frames += 1
+                    if invalid_frames > self._MAX_INVALID_FRAMES:
+                        raise ParseError("Invalid MPEG frame header")
                 continue
             if first_mpeg_id is None:
                 first_mpeg_id = mpeg_id
