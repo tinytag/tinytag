@@ -714,6 +714,14 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'album': 'some album',
         'artist': 'some artist',
     }),
+    ('synced_lyrics_empty.mp3', {
+        'other': OtherFields(),
+        'filesize': 1988,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,
