@@ -839,6 +839,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
         'channels': 1,
     }),
+    ('negative_bitrate.ogg', {
+        'other': OtherFields(),
+        'duration': 7.6635,
+        'filesize': 7224,
+        'samplerate': 6000,
+        'channels': 1,
+    }),
     ('test.opus', {
         'other': OtherFields({
             'encoder': ['Lavc57.24.102 libopus'],
@@ -899,16 +906,28 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 5,
         'year': '2023',
     }),
-    ('test.spx', {
+    ('no_bitrate.spx', {
         'other': OtherFields(),
         'filesize': 7921,
         'channels': 1,
         'samplerate': 16000,
-        'bitrate': -1,
         'duration': 2.1445625,
         'artist': 'test1',
         'title': 'test2',
         'comment': 'Encoded with Speex 1.2.0',
+    }),
+    ('bitrate_present.spx', {
+        'other': OtherFields({
+            'encoder': ['Lavc62.11.100 libspeex'],
+        }),
+        'filesize': 2304,
+        'channels': 1,
+        'samplerate': 8000,
+        'bitrate': 15.0,
+        'duration': 1.067,
+        'artist': 'test1',
+        'title': 'test2',
+        'comment': 'Lavf62.3.100',
     }),
     ('test.wav', {
         'other': OtherFields(),
@@ -1553,7 +1572,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'duration': 123251.6585941043,
         'channels': 2,
-        'bitrate': 0.0,
     }),
     ('multi_value.m4a', {
         'other': OtherFields({
