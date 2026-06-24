@@ -70,6 +70,7 @@ $ python3 -m tinytag /some/music.mp3
 {
   "filename": "/some/music.mp3",
   "filesize": 3243226,
+  "mime_type": "audio/mpeg",
   "duration": 173.52,
   "channels": 2,
   "bitrate": 128,
@@ -130,6 +131,7 @@ tag.bitdepth: int | None         # audio bit depth (for lossless audio)
 tag.bitrate: float | None        # audio bitrate in kbps
 tag.channels: int | None         # number of audio channels
 tag.duration: float | None       # audio duration in seconds
+tag.mime_type: str | None        # audio MIME type (added in tinytag 2.3.0) 
 tag.samplerate: int | None       # audio samples per second
 ```
 
@@ -153,6 +155,39 @@ tag.track: int | None            # track number
 tag.track_total: int | None      # total number of tracks
 tag.year: str | None             # year/date
 ```
+
+#### Audio MIME Types
+
+At present, tinytag may return the audio MIME types documented in this section.
+When available, a `codecs` parameter as described in the [RFC 6381](https://www.rfc-editor.org/info/rfc6381)
+standard is included.
+
+For standard codec values, see:
+  * `audio/mp4`: [RFC 6381](https://www.rfc-editor.org/info/rfc6381)
+  * `audio/ogg`: [RFC 5334](https://www.rfc-editor.org/info/rfc5334)
+             and [RFC 7845](https://www.rfc-editor.org/info/rfc7845)
+  * `audio/wav`: [RFC 2361](https://www.rfc-editor.org/info/rfc2361)
+
+No official standards exists for `codecs` values for the `audio/aiff` and
+`audio/x-ms-wma` MIME types. The most appropriate value provided by the format
+is used.
+
+    audio/aiff
+    audio/aiff; codecs="<FourCC>"    # AIFF-C compression type, e.g. "alaw"
+    audio/flac
+    audio/mp4
+    audio/mp4; codecs="alac"
+    audio/mp4; codecs="mp4a.oo[.A]"  # E.g. "mp4a.40.2" for AAC-LC
+    audio/mpeg
+    audio/ogg
+    audio/ogg; codecs="flac"
+    audio/ogg; codecs="opus"
+    audio/ogg; codecs="speex"
+    audio/ogg; codecs="vorbis"
+    audio/wav
+    audio/wav; codecs="<1..>"        # WAVE format tag, e.g. "1" for PCM
+    audio/x-ms-wma
+    audio/x-ms-wma; codecs="<1..>"   # WAVE format tag, e.g. "353" for WMA v2
 
 ### Additional Metadata
 

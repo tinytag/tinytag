@@ -19,8 +19,8 @@ BOGUS_FILE = os.path.join(SAMPLE_FOLDER, 'there_is_no_such_ext.bogus')
 TINYTAG_ATTRIBUTES = {
     'album', 'albumartist', 'artist', 'bitdepth', 'bitrate',
     'channels', 'comment', 'composer', 'disc', 'disc_total', 'duration',
-    'filesize', 'filename', 'genre', 'samplerate', 'title', 'track',
-    'track_total', 'year'
+    'filesize', 'filename', 'genre', 'mime_type', 'samplerate', 'title',
+    'track', 'track_total', 'year'
 }
 
 

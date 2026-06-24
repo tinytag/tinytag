@@ -32,6 +32,7 @@ else:
 TEST_FILES: dict[str, ExpectedTag] = dict([
     ('vbri.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'duration': 0.47020408163265304,
@@ -47,6 +48,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('cbr.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'duration': 0.4963265306122449,
@@ -62,6 +64,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('vbr_xing_header.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'bitrate': 186.04383278145696,
         'channels': 1,
         'samplerate': 44100,
@@ -75,6 +78,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'tlen': ['249976']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2000,
         'album': "The Harpers' Masque",
         'artist': 'Knodel and Valencia',
@@ -98,6 +102,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'itunes_cddb_tracknumber': ['3'],
         }),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'track_total': 11,
@@ -113,6 +118,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('silence-44-s-v1.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'genre': 'Darkwave',
@@ -127,6 +133,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('id3v1-latin1.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'genre': 'Rock',
         'album': 'The Young Americans',
         'title': 'Play Dead',
@@ -161,6 +168,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 'LAME 32bits version 3.98.4 (http://www.mp3dev.org/)'
             ],
         }),
+        'mime_type': 'audio/mpeg',
         'track_total': 11,
         'track': 7,
         'artist': 'The National',
@@ -173,6 +181,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('utf-8-id3v2.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'genre': 'Acustico',
         'track_total': 21,
         'track': 1,
@@ -185,6 +194,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('utf-8-id3v2-invalid-string.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'genre': 'Acustico',
         'track_total': 21,
         'track': 1,
@@ -201,10 +211,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('incomplete.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 3
     }),
     ('silence-44khz-56k-mono-1s.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 1,
         'samplerate': 44100,
         'duration': 1.0448979591836736,
@@ -213,6 +225,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('silence-22khz-mono-1s.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 1,
         'samplerate': 22050,
         'filesize': 4284,
@@ -226,6 +239,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 'Courtney Barnett'
             ]
         }),
+        'mime_type': 'audio/mpeg',
         'track': 1,
         'disc_total': 1,
         'composer': 'Courtney Barnett',
@@ -242,6 +256,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('utf16be.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'title': '52-girls',
         'filesize': 2048,
         'track': 6,
@@ -264,6 +279,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'itunpgap': ['0'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 500,
         'album': 'ARTPOP',
         'artist': 'Lady GaGa',
@@ -278,6 +294,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'url': ['www.nin.com'],
             'encoded_by': ['LAME 3.97'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 19980,
         'album': 'Ghosts I-IV',
         'albumartist': 'Nine Inch Nails',
@@ -294,6 +311,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'label': ['Unclear']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 512,
         'album': 'The Embrace',
         'artist': 'Johannes Heil & D.Diggler',
@@ -303,6 +321,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('id3_genre_id_out_of_bounds.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 512,
         'album': 'MECHANICAL ANIMALS',
         'artist': 'Manson',
@@ -312,6 +331,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('image-text-encoding.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 1,
         'samplerate': 22050,
         'filesize': 11104,
@@ -324,6 +344,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'love rating': ['L'],
             'publisher': ['Century Media']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 1130,
         'album': 'Somewhere Far Beyond',
         'albumartist': 'Blind Guardian',
@@ -337,6 +358,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf58.20.100']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 80919,
         'channels': 2,
         'duration': 5.067755102040817,
@@ -345,6 +367,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('chinese_id3.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 1000,
         'album': '½ÇÂäÖ®¸è',
         'albumartist': 'ËÕÔÆ',
@@ -361,6 +384,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf54.29.104']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 1000,
         'album': 'ERB',
         'artist': 'Epic Rap Battles Of History',
@@ -413,6 +437,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                  'engineer\x00Billy Howerdel\x00engineer\x00Critter')
             ],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 6943,
         'album': 'eMOTIVe',
         'albumartist': 'A Perfect Circle',
@@ -432,6 +457,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'year': '2004',
     }),
     ('vbr8.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9504,
         'bitrate': 8.25,
         'channels': 1,
@@ -440,6 +466,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
     }),
     ('vbr8stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9504,
         'bitrate': 8.25,
         'channels': 2,
@@ -448,6 +475,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
     }),
     ('vbr11.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9360,
         'bitrate': 8.143465909090908,
         'channels': 1,
@@ -456,6 +484,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 11025,
     }),
     ('vbr11stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9360,
         'bitrate': 8.143465909090908,
         'channels': 2,
@@ -464,6 +493,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 11025,
     }),
     ('vbr16.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9432,
         'bitrate': 8.251968503937007,
         'channels': 1,
@@ -472,6 +502,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 16000,
     }),
     ('vbr16stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9432,
         'bitrate': 8.251968503937007,
         'channels': 2,
@@ -480,6 +511,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 16000,
     }),
     ('vbr22.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9282,
         'bitrate': 8.145021489971347,
         'channels': 1,
@@ -488,6 +520,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 22050,
     }),
     ('vbr22stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 9282,
         'bitrate': 8.145021489971347,
         'channels': 2,
@@ -496,6 +529,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 22050,
     }),
     ('vbr32.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 37008,
         'bitrate': 32.50592885375494,
         'channels': 1,
@@ -504,6 +538,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 32000,
     }),
     ('vbr32stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 37008,
         'bitrate': 32.50592885375494,
         'channels': 2,
@@ -512,6 +547,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 32000,
     }),
     ('vbr44.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 36609,
         'bitrate': 32.21697198275862,
         'channels': 1,
@@ -520,6 +556,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
     }),
     ('vbr44stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 36609,
         'bitrate': 32.21697198275862,
         'channels': 2,
@@ -528,6 +565,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
     }),
     ('vbr48.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 36672,
         'bitrate': 32.33862433862434,
         'channels': 1,
@@ -536,6 +574,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 48000,
     }),
     ('vbr48stereo.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 36672,
         'bitrate': 32.33862433862434,
         'channels': 2,
@@ -545,6 +584,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('id3v24_genre_null_byte.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 256,
         'album': '\u79d8\u5bc6',
         'albumartist': 'aiko',
@@ -556,6 +596,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'year': '2008',
     }),
     ('vbr_xing_header_short.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 432,
         'bitrate': 24.0,
         'channels': 1,
@@ -574,6 +615,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 'artist7',
             ]
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2007,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -583,6 +625,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'genre': 'something 1',
     }),
     ('id3_frames.mp3', {
+        'mime_type': 'audio/mpeg',
         'filesize': 27576,
         'bitrate': 50.03636363636364,
         'channels': 1,
@@ -592,17 +635,20 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('id3v22_with_image.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 2311,
         'title': 'image',
     }),
     ('utf16_no_bom.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 1069,
         'title': 'no bom test ë',
         'artist': 'no bom test 2 ë',
     }),
     ('title_after_image.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 2311,
         'title': 'title after image',
         'track': 1,
@@ -611,6 +657,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'grouping': ['some grouping'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2007,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -632,6 +679,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'movement_total': ['2'],
             'show_movement': ['1']
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2007,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -648,6 +696,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('empty_frame.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 2005,
         'bitrate': 32.0,
         'channels': 1,
@@ -661,6 +710,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'lyrics': ['[00:00.00]\n[00:01.00]first line\n[00:01.55]second '
                        'line\n[00:05.99]third line'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2007,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -671,6 +721,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'lyrics': ['\nfirst line\nsecond line\nthird line'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 2007,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -684,6 +735,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                        '[18246:35.58]\n[18246:35.58]\n[18246:35.58]\n'
                        '[18246:35.58]\n[18246:35.58]\n[18246:35.58]'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 498,
         'bitrate': 128.0,
         'channels': 2,
@@ -698,6 +750,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                        '[18175:35.68]\n[18175:35.68]\n[18175:35.68]\n'
                        '[18175:35.68]'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 507,
         'bitrate': 128.0,
         'channels': 2,
@@ -718,6 +771,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 'me title</rdf:li>\n    </rdf:Alt>\n   </dc:title>\n  </rdf:De'
                 'scription>\n </rdf:RDF>\n</x:xmpmeta>'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 5712,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -729,6 +783,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('synced_lyrics_empty.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 1988,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -739,6 +794,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'title': ['another title', 'yet another title'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 1988,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -755,6 +811,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'track': ['2', '99'],
             'lyrics': ['duplicate lyrics', 'new lyrics', 'more lyrics'],
         }),
+        'mime_type': 'audio/mpeg',
         'filesize': 3037,
         'bitrate': 57.39124999999999,
         'channels': 1,
@@ -770,11 +827,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('multiple_images.mp3', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'filesize': 9633,
         'title': 'image',
     }),
     ('detect_mp3_fffb.x', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'duration': 3.7355102040816326,
@@ -783,6 +842,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('detect_mp3_fffb_id3v1.x', {
         'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
         'channels': 2,
         'samplerate': 44100,
         'genre': 'Darkwave',
@@ -797,6 +857,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('empty.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 3.684716553287982,
         'filesize': 4328,
         'bitrate': 112.0,
@@ -811,6 +872,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'replaygain_track_peak': ['1.17979193'],
             'replaygain_track_gain': ['-10.02 dB'],
         }),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'genre': 'JRock',
         'duration': 4.128798185941043,
         'album': 'Timeless',
@@ -826,6 +888,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('test.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 1.0,
         'album': 'the boss',
         'year': '2006',
@@ -840,6 +903,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('corrupt_metadata.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'filesize': 18648,
         'bitrate': 80.0,
         'duration': 2.132358276643991,
@@ -848,6 +912,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('composer.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'filesize': 4480,
         'album': 'An Album',
         'artist': 'An Artist',
@@ -864,6 +929,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('ogg_with_image.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'channels': 1,
         'duration': 0.1,
         'filesize': 5759,
@@ -881,6 +947,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'movement_total': ['2'],
             'show_movement': ['1']
         }),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'channels': 1,
         'duration': 0.1,
         'filesize': 4279,
@@ -897,6 +964,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('data_after_eos.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 3.684716553287982,
         'filesize': 4424,
         'bitrate': 112.0,
@@ -905,6 +973,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('no_audio.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 0.0,
         'filesize': 2837,
         'samplerate': 8000,
@@ -914,6 +983,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder': ['Lavf62.3.100'],
         }),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 30.0,
         'filesize': 9344,
         'bitrate': 16.8,
@@ -922,6 +992,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('negative_bitrate.ogg', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
         'duration': 7.6635,
         'filesize': 7224,
         'samplerate': 6000,
@@ -941,6 +1012,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'performer': ['Masayoshi Minoshima'],
             'vocal': ['nomico'],
         }),
+        'mime_type': 'audio/ogg; codecs="opus"',
         'albumartist': 'Alstroemeria Records',
         'samplerate': 48000,
         'channels': 2,
@@ -961,6 +1033,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder': ['opusenc from opus-tools 0.2']
         }),
+        'mime_type': 'audio/ogg; codecs="opus"',
         'filesize': 7251,
         'channels': 1,
         'samplerate': 48000,
@@ -973,6 +1046,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'isrc': ['test4'],
             'lyrics': ['test7']
         }),
+        'mime_type': 'audio/ogg; codecs="flac"',
         'filesize': 9273,
         'album': 'test2',
         'artist': 'test6',
@@ -987,8 +1061,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 5,
         'year': '2023',
     }),
+    ('empty_file.ogg', {
+        'other': OtherFields(),
+        'filesize': 0,
+    }),
     ('no_bitrate.spx', {
         'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="speex"',
         'filesize': 7921,
         'channels': 1,
         'samplerate': 16000,
@@ -1001,6 +1080,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder': ['Lavc62.11.100 libspeex'],
         }),
+        'mime_type': 'audio/ogg; codecs="speex"',
         'filesize': 2304,
         'channels': 1,
         'samplerate': 8000,
@@ -1012,6 +1092,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('test.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 1.0,
         'filesize': 176444,
@@ -1021,6 +1102,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('test3sMono.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 1,
         'duration': 3.0,
         'filesize': 264644,
@@ -1030,6 +1112,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('test-tagged.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 1.0,
         'filesize': 176688,
@@ -1046,6 +1129,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('test-riff-tags.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 1.0,
         'filesize': 176540,
@@ -1060,6 +1144,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('silence-22khz-mono-1s.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 1,
         'duration': 0.9991836734693877,
         'filesize': 48160,
@@ -1072,6 +1157,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'title': ['Stacked'],
             'isft': ['Lavf58.20.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 1,
         'duration': 1.0,
         'filesize': 44280,
@@ -1085,6 +1171,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('adpcm.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="2"',
         'channels': 1,
         'duration': 12.080136054421768,
         'filesize': 268686,
@@ -1103,6 +1190,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf59.16.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20670,
@@ -1120,6 +1208,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf59.16.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20682,
@@ -1136,6 +1225,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             '_disc': ['garbage'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'filesize': 8908,
         'bitrate': 705.6,
         'duration': 0.1,
@@ -1145,6 +1235,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('gsm_6_10.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="49"',
         'bitrate': 72.8,
         'channels': 1,
         'duration': 0.1,
@@ -1160,6 +1251,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('wav_with_image.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 1,
         'duration': 2.144625,
         'filesize': 22902,
@@ -1179,6 +1271,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 "</x:xmpmeta>"
             ]
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'artist': 'some artist',
         'title': 'some title',
         'album': 'some album',
@@ -1191,6 +1284,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('32bit_float.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="3"',
         'bitrate': 512.0,
         'channels': 2,
         'duration': 0.1,
@@ -1200,6 +1294,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('24bit_pcm.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 384.0,
         'channels': 2,
         'duration': 0.1,
@@ -1211,6 +1306,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 384.0,
         'channels': 2,
         'duration': 0.128,
@@ -1220,6 +1316,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('32bit_pcm.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 512.0,
         'channels': 2,
         'duration': 0.1,
@@ -1231,6 +1328,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 512.0,
         'channels': 2,
         'duration': 0.128,
@@ -1242,6 +1340,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
+        'mime_type': 'audio/wav; codecs="2"',
         'bitrate': 64.7588932806324,
         'channels': 2,
         'duration': 0.1265,
@@ -1253,6 +1352,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
+        'mime_type': 'audio/wav; codecs="85"',
         'channels': 2,
         'duration': 0.0,
         'filesize': 104,
@@ -1260,6 +1360,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('no_audio_data_uncompressed.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'channels': 2,
         'duration': 0.0,
         'filesize': 44,
@@ -1268,6 +1369,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('8bit_pcm.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 128.0,
         'channels': 2,
         'duration': 0.1,
@@ -1279,6 +1381,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 128.0,
         'channels': 2,
         'duration': 0.128,
@@ -1288,6 +1391,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('16bit_pcm.wav', {
         'other': OtherFields(),
+        'mime_type': 'audio/wav; codecs="1"',
         'bitrate': 256.0,
         'channels': 2,
         'duration': 0.1,
@@ -1295,8 +1399,24 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
         'bitdepth': 16,
     }),
+    ('mp3_audio.wav', {
+        'other': OtherFields({
+            'isft': ['Lavf61.7.100'],
+        }),
+        'mime_type': 'audio/wav; codecs="85"',
+        'filesize': 4264,
+        'samplerate': 44100,
+        'duration': 1.0250566893424036,
+        'channels': 1,
+        'bitrate': 32.46649706890831,
+    }),
+    ('empty_file.wav', {
+        'other': OtherFields(),
+        'filesize': 0,
+    }),
     ('flac1sMono.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'genre': 'Avantgarde',
         'album': 'alb',
         'year': '2014',
@@ -1313,6 +1433,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('flac453sStereo.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'duration': 453.51473922902494,
         'filesize': 84236,
@@ -1322,6 +1443,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('flac1.5sStereo.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'album': 'alb',
         'year': '2014',
@@ -1350,6 +1472,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'replaygain_track_gain': ['-8.08 dB'],
             'replaygain_album_peak': ['1.0000'],
         }),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'track_total': 11,
         'album': 'Belle and Sebastian Write About Love',
@@ -1365,6 +1488,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('no-tags.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 4692,
@@ -1383,6 +1507,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'replaygain_track_gain': ['-9.61 dB'],
             'replaygain_track_peak': ['1.000000'],
         }),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'album': 'Appleseed Original Soundtrack',
         'year': '2004',
@@ -1403,6 +1528,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('106-invalid-streaminfo.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'filesize': 4692,
         'bitrate': 10.186943678613627,
         'channels': 2,
@@ -1412,6 +1538,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('106-short-picture-block-size.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'filesize': 4692,
         'bitrate': 10.186943678613627,
         'channels': 2,
@@ -1421,6 +1548,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('with_padded_id3_header.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'filesize': 16070,
         'album': 'album',
         'artist': 'artist',
@@ -1448,6 +1576,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'album': ['album'],
             'title': ['title'],
         }),
+        'mime_type': 'audio/flac',
         'filesize': 19522,
         'album': 'Unbekannter Titel',
         'artist': 'Unbekannter Künstler',
@@ -1467,6 +1596,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('flac_invalid_track_number.flac', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'filesize': 235,
         'bitrate': 18.8,
         'channels': 1,
@@ -1485,6 +1615,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'track_total': ['2', '3'],
             'url': ['https://example.com'],
         }),
+        'mime_type': 'audio/flac',
         'filesize': 3016,
         'album': 'album 1',
         'artist': 'artist 1',
@@ -1503,6 +1634,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'lyrics': ['some lyrics here\nnew line']
         }),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 4777,
@@ -1510,8 +1642,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'bitdepth': 16,
     }),
+    ('empty_file.flac', {
+        'other': OtherFields(),
+        'filesize': 0,
+    }),
     ('detect_flac.x', {
         'other': OtherFields(),
+        'mime_type': 'audio/flac',
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 120,
@@ -1530,6 +1667,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'peakvalue': ['30369'],
             'averagelevel': ['7291'],
         }),
+        'mime_type': 'audio/x-ms-wma; codecs="353"',
         'samplerate': 44100,
         'album': 'The Colour and the Shape',
         'title': 'Doll',
@@ -1546,6 +1684,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('lossless.wma', {
         'other': OtherFields(),
+        'mime_type': 'audio/x-ms-wma; codecs="355"',
         'samplerate': 44100,
         'bitrate': 667.296,
         'filesize': 2500,
@@ -1557,6 +1696,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf60.16.100']
         }),
+        'mime_type': 'audio/x-ms-wma; codecs="353"',
         'filesize': 3940,
         'bitrate': 128.0,
         'duration': 2.1409999999999996,
@@ -1568,6 +1708,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'grouping': ['some grouping'],
             'work': ['some work'],
         }),
+        'mime_type': 'audio/x-ms-wma; codecs="353"',
         'filesize': 4070,
         'bitrate': 128.0,
         'duration': 2.1409999999999996,
@@ -1597,6 +1738,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'encoder_settings': ['Lavf60.16.100'],
         }),
+        'mime_type': 'audio/x-ms-wma; codecs="353"',
         'filesize': 4723,
         'bitrate': 128.0,
         'duration': 2.1409999999999996,
@@ -1605,6 +1747,10 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'title': 'some title',
         'album': 'some album',
         'artist': 'some artist',
+    }),
+    ('empty_file.wma', {
+        'other': OtherFields(),
+        'filesize': 0,
     }),
     ('test.m4a', {
         'other': OtherFields({
@@ -1626,6 +1772,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'cpil': ['0'],
             'pgap': ['0'],
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'samplerate': 44100,
         'duration': 314.97868480725623,
         'bitrate': 256.0,
@@ -1645,6 +1792,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'bpm': ['1'],
             'encoded_by': ['Lavf60.3.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'test1',
         'composer': 'test8',
         'filesize': 7371,
@@ -1659,6 +1807,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'lyrics': ['Album notes:'],
             'upc': ['0034571177380']
         }),
+        'mime_type': 'audio/mp4; codecs="alac"',
         'artist': 'Howard Shelley',
         'filesize': 20000,
         'composer': 'Clementi, Muzio (1752-1832)',
@@ -1683,6 +1832,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'description': ['test description'],
             'encoded_by': ['Lavf59.27.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'filesize': 32006,
         'bitrate': 101.038,
         'channels': 2,
@@ -1694,6 +1844,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'description': ['test description']
         }),
+        'mime_type': 'audio/mp4',
         'filesize': 2639,
         'comment': 'test comment',
         'duration': 727.1066666666667,
@@ -1704,6 +1855,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'bpm': ['99999'],
             'encoded_by': ['Lavf60.3.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'test1',
         'composer': 'test8',
         'filesize': 6260,
@@ -1714,6 +1866,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('mvhd_version_1.m4a', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.5"',
         'title': '64-bit test',
         'filesize': 2048,
         'samplerate': 44100,
@@ -1730,6 +1883,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'encoded_by': ['Lavf61.7.100'],
             'grouping': ['grouping', 'second grouping']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'some artist',
         'title': 'some title',
         'album': 'some album',
@@ -1747,6 +1901,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'cnid': ['3'],
             'pgap': ['1'],
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'filesize': 1995,
         'samplerate': 44100,
         'duration': 0.524,
@@ -1762,6 +1917,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'movement_total': ['2'],
             'show_movement': ['1'],
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'filesize': 1995,
         'samplerate': 44100,
         'duration': 0.524,
@@ -1781,6 +1937,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'description': ['test description'],
             'encoded_by': ['Lavf59.27.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'comment': 'test comment',
         'filesize': 32014,
         'samplerate': 44100,
@@ -1790,10 +1947,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('mp4_extended_size_truncated.m4a', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4',
         'filesize': 39
     }),
     ('mp4_size_zero.m4a', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4',
         'filesize': 152,
         'duration': 2.0
     }),
@@ -1810,6 +1969,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'encoded_by': ['Lavf61.7.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'some artist',
         'title': 'some title',
         'album': 'some album',
@@ -1823,6 +1983,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoded_by': ['Lavf61.7.100']
         }),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'some artist',
         'title': 'some title',
         'album': 'some album',
@@ -1834,6 +1995,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('8bit_pcm_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 19.76,
         'channels': 2,
         'duration': 0.1,
@@ -1842,6 +2004,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('8bit_pcm_lavf_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 0.125,
         'channels': 2,
         'duration': 0.128,
@@ -1850,6 +2013,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('16bit_pcm_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 23.6,
         'channels': 2,
         'duration': 0.1,
@@ -1858,6 +2022,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('24bit_pcm_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 23.84,
         'channels': 2,
         'duration': 0.1,
@@ -1866,6 +2031,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('24bit_pcm_extended_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 134.812,
         'channels': 2,
         'duration': 0.128,
@@ -1874,6 +2040,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('32bit_pcm_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 0.16,
         'channels': 2,
         'duration': 0.1,
@@ -1882,6 +2049,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('32bit_pcm_extended_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 262.187,
         'channels': 2,
         'duration': 0.128,
@@ -1890,14 +2058,31 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('32bit_float_to_als.mp4', {
         'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="mp4a.40.36"',
         'bitrate': 0.64,
         'channels': 2,
         'duration': 0.1,
         'filesize': 736,
         'samplerate': 8000,
     }),
+    ('mp3_audio.m4a', {
+        'other': OtherFields({
+            'encoded_by': ['Lavf61.7.100']
+        }),
+        'mime_type': 'audio/mp4; codecs="mp4a.6B"',
+        'filesize': 4922,
+        'samplerate': 44100,
+        'duration': 1.025,
+        'channels': 1,
+        'bitrate': 32.48,
+    }),
+    ('empty_file.m4a', {
+        'other': OtherFields(),
+        'filesize': 0,
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 2,
         'duration': 1.0,
         'filesize': 177620,
@@ -1916,6 +2101,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'copyright': ['℗ 1992 Ace Records']
         }),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 2,
         'duration': 0.0,
         'filesize': 164,
@@ -1926,6 +2112,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('pluck-pcm8.aiff', {
         'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 2,
         'duration': 0.2999546485260771,
         'filesize': 6892,
@@ -1942,6 +2129,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'comment': ['user: kabal@CAPELLA', 'program: CopyAudio']
         }),
+        'mime_type': 'audio/aiff; codecs="ulaw"',
         'channels': 2,
         'duration': 2.936625,
         'filesize': 47148,
@@ -1952,6 +2140,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('invalid_sample_rate.aiff', {
         'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 1,
         'filesize': 4096,
         'bitdepth': 16,
@@ -1961,6 +2150,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'copyright': ['test'],
             'isrc': ['CC-XXX-YY-NNNNN']
         }),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 1,
         'duration': 2.176,
         'filesize': 18532,
@@ -1972,6 +2162,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('aiff_with_image.aiff', {
         'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 1,
         'duration': 2.176,
         'filesize': 21044,
@@ -1999,6 +2190,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 '</rdf:RDF>\n</x:xmpmeta>'
             ]
         }),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 2,
         'duration': 0.2999546485260771,
         'filesize': 9612,
@@ -2011,11 +2203,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('no_audio.aiff', {
         'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
         'channels': 2,
         'duration': 0.0,
         'filesize': 54,
         'samplerate': 8000,
         'bitdepth': 16,
+    }),
+    ('empty_file.aiff', {
+        'other': OtherFields(),
+        'filesize': 0,
     }),
 ])
 
@@ -2282,6 +2479,11 @@ class TestAll(TestCase):
                     key: val for key, val in expected.items()
                     if key not in excluded_attrs
                 }
+                if 'mime_type' in filtered_expected:
+                    filtered_expected['mime_type'] = (
+                        str(filtered_expected['mime_type'])
+                        .split(';', maxsplit=1)[0]
+                    )
                 self.compare_tag(results, filtered_expected)
                 assert tag.images.any is None
 
@@ -2290,7 +2492,7 @@ class TestAll(TestCase):
             with self.subTest(testfile=testfile, expected=expected):
                 filename = os.path.join(SAMPLE_FOLDER, testfile)
                 allowed_attrs = {
-                    'bitdepth', 'bitrate', 'channels', 'duration',
+                    'mime_type', 'bitdepth', 'bitrate', 'channels', 'duration',
                     'filesize', 'samplerate'}
                 tag = TinyTag.get(filename, tags=False, duration=True)
                 results = {
@@ -2455,6 +2657,7 @@ class TestAll(TestCase):
                      file_handle: BinaryIO | None,
                      tags: bool,
                      duration: bool) -> None:
+                self.filesize = 1
                 self._filehandler = file_handle
                 self._load(tags=tags, duration=duration)
         tag = IncompleteTag()
@@ -2486,7 +2689,8 @@ class TestAll(TestCase):
             os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
         vars_str = str(vars(tag))
         self.assertIn(
-            "flac_with_image.flac', 'filesize': 3016, 'duration': 0.1, "
+            "flac_with_image.flac', 'filesize': 3016, "
+            "'mime_type': 'audio/flac', 'duration': 0.1, "
             "'channels': 1, 'bitrate': 241.28, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
             "'albumartist': None, 'composer': None, 'album': 'album 1', "
@@ -2523,7 +2727,8 @@ class TestAll(TestCase):
         tag = TinyTag.get(
             os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
         self.assertIn(
-            "flac_with_image.flac', 'filesize': 3016, 'duration': 0.1, "
+            "flac_with_image.flac', 'filesize': 3016, "
+            "'mime_type': 'audio/flac', 'duration': 0.1, "
             "'channels': 1, 'bitrate': 241.28, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
             "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
