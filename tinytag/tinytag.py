@@ -327,7 +327,7 @@ class TinyTag:
     @staticmethod
     def _unpad(s: str) -> str:
         # certain strings *may* be terminated with a zero byte at the end
-        return s.strip('\x00')
+        return s.rstrip('\x00')
 
     def get_image(self) -> bytes | None:
         """Deprecated, use 'images.any' instead."""
@@ -1149,17 +1149,12 @@ class _ID3(TinyTag):
             if genre_id < len(self._ID3V1_GENRES):
                 self._set_field('genre', self._ID3V1_GENRES[genre_id])
 
-    def _parse_custom_field(self, content: str) -> bool:
-        custom_field_name, separator, value = content.partition('\x00')
+    def _set_custom_field(self, custom_field_name: str, value: str) -> None:
         custom_field_name_lower = custom_field_name.lower()
-        value = value.lstrip('\ufeff')
-        if custom_field_name_lower and separator and value:
-            field_name = self._ID3_MAPPING_CUSTOM.get(
-                custom_field_name_lower,
-                self._OTHER_PREFIX + custom_field_name_lower)
-            self._set_field(field_name, value)
-            return True
-        return False
+        field_name = self._ID3_MAPPING_CUSTOM.get(
+            custom_field_name_lower,
+            self._OTHER_PREFIX + custom_field_name_lower)
+        self._set_field(field_name, value)
 
     def _set_grouping_work_fields(self) -> None:
         # iTunes 12.5.4.42 added a new GRP1 frame for 'grouping', and
@@ -1293,21 +1288,31 @@ class _ID3(TinyTag):
         should_set_field = True
         if self._parse_tags and frame_id in self._ID3_MAPPING:
             fieldname = self._ID3_MAPPING[frame_id]
-            language = fieldname in {'comment', 'other.lyrics'}
-            value = self._decode_string(fh.read(frame_size), language)
+            content = fh.read(frame_size)
+            if fieldname in {'comment', 'other.lyrics'}:
+                encoding = content[:1]
+                content = content[4:]
+                end_pos = self._find_string_end_pos(content, encoding)
+                value = self._decode_string(encoding + content[:end_pos])
+                if end_pos < len(content):
+                    content_descriptor = value
+                    value = self._decode_string(encoding + content[end_pos:])
+                    # check if comment is a key-value pair (used by iTunes)
+                    if fieldname == 'comment' and content_descriptor and value:
+                        self._set_custom_field(content_descriptor, value)
+                        return frame_size
+            else:
+                value = self._decode_string(content)
             if not value:
                 return frame_size
-            if fieldname == "comment":
-                # check if comment is a key-value pair (used by iTunes)
-                should_set_field = not self._parse_custom_field(value)
-            elif fieldname in {'track', 'disc', 'other.movement'}:
+            if fieldname in {'track', 'disc', 'other.movement'}:
                 if '/' in value:
                     value, total = value.split('/')[:2]
                     if total.isdecimal():
                         self._set_field(f'{fieldname}_total', int(total))
                 if value.isdecimal():
                     self._set_field(fieldname, int(value))
-                should_set_field = False
+                return frame_size
             elif fieldname == 'genre':
                 genre_id = 255
                 # funky: id3v1 genre hidden in a id3v2 field
@@ -1323,20 +1328,23 @@ class _ID3(TinyTag):
                     value = self._ID3V1_GENRES[genre_id]
             elif fieldname == 'modern_grouping':
                 self._modern_grouping_values.append(value)
-                should_set_field = False
+                return frame_size
             elif fieldname == 'legacy_grouping':
                 self._legacy_grouping_values.append(value)
-                should_set_field = False
-            if should_set_field:
-                self._set_field(fieldname, value)
+                return frame_size
+            self._set_field(fieldname, value)
         elif self._parse_tags and frame_id in self._SYNCED_LYRICS_FRAME_IDS:
             lyrics = self._parse_synced_lyrics(fh.read(frame_size))
             self._set_field('other.lyrics', lyrics)
         elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
-            value = self._decode_string(fh.read(frame_size))
-            if value:
-                self._parse_custom_field(value)
+            content = fh.read(frame_size)
+            encoding = content[:1]
+            end_pos = self._find_string_end_pos(content, encoding, start_pos=1)
+            description = self._decode_string(content[:end_pos])
+            value = self._decode_string(encoding + content[end_pos:])
+            if description and value:
+                self._set_custom_field(description, value)
         elif self._parse_tags and frame_id == b'PRIV':
             content = fh.read(frame_size)
             owner_id_end_pos = self._find_string_end_pos(content)
@@ -1376,7 +1384,7 @@ class _ID3(TinyTag):
                 break
         return start_pos if end_pos < 0 else end_pos
 
-    def _decode_string(self, value: bytes, language: bool = False) -> str:
+    def _decode_string(self, value: bytes) -> str:
         default_encoding = 'ISO-8859-1'
         if self._default_encoding:
             default_encoding = self._default_encoding
@@ -1387,23 +1395,12 @@ class _ID3(TinyTag):
             encoding = default_encoding
         elif first_byte == b'\x01':  # UTF-16 with BOM
             value = value[1:]
-            # remove language (but leave BOM)
-            if language:
-                if value[3:5] in {b'\xfe\xff', b'\xff\xfe'}:
-                    value = value[3:]
-                if value[:3].isalpha():
-                    value = value[3:]  # remove language
-                # strip optional additional null bytes
-                value = value.lstrip(b'\x00')
             # read byte order mark to determine endianness
             encoding = ('UTF-16be' if value.startswith(b'\xfe\xff')
                         else 'UTF-16le')
             # strip the bom if it exists
             if value.startswith(b'\xfe\xff') or value.startswith(b'\xff\xfe'):
                 value = value[2:] if len(value) % 2 == 0 else value[2:-1]
-            # remove ADDITIONAL OTHER BOM :facepalm:
-            if value.startswith(b'\x00\x00\xff\xfe'):
-                value = value[4:]
         elif first_byte == b'\x02':  # UTF-16 without BOM
             # strip optional null byte, if byte count uneven
             value = value[1:-1] if len(value) % 2 == 0 else value[1:]
@@ -1413,8 +1410,6 @@ class _ID3(TinyTag):
             encoding = 'UTF-8'
         else:
             encoding = default_encoding  # wild guess
-        if language and value[:3].isalpha():
-            value = value[3:]  # remove language
         return self._unpad(value.decode(encoding, 'replace'))
 
     @staticmethod
