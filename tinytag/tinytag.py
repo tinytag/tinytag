@@ -119,7 +119,8 @@ class TinyTag:
             duration: bool = True,
             image: bool = False,
             encoding: str | None = None,
-            ignore_errors: bool | None = None) -> TinyTag:
+            ignore_errors: bool | None = None,
+            header_detection: bool = True) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
         filename_str = None
@@ -141,7 +142,10 @@ class TinyTag:
             file_obj.seek(0, SEEK_END)
             filesize = file_obj.tell()
             file_obj.seek(0)
-            parser_class = cls._get_parser_class(filename_str, file_obj)
+            if header_detection:
+                parser_class = cls._get_parser_class(filename_str, file_obj)
+            else:
+                parser_class = cls._get_parser_class(filename_str)
             tag = parser_class()
             tag._filehandler = file_obj
             tag._default_encoding = encoding
@@ -248,7 +252,7 @@ class TinyTag:
             parser_class = cls._get_parser_for_filename(filename)
             if parser_class is not None:
                 return parser_class
-        # try determining the file type by magic byte header
+        # try determining the file type by magic byte header, if provided
         if filehandle:
             parser_class = cls._get_parser_for_file_handle(filehandle)
             if parser_class is not None:

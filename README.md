@@ -364,6 +364,20 @@ if fish_images:
     description = image.description
 ```
 
+### Magic Header Detection
+
+By default, tinytag will determine the file type by 1. checking the file name
+extension, and 2. reading and inspecting the file header, i.e. magic header
+detection.
+
+In case you want to disable magic header detection, e.g. to minimize read
+operations when many non-audio files exist in a folder, pass a
+`header_detection` argument with a value of `False` (added in tinytag 2.3.0).
+
+```python
+tag: TinyTag = TinyTag.get('invalid_file.jpg', header_detection=False)
+```
+
 ### Encoding
 
 To open files using a specific encoding, you can use the `encoding` parameter.
@@ -371,7 +385,7 @@ This parameter is however only used for formats where the encoding is not
 explicitly specified.
 
 ```python
-TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
+tag: TinyTag = TinyTag.get('a_file_with_gbk_encoding.mp3', encoding='gbk')
 ```
 
 ### File-like Objects
@@ -380,7 +394,7 @@ To use a file-like object (e.g. BytesIO) instead of a file path, pass a
 `file_obj` keyword argument:
 
 ```python
-TinyTag.get(file_obj=your_file_obj)
+tag: TinyTag = TinyTag.get(file_obj=your_file_obj)
 ```
 
 ### Exceptions
