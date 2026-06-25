@@ -1967,6 +1967,12 @@ class TestAll(TestCase):
                 tag = TinyTag.get(filename)
                 self.assertIsInstance(tag, expected)
 
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                with self.assertRaises(UnsupportedFormatError) as context:
+                    TinyTag.get(filename, header_detection=False)
+                self.assertIsInstance(context.exception, TinyTagException)
+
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
             TinyTag.get()
