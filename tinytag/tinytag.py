@@ -403,7 +403,8 @@ class Images:
     def _set_field(self, fieldname: str, value: Image) -> None:
         old_value = self.__dict__.get(fieldname)
         if fieldname.startswith(self._OTHER_PREFIX) or old_value is not None:
-            fieldname = fieldname[len(self._OTHER_PREFIX):]
+            if fieldname.startswith(self._OTHER_PREFIX):
+                fieldname = fieldname[len(self._OTHER_PREFIX):]
             other_values = self.other.get(fieldname, [])
             other_values.append(value)
             if _DEBUG:
