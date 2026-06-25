@@ -822,6 +822,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'channels': 2,
     }),
+    ('no_audio.ogg', {
+        'other': OtherFields(),
+        'duration': 0.0,
+        'filesize': 2837,
+        'samplerate': 8000,
+        'channels': 2,
+    }),
     ('test.opus', {
         'other': OtherFields({
             'encoder': ['Lavc57.24.102 libopus'],
@@ -1605,7 +1612,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 0.0,
         'filesize': 164,
-        'bitrate': 1411.2,
         'samplerate': 44100,
         'bitdepth': 16,
         'title': 'Go Out and Get Some',
@@ -1695,6 +1701,14 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 11025,
         'bitdepth': 8,
         'comment': 'Audacity Pluck + Wahwah',
+    }),
+    ('no_audio.aiff', {
+        'other': OtherFields(),
+        'channels': 2,
+        'duration': 0.0,
+        'filesize': 54,
+        'samplerate': 8000,
+        'bitdepth': 16,
     }),
 ])
 

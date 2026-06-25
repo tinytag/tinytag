@@ -1483,9 +1483,11 @@ class _Ogg(TinyTag):
         self.duration = max(
             (self._granule_pos - self._pre_skip) / self.samplerate, 0
         )
-        if self._audio_size is None or not self.duration:
-            return  # not an opus file
-        self.bitrate = self._audio_size * 8 / self.duration / 1000
+        if not self.duration:
+            self.bitrate = None  # no data means no meaningful bitrate
+            return
+        if self._audio_size:  # opus file
+            self.bitrate = self._audio_size * 8 / self.duration / 1000
 
     def _parse_tag(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
@@ -1495,7 +1497,9 @@ class _Ogg(TinyTag):
                 if self._parse_duration:
                     self.channels, self.samplerate = unpack(
                         "<Bi", packet[11:16])
-                    self.bitrate = unpack("<i", packet[20:24])[0] / 1000
+                    bitrate = unpack("<i", packet[20:24])[0] / 1000
+                    if bitrate > 0:
+                        self.bitrate = bitrate
             elif packet.startswith(b"\x03vorbis"):
                 if self._parse_tags:
                     walker = BytesIO(packet)
@@ -2061,8 +2065,9 @@ class _Aiff(TinyTag):
                     sr = int(mantissa * (2 ** (exp - 0x3FFF - 63)))
                     duration = num_frames / sr
                     bitrate = sr * channels * bitdepth / 1000
-                    self.samplerate, self.duration, self.bitrate = (
-                        sr, duration, bitrate)
+                    if duration > 0:
+                        self.bitrate = bitrate
+                    self.samplerate, self.duration = sr, duration
                 except OverflowError:
                     pass
             elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
