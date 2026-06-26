@@ -108,6 +108,7 @@ class TinyTag:
         self._parse_duration = True
         self._parse_tags = True
         self._load_image = False
+        self._duration_parsed = False
         self._tags_parsed = False
         self.__dict__: dict[str, str | float | Images | OtherFields | None]
 
@@ -266,12 +267,8 @@ class TinyTag:
         self._load_image = image
         if self._filehandler is None:
             raise ValueError("File handle is required")
-        if tags:
-            self._parse_tag(self._filehandler)
-        if duration:
-            if tags:  # rewind file if the tags were already parsed
-                self._filehandler.seek(0)
-            self._determine_duration(self._filehandler)
+        if tags or duration:
+            self._parse(self._filehandler)
 
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
@@ -306,10 +303,7 @@ class TinyTag:
             print(f'Setting field "{fieldname}" to "{new_value!r}"')
         self.__dict__[fieldname] = new_value
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        raise NotImplementedError
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         raise NotImplementedError
 
     def _update(self, other: TinyTag) -> None:
@@ -495,11 +489,29 @@ class _MP4(TinyTag):
 
     _audio_data_tree: _DataTreeDict | None = None
     _meta_data_tree: _DataTreeDict | None = None
+    _combined_tree: _DataTreeDict | None = None
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
-        if _MP4._audio_data_tree is None:
-            _MP4._audio_data_tree = {
+    def _parse(self, fh: BinaryIO) -> None:
+        # The parser tree: Each key is an atom name which is traversed if
+        # existing. Leaves of the parser tree are callables which receive
+        # the atom data. Callables return {fieldname: value} which is updates
+        # the TinyTag.
+        tree = {}
+        if self._parse_duration and self._parse_tags:
+            tree = self._build_combined_tree()
+        elif self._parse_duration:
+            tree = self._build_audio_data_tree()
+        elif self._parse_tags:
+            tree = self._build_meta_data_tree()
+        self._traverse_atoms(fh, path=tree)
+        self._duration_parsed = self._parse_duration
+        self._tags_parsed = self._parse_tags
+
+    @classmethod
+    def _build_audio_data_tree(cls) -> _DataTreeDict:
+        if cls._audio_data_tree is None:
+            # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
+            cls._audio_data_tree = {
                 b'moov': {
                     b'mvhd': _MP4._parse_mvhd,
                     b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {
@@ -508,15 +520,12 @@ class _MP4(TinyTag):
                     }}}}}
                 }
             }
-        self._traverse_atoms(fh, path=_MP4._audio_data_tree)
+        return cls._audio_data_tree
 
-    def _parse_tag(self, fh: BinaryIO) -> None:
-        # The parser tree: Each key is an atom name which is traversed if
-        # existing. Leaves of the parser tree are callables which receive
-        # the atom data. Callables return {fieldname: value} which is updates
-        # the TinyTag.
-        if _MP4._meta_data_tree is None:
-            _MP4._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
+    @classmethod
+    def _build_meta_data_tree(cls) -> _DataTreeDict:
+        if cls._meta_data_tree is None:
+            cls._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
                 # http://atomicparsley.sourceforge.net/mpeg-4files.html
                 # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
                 b'\xa9ART': {b'data': _MP4._data_parser('artist')},
@@ -553,7 +562,19 @@ class _MP4(TinyTag):
                 b'covr': {b'data': _MP4._parse_cover_image},
                 b'----': _MP4._parse_custom_field,
             }}}}, b'uuid': _MP4._parse_uuid}
-        self._traverse_atoms(fh, path=_MP4._meta_data_tree)
+        return cls._meta_data_tree
+
+    @classmethod
+    def _build_combined_tree(cls) -> _DataTreeDict:
+        if cls._combined_tree is None:
+            cls._combined_tree = result = dict(cls._build_audio_data_tree())
+            for key, value in cls._build_meta_data_tree().items():
+                current = result.get(key)
+                if isinstance(current, dict) and isinstance(value, dict):
+                    result[key] = {**current, **value}
+                else:
+                    result[key] = value
+        return cls._combined_tree
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
@@ -959,10 +980,22 @@ class _ID3(TinyTag):
 
     def __init__(self) -> None:
         super().__init__()
-        # save position after the ID3 tag for duration measurement speedup
-        self._bytepos_after_id3v2 = -1
         self._modern_grouping_values: list[str] = []
         self._legacy_grouping_values: list[str] = []
+
+    def _parse(self, fh: BinaryIO) -> None:
+        audio_offset = 0
+        if self._parse_tags:
+            audio_offset = self._parse_id3v2(fh)
+        elif self._parse_duration:
+            audio_offset, _extended, _major = self._parse_id3v2_header(fh)
+        if self._parse_duration:
+            self._determine_duration(fh, audio_offset)
+        if self._parse_tags and self.filesize >= self._ID3V1_TAG_SIZE:
+            # try parsing id3v1 at the end of file
+            fh.seek(self.filesize - self._ID3V1_TAG_SIZE)
+            self._parse_id3v1(fh)
+        self._tags_parsed = self._parse_tags
 
     @staticmethod
     def _parse_xing_header(fh: BinaryIO) -> tuple[int, int]:
@@ -980,21 +1013,16 @@ class _ID3(TinyTag):
             fh.seek(4, SEEK_CUR)
         return frames, byte_count
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        # if tag reading was disabled, find start position of audio data
-        if self._bytepos_after_id3v2 == -1:
-            self._parse_id3v2_header(fh)
-
+    def _determine_duration(self, fh: BinaryIO, audio_offset: int) -> None:
         max_estimation_frames = (
             (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
         frame_size_accu = 0
-        audio_offset = self._bytepos_after_id3v2
         frames = 0  # count frames for determining mp3 duration
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
         last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
         # seek to first position after id3 tag (speedup for large header)
         first_mpeg_id = None
-        fh.seek(self._bytepos_after_id3v2)
+        fh.seek(audio_offset)
         while True:
             # reading through garbage until 11 '1' sync-bits are found
             header = fh.read(4)
@@ -1047,6 +1075,7 @@ class _ID3(TinyTag):
                             samples_pf = 576
                         self.duration = dur = xframes * samples_pf / samplerate
                         self.bitrate = byte_count * 8 / dur / 1000
+                        self._duration_parsed = True
                         return
                 fh.seek(prev_offset)
 
@@ -1067,19 +1096,14 @@ class _ID3(TinyTag):
                 samples = est_frame_count * self._SAMPLES_PER_FRAME
                 self.duration = samples / samplerate
                 self.bitrate = bitrate_accu / frames
+                self._duration_parsed = True
                 return
 
             if frame_length > 1:  # jump over current frame body
                 fh.seek(frame_length - header_len, SEEK_CUR)
         if self.samplerate:
             self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
-        self._parse_id3v2(fh)
-        if self.filesize >= self._ID3V1_TAG_SIZE:
-            # try parsing id3v1 at the end of file
-            fh.seek(self.filesize - self._ID3V1_TAG_SIZE)
-            self._parse_id3v1(fh)
+        self._duration_parsed = True
 
     def _parse_id3v2_header(self, fh: BinaryIO) -> tuple[int, bool, int]:
         size = major = 0
@@ -1093,13 +1117,12 @@ class _ID3(TinyTag):
                 print(f'Found id3 v2.{major}')
             extended = (header[5] & 0x40) > 0
             size = self._unsynchsafe(unpack('4B', header[6:10]))
-        self._bytepos_after_id3v2 = size
         return size, extended, major
 
-    def _parse_id3v2(self, fh: BinaryIO) -> None:
+    def _parse_id3v2(self, fh: BinaryIO) -> int:
         size, extended, major = self._parse_id3v2_header(fh)
         if size <= 0:
-            return
+            return size
         end_pos = fh.tell() + size
         parsed_size = 0
         if extended:  # just read over the extended header.
@@ -1112,6 +1135,7 @@ class _ID3(TinyTag):
             parsed_size += frame_size
         fh.seek(end_pos)
         self._set_grouping_work_fields()
+        return size
 
     def _parse_id3v1(self, fh: BinaryIO) -> None:
         content = fh.read(3 + 30 + 30 + 30 + 4 + 30 + 1)
@@ -1476,26 +1500,12 @@ class _Ogg(TinyTag):
     def __init__(self) -> None:
         super().__init__()
         self._granule_pos = 0
-        self._pre_skip = 0  # number of samples to skip in opus stream
         self._audio_size: int | None = None  # size of opus audio stream
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        if not self._tags_parsed:
-            self._parse_tag(fh)  # determine sample rate
-        if self.duration is not None or not self.samplerate:
-            return  # either ogg flac or invalid file
-        self.duration = max(
-            (self._granule_pos - self._pre_skip) / self.samplerate, 0
-        )
-        if not self.duration:
-            self.bitrate = None  # no data means no meaningful bitrate
-            return
-        if self._audio_size:  # opus file
-            self.bitrate = self._audio_size * 8 / self.duration / 1000
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
         check_speex_second_packet = False
+        pre_skip = 0  # number of samples to skip in opus stream
         for packet in self._parse_pages(fh):
             if packet.startswith(b"\x01vorbis"):
                 if self._parse_duration:
@@ -1504,11 +1514,13 @@ class _Ogg(TinyTag):
                     bitrate = unpack("<i", packet[20:24])[0] / 1000
                     if bitrate > 0:
                         self.bitrate = bitrate
+                    self._duration_parsed = True
             elif packet.startswith(b"\x03vorbis"):
                 if self._parse_tags:
                     walker = BytesIO(packet)
                     walker.seek(7)  # jump over header name
                     self._parse_vorbis_comment(walker)
+                    self._tags_parsed = True
             elif packet.startswith(b'OpusHead'):
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
@@ -1517,12 +1529,13 @@ class _Ogg(TinyTag):
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
                         self.samplerate = 48000
-                        self._pre_skip = pre_skip
+                    self._duration_parsed = True
             elif packet.startswith(b'OpusTags'):
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
                     walker.seek(8)  # jump over header name
                     self._parse_vorbis_comment(walker)
+                    self._tags_parsed = True
                 self._audio_size = 0  # start counting size of audio stream
             elif packet.startswith(b'\x7fFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
@@ -1534,9 +1547,10 @@ class _Ogg(TinyTag):
                 flactag._filehandler = walker
                 flactag.filesize = self.filesize
                 flactag._load(
-                    tags=self._parse_tags, duration=self._parse_duration,
+                    tags=False, duration=self._parse_duration,
                     image=self._load_image)
                 self._update(flactag)
+                self._duration_parsed = self._parse_duration
                 check_flac_second_packet = True
             elif check_flac_second_packet:
                 # second packet contains FLAC metadata block
@@ -1547,12 +1561,14 @@ class _Ogg(TinyTag):
                     # pylint: disable=protected-access
                     if block_type == _Flac._VORBIS_COMMENT:
                         self._parse_vorbis_comment(walker)
+                    self._tags_parsed = True
                 check_flac_second_packet = False
             elif packet.startswith(b'Speex   '):
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
                     self.samplerate = unpack("<i", packet[36:40])[0]
                     self.channels, self.bitrate = unpack("<ii", packet[48:56])
+                    self._duration_parsed = True
                 check_speex_second_packet = True
             elif check_speex_second_packet:
                 if self._parse_tags:
@@ -1563,15 +1579,23 @@ class _Ogg(TinyTag):
                     self._set_field('comment', comment)
                     # other tags
                     self._parse_vorbis_comment(walker, has_vendor=False)
+                    self._tags_parsed = True
                 check_speex_second_packet = False
-            else:
+            if self._tags_parsed and not self._parse_duration:
                 # Optimization: If we need to determine the duration, read
                 # granule_pos of remaining pages, but skip contents of
                 # segments. If we don't need the duration, stop here.
-                self._tags_parsed = True
-                if not self._parse_duration:
-                    return
-        self._tags_parsed = True
+                break
+        if self.duration is not None or not self.samplerate:
+            return  # either ogg flac or invalid file
+        self.duration = max(
+            (self._granule_pos - pre_skip) / self.samplerate, 0
+        )
+        if not self.duration:
+            self.bitrate = None  # no data means no meaningful bitrate
+            return
+        if self._audio_size:  # opus file
+            self.bitrate = self._audio_size * 8 / self.duration / 1000
 
     def _parse_vorbis_comment(self,
                               fh: BinaryIO,
@@ -1704,11 +1728,7 @@ class _Wave(TinyTag):
         0x03,  # IEEE FLOAT
     }
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        if not self._tags_parsed:
-            self._parse_tag(fh)
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         # http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
         # https://en.wikipedia.org/wiki/WAV
         header = fh.read(12)
@@ -1788,7 +1808,8 @@ class _Wave(TinyTag):
             self.duration = audio_size / (block_align * self.samplerate)
             if self.duration:
                 self.bitrate = block_align * self.samplerate * 8 / 1000
-        self._tags_parsed = True
+        self._duration_parsed = self._parse_duration
+        self._tags_parsed = self._parse_tags
 
 
 class _Flac(TinyTag):
@@ -1798,11 +1819,7 @@ class _Flac(TinyTag):
     _VORBIS_COMMENT = 4
     _PICTURE = 6
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        if not self._tags_parsed:
-            self._parse_tag(fh)
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         id3 = None
         header = fh.read(4)
         if header.startswith(b'ID3'):  # parse ID3 header if it exists
@@ -1870,7 +1887,8 @@ class _Flac(TinyTag):
             block_header = fh.read(header_len)
         if id3 is not None:  # apply ID3 tags after vorbis
             self._update(id3)
-        self._tags_parsed = True
+        self._duration_parsed = self._parse_duration
+        self._tags_parsed = self._parse_tags
 
     @classmethod
     def _parse_image(cls, fh: BinaryIO) -> tuple[str, Image]:
@@ -1938,11 +1956,7 @@ class _Wma(TinyTag):
     _STREAM_TYPE_ASF_AUDIO_MEDIA = b'@\x9ei\xf8M[\xcf\x11\xa8\xfd\x00\x80_\\D+'
     _XMP_METADATA = b'\xcb\xcfz\xbe\xa9\x97\xe8B\x9cq\x99\x94\x91\xe3\xaf\xac'
 
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        if not self._tags_parsed:
-            self._parse_tag(fh)
-
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         # http://www.garykessler.net/library/file_sigs.html
         # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
         header = fh.read(30)
@@ -2029,7 +2043,8 @@ class _Wma(TinyTag):
                 # skip unknown object ids
                 fh.seek(object_size - header_len, SEEK_CUR)
             object_header = fh.read(header_len)
-        self._tags_parsed = True
+        self._duration_parsed = self._parse_duration
+        self._tags_parsed = self._parse_tags
 
 
 class _Aiff(TinyTag):
@@ -2061,7 +2076,7 @@ class _Aiff(TinyTag):
         b'(c) ': 'other.copyright',
     }
 
-    def _parse_tag(self, fh: BinaryIO) -> None:
+    def _parse(self, fh: BinaryIO) -> None:
         header = fh.read(12)
         if header[:4] != b'FORM' or header[8:12] not in {b'AIFC', b'AIFF'}:
             raise ParseError('Invalid AIFF header')
@@ -2106,8 +2121,5 @@ class _Aiff(TinyTag):
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
-        self._tags_parsed = True
-
-    def _determine_duration(self, fh: BinaryIO) -> None:
-        if not self._tags_parsed:
-            self._parse_tag(fh)
+        self._duration_parsed = self._parse_duration
+        self._tags_parsed = self._parse_tags
