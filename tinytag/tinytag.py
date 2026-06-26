@@ -1699,6 +1699,10 @@ class _Wave(TinyTag):
         b'IENC': 'other.encoded_by',
         b'IMED': 'other.media',
     }
+    _UNCOMPRESSED_FORMATS = {
+        0x01,  # PCM
+        0x03,  # IEEE FLOAT
+    }
 
     def _determine_duration(self, fh: BinaryIO) -> None:
         if not self._tags_parsed:
@@ -1710,33 +1714,34 @@ class _Wave(TinyTag):
         header = fh.read(12)
         if header[:4] != b'RIFF' or header[8:12] != b'WAVE':
             raise ParseError('Invalid WAV header')
-        if self._parse_duration:
-            self.bitdepth = 16  # assume 16bit depth (CD quality)
+        is_compressed = False
+        block_align = 0
+        audio_size = 0
+        num_samples = 0
         header_len = 8
         chunk_header = fh.read(header_len)
         while len(chunk_header) == header_len:
             subchunk_id = chunk_header[:4]
             subchunk_size = unpack('I', chunk_header[4:])[0]
+            subchunk_size_unpadded = subchunk_size
             # IFF chunks are padded to an even number of bytes
             subchunk_size += subchunk_size % 2
             if self._parse_duration and subchunk_id == b'fmt ':
                 chunk = fh.read(subchunk_size)
-                _format_tag, channels, samplerate = unpack('<HHI', chunk[:8])
-                bitdepth = unpack('<H', chunk[14:16])[0]
-                if bitdepth == 0:
-                    # Certain codecs (e.g. GSM 6.10) give us a bit depth of
-                    # zero. Avoid division by zero when calculating duration.
-                    bitdepth = 1
-                self.bitrate = samplerate * channels * bitdepth / 1000
-                self.channels, self.samplerate, self.bitdepth = (
-                    channels, samplerate, bitdepth)
+                format_tag, self.channels, self.samplerate = unpack(
+                    '<HHI', chunk[:8])
+                block_align, bitdepth = unpack('<HH', chunk[12:16])
+                if format_tag == 0xFFFE:  # Extensible, read subformat
+                    format_tag = unpack('<H', chunk[24:26])[0]
+                if bitdepth > 0:
+                    self.bitdepth = bitdepth
+                is_compressed = format_tag not in self._UNCOMPRESSED_FORMATS
             elif self._parse_duration and subchunk_id == b'data':
-                if (self.channels is not None and self.samplerate is not None
-                        and self.bitdepth is not None):
-                    self.duration = (
-                        subchunk_size / self.channels / self.samplerate
-                        / (self.bitdepth / 8))
+                audio_size = subchunk_size_unpadded
                 fh.seek(subchunk_size, SEEK_CUR)
+            elif self._parse_duration and subchunk_id == b'fact':
+                chunk = fh.read(subchunk_size)
+                num_samples = unpack('I', chunk[:4])[0]
             elif self._parse_tags and subchunk_id == b'LIST':
                 chunk = fh.read(subchunk_size)
                 if chunk.startswith(b'INFO'):
@@ -1771,6 +1776,18 @@ class _Wave(TinyTag):
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
+        if is_compressed and self.samplerate:
+            if not audio_size:
+                # Normalization due to some encoders setting num_samples to 1
+                # when no audio data is present.
+                num_samples = 0
+            self.duration = num_samples / self.samplerate
+            if self.duration:
+                self.bitrate = audio_size * 8 / self.duration / 1000
+        elif block_align and self.samplerate:
+            self.duration = audio_size / (block_align * self.samplerate)
+            if self.duration:
+                self.bitrate = block_align * self.samplerate * 8 / 1000
         self._tags_parsed = True
 
 
