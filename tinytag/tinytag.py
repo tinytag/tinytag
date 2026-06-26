@@ -198,7 +198,7 @@ class TinyTag:
         if cls._file_extension_mapping is None:
             cls._file_extension_mapping = {
                 ('.mp1', '.mp2', '.mp3'): _ID3,
-                ('.oga', '.ogg', '.opus', '.spx'): _Ogg,
+                ('.oga', '.ogv', '.ogg', '.opus', '.spx'): _Ogg,
                 ('.wav',): _Wave,
                 ('.flac',): _Flac,
                 ('.wma',): _Wma,
@@ -228,9 +228,7 @@ class TinyTag:
              and header[8:11] in {b'M4A', b'M4B', b'aax'})
                 or b'\xff\xf1' in header):
             return _MP4
-        if (header.startswith(b'OggS')
-            and (header[29:33] == b'FLAC' or header[29:35] == b'vorbis'
-                 or header[28:32] == b'Opus' or header[29:34] == b'Speex')):
+        if header.startswith(b'OggS'):
             return _Ogg
         if header.startswith(b'RIFF') and header[8:12] == b'WAVE':
             return _Wave
@@ -1500,13 +1498,15 @@ class _Ogg(TinyTag):
     def __init__(self) -> None:
         super().__init__()
         self._granule_pos = 0
-        self._audio_size: int | None = None  # size of opus audio stream
+        self._audio_size = 0  # size of opus audio stream
+        self._granule_pos_serial: int | None = None
+        self._audio_size_serial: int | None = None
 
     def _parse(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
         check_speex_second_packet = False
         pre_skip = 0  # number of samples to skip in opus stream
-        for packet in self._parse_pages(fh):
+        for packet, serial in self._parse_pages(fh):
             if packet.startswith(b"\x01vorbis"):
                 if self._parse_duration:
                     self.channels, self.samplerate = unpack(
@@ -1514,6 +1514,7 @@ class _Ogg(TinyTag):
                     bitrate = unpack("<i", packet[20:24])[0] / 1000
                     if bitrate > 0:
                         self.bitrate = bitrate
+                    self._granule_pos_serial = serial
                     self._duration_parsed = True
             elif packet.startswith(b"\x03vorbis"):
                 if self._parse_tags:
@@ -1530,13 +1531,14 @@ class _Ogg(TinyTag):
                         self.channels = ch
                         self.samplerate = 48000
                     self._duration_parsed = True
+                    self._granule_pos_serial = serial
             elif packet.startswith(b'OpusTags'):
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
                     walker.seek(8)  # jump over header name
                     self._parse_vorbis_comment(walker)
                     self._tags_parsed = True
-                self._audio_size = 0  # start counting size of audio stream
+                self._audio_size_serial = serial
             elif packet.startswith(b'\x7fFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
                 walker = BytesIO(packet)
@@ -1568,6 +1570,7 @@ class _Ogg(TinyTag):
                 if self._parse_duration:
                     self.samplerate = unpack("<i", packet[36:40])[0]
                     self.channels, self.bitrate = unpack("<ii", packet[48:56])
+                    self._granule_pos_serial = serial
                     self._duration_parsed = True
                 check_speex_second_packet = True
             elif check_speex_second_packet:
@@ -1639,10 +1642,10 @@ class _Ogg(TinyTag):
                     elif value:
                         self._set_field(fieldname, value)
 
-    def _parse_pages(self, fh: BinaryIO) -> Iterator[bytearray]:
+    def _parse_pages(self, fh: BinaryIO) -> Iterator[tuple[bytearray, int]]:
         # for the spec, see: https://wiki.xiph.org/Ogg
-        packet_data = bytearray()
-        current_serial = None
+        initialized = False
+        packets = {}
         last_granule_pos = 0
         last_audio_size = 0
         header_len = 27
@@ -1650,15 +1653,20 @@ class _Ogg(TinyTag):
         while len(page_header) == header_len:
             version = page_header[4]
             if page_header[:4] != b'OggS' or version != 0:
+                if initialized:
+                    # Garbage found after parsing a valid page
+                    break
                 raise ParseError('Invalid OGG header')
             # https://xiph.org/ogg/doc/framing.html
+            initialized = True
             header_type = page_header[5]
             eos = header_type & 0x04
             granule_pos, serial = unpack('<qI', page_header[6:18])
-            if current_serial is None:
-                current_serial = serial
-            serial_match = serial == current_serial
-            if serial_match and granule_pos > 0:
+            if serial not in packets:
+                packets[serial] = bytearray()
+            packet_data = packets[serial]
+            audio_size_serial_match = serial == self._audio_size_serial
+            if serial == self._granule_pos_serial:
                 if eos:
                     self._granule_pos = granule_pos
                 else:
@@ -1670,27 +1678,25 @@ class _Ogg(TinyTag):
             audio_size = 0
             for seg_size in seg_sizes:  # read all segments
                 read_size += seg_size
-                if self._audio_size is not None:
+                if audio_size_serial_match:
                     audio_size += seg_size
                 # less than 255 bytes means end of packet
-                if seg_size < 255 and serial_match and not self._tags_parsed:
+                if seg_size < 255 and not self._tags_parsed:
                     packet_data += fh.read(read_size)
-                    yield packet_data
+                    yield packet_data, serial
                     packet_data.clear()
                     read_size = 0
             if read_size:
-                if not serial_match or self._tags_parsed:
+                if self._tags_parsed and self._duration_parsed:
                     fh.seek(read_size, SEEK_CUR)
                 else:  # packet continues on next page
                     packet_data += fh.read(read_size)
-            if serial_match and self._audio_size is not None:
+            if audio_size_serial_match:
                 if eos:
                     self._audio_size += last_audio_size + audio_size
                 else:
                     self._audio_size += last_audio_size
                     last_audio_size = audio_size
-            if eos:
-                break
             page_header = fh.read(header_len)
 
 
