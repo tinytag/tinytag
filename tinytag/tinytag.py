@@ -751,6 +751,7 @@ class _MP4(TinyTag):
         channels = unpack('>H', data[16:18])[0]
         # jump over bit_depth, QT compr id & pkt size
         sr = unpack('>I', data[22:26])[0]
+        result = {'channels': channels, 'samplerate': sr}
 
         # ES Description Atom
         esds_atom_size = unpack('>I', data[28:32])[0]
@@ -765,7 +766,9 @@ class _MP4(TinyTag):
         cls._read_extended_descriptor(esds_atom)
         esds_atom.seek(9, SEEK_CUR)
         avg_br = unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
-        return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br}
+        if avg_br > 0:
+            result['bitrate'] = avg_br
+        return result
 
     @classmethod
     def _parse_audio_sample_entry_alac(cls, data: bytes) -> dict[str, int]:
@@ -1519,9 +1522,9 @@ class _Ogg(TinyTag):
                 if self._parse_duration:
                     self.channels, self.samplerate = unpack(
                         "<Bi", packet[11:16])
-                    bitrate = unpack("<i", packet[20:24])[0] / 1000
+                    bitrate = unpack("<i", packet[20:24])[0]
                     if bitrate > 0:
-                        self.bitrate = bitrate
+                        self.bitrate = bitrate / 1000
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
             elif packet.startswith(b"\x03vorbis"):
@@ -1577,7 +1580,9 @@ class _Ogg(TinyTag):
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
                     self.samplerate = unpack("<i", packet[36:40])[0]
-                    self.channels, self.bitrate = unpack("<ii", packet[48:56])
+                    self.channels, bitrate = unpack("<ii", packet[48:56])
+                    if bitrate > 0:
+                        self.bitrate = bitrate / 1000
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
                 check_speex_second_packet = True
