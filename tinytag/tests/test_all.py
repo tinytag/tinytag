@@ -829,6 +829,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
         'channels': 2,
     }),
+    ('multi_stream.ogv', {
+        'other': OtherFields({
+            'encoder': ['Lavf62.3.100'],
+        }),
+        'duration': 30.0,
+        'filesize': 9344,
+        'bitrate': 16.8,
+        'samplerate': 8000,
+        'channels': 1,
+    }),
     ('test.opus', {
         'other': OtherFields({
             'encoder': ['Lavc57.24.102 libopus'],
@@ -2023,6 +2033,7 @@ class TestAll(TestCase):
             ('detect_mp3_fffb.x', _ID3),
             ('detect_ogg_flac.x', _Ogg),
             ('detect_ogg_opus.x', _Ogg),
+            ('detect_ogg_theora.x', _Ogg),
             ('detect_ogg_vorbis.x', _Ogg),
             ('detect_wav.x', _Wave),
             ('detect_flac.x', _Flac),
