@@ -1950,6 +1950,8 @@ class TestAll(TestCase):
 
     def test_invalid_file(self) -> None:
         for path, cls in (
+            ('flac1.5sStereo.flac', _ID3),
+            ('silence-44-s-v1.mp3', _MP4),
             ('silence-44-s-v1.mp3', _Flac),
             ('flac1.5sStereo.flac', _Ogg),
             ('flac1.5sStereo.flac', _Wave),
