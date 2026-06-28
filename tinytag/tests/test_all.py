@@ -722,6 +722,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 0.1306122448979592,
         'samplerate': 44100,
     }),
+    ('multi_value_utf16.mp3', {
+        'other': OtherFields({
+            'title': ['another title', 'yet another title'],
+        }),
+        'filesize': 1988,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+        'title': 'some title',
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'duration': 3.684716553287982,

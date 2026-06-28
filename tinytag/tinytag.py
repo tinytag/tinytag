@@ -1341,40 +1341,49 @@ class _ID3(TinyTag):
                     if fieldname == 'comment' and content_descriptor and value:
                         self._set_custom_field(content_descriptor, value)
                         return frame_size
-            elif frame_id.startswith(b'W'):  # URL frame, no custom encoding
+                self._set_field(fieldname, value)
+                return frame_size
+            if frame_id.startswith(b'W'):  # URL frame, no custom encoding
                 value = self._decode_string(content)
-            else:
-                encoding = content[0]
-                content = content[1:]
-                value = self._decode_string(content, encoding)
-            if fieldname in {'track', 'disc', 'other.movement'}:
-                if '/' in value:
-                    value, total = value.split('/')[:2]
-                    if total.isdecimal():
-                        self._set_field(f'{fieldname}_total', int(total))
-                if value.isdecimal():
-                    self._set_field(fieldname, int(value))
+                self._set_field(fieldname, value)
                 return frame_size
-            elif fieldname == 'genre':
-                genre_id = 255
-                # funky: id3v1 genre hidden in a id3v2 field
-                if value.isdecimal():
-                    genre_id = int(value)
-                # funkier: the TCO may contain genres in parens, e.g '(13)'
-                elif value.startswith('('):
-                    end_pos = value.find(')')
-                    parens_text = value[1:end_pos]
-                    if end_pos > 0 and parens_text.isdecimal():
-                        genre_id = int(parens_text)
-                if 0 <= genre_id < len(self._ID3V1_GENRES):
-                    value = self._ID3V1_GENRES[genre_id]
-            elif fieldname == 'modern_grouping':
-                self._modern_grouping_values.append(value)
-                return frame_size
-            elif fieldname == 'legacy_grouping':
-                self._legacy_grouping_values.append(value)
-                return frame_size
-            self._set_field(fieldname, value)
+            encoding = content[0]
+            content = content[1:]
+            content_length = len(content)
+            offset = 0
+            while offset < content_length:
+                end_pos = self._find_string_end_pos(content, encoding, offset)
+                if end_pos == offset:
+                    end_pos = content_length
+                value = self._decode_string(content[offset:end_pos], encoding)
+                offset = end_pos
+                if fieldname in {'track', 'disc', 'other.movement'}:
+                    if '/' in value:
+                        value, total = value.split('/')[:2]
+                        if total.isdecimal():
+                            self._set_field(f'{fieldname}_total', int(total))
+                    if value.isdecimal():
+                        self._set_field(fieldname, int(value))
+                elif fieldname == 'genre':
+                    genre_id = 255
+                    # funky: id3v1 genre hidden in a id3v2 field
+                    if value.isdecimal():
+                        genre_id = int(value)
+                    # funkier: the TCO may contain genres in parens, e.g '(13)'
+                    elif value.startswith('('):
+                        end_pos = value.find(')')
+                        parens_text = value[1:end_pos]
+                        if end_pos > 0 and parens_text.isdecimal():
+                            genre_id = int(parens_text)
+                    if 0 <= genre_id < len(self._ID3V1_GENRES):
+                        value = self._ID3V1_GENRES[genre_id]
+                    self._set_field(fieldname, value)
+                elif fieldname == 'modern_grouping':
+                    self._modern_grouping_values.append(value)
+                elif fieldname == 'legacy_grouping':
+                    self._legacy_grouping_values.append(value)
+                else:
+                    self._set_field(fieldname, value)
         elif self._parse_tags and frame_id in self._SYNCED_LYRICS_FRAME_IDS:
             content = fh.read(frame_size)
             lyrics = self._parse_synced_lyrics(content)
@@ -1430,7 +1439,7 @@ class _ID3(TinyTag):
             end_pos = content.find(b'\x00', start_pos)
             return start_pos if end_pos < 0 else end_pos + 1
         end_pos = -1
-        for i in range(start_pos, len(content), 2):
+        for i in range(start_pos, len(content) - 1, 2):
             if content[i] == 0x00 and content[i + 1] == 0x00:
                 end_pos = i + 2
                 break
