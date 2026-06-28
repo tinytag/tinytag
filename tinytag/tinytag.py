@@ -1896,6 +1896,9 @@ class _Flac(TinyTag):
                 self.samplerate = sr
                 if duration > 0:
                     self.bitrate = self.filesize * 8 / duration / 1000
+                self._duration_parsed = True
+                if not self._parse_tags:
+                    break
             elif self._parse_tags and block_type == self._VORBIS_COMMENT:
                 # pylint: disable=protected-access
                 walker = BytesIO(fh.read(size))
@@ -1913,7 +1916,6 @@ class _Flac(TinyTag):
             block_header = fh.read(header_len)
         if id3 is not None:  # apply ID3 tags after vorbis
             self._update(id3)
-        self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
 
     @classmethod
@@ -2132,6 +2134,9 @@ class _Aiff(TinyTag):
                     self.samplerate, self.duration = sr, duration
                 except OverflowError:
                     pass
+                self._duration_parsed = True
+                if not self._parse_tags:
+                    break
             elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
                 id3 = _ID3()
@@ -2148,5 +2153,4 @@ class _Aiff(TinyTag):
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
-        self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
