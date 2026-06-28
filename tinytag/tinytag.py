@@ -269,6 +269,8 @@ class TinyTag:
     def _set_field(self, fieldname: str, value: str | float,
                    check_conflict: bool = True) -> None:
         if fieldname.startswith(self._OTHER_PREFIX):
+            if isinstance(value, str) and not value:
+                return
             fieldname = fieldname[len(self._OTHER_PREFIX):]
             if check_conflict and fieldname in self.__dict__:
                 fieldname = '_' + fieldname
@@ -281,6 +283,8 @@ class TinyTag:
         old_value = self.__dict__.get(fieldname)
         new_value = value
         if isinstance(new_value, str):
+            if not new_value:
+                return
             # First value goes in tag, others in tag.other
             values = new_value.split('\x00')
             for index, i_value in enumerate(values):
@@ -322,6 +326,10 @@ class TinyTag:
     def _unpad(s: str) -> str:
         # certain strings *may* be terminated with a zero byte at the end
         return s.rstrip('\x00')
+
+    @staticmethod
+    def _unpad_bytes(s: bytes) -> bytes:
+        return s.rstrip(b'\x00')
 
     def get_image(self) -> bytes | None:
         """Deprecated, use 'images.any' instead."""
@@ -652,7 +660,7 @@ class _MP4(TinyTag):
         def _parse_data_atom(data_atom: bytes) -> dict[str, str]:
             data_type = unpack('>I', data_atom[:4])[0]
             data = data_atom[8:]
-            value = None
+            value = ""
             if data_type == 1:     # UTF-8 string
                 value = data.decode('utf-8', 'replace')
             elif data_type == 21:  # BE signed integer
@@ -660,9 +668,7 @@ class _MP4(TinyTag):
                 data_len = len(data)
                 if data_len in fmts:
                     value = str(unpack(fmts[data_len], data)[0])
-            if value:
-                return {fieldname: value}
-            return {}
+            return {fieldname: value}
         return _parse_data_atom
 
     @classmethod
@@ -736,7 +742,7 @@ class _MP4(TinyTag):
             return result
         uuid = data_atom[:uuid_len]
         if uuid == b'\xbez\xcf\xcb\x97\xa9B\xe8\x9cq\x99\x94\x91\xe3\xaf\xac':
-            result[cls._OTHER_PREFIX + 'xmp'] = data_atom[uuid_len:].decode(
+            result['other.xmp'] = data_atom[uuid_len:].decode(
                 'utf-8', 'replace')
         return result
 
@@ -871,6 +877,7 @@ class _ID3(TinyTag):
         b'USER',
         b'WXXX', b'WXX',
     }
+    _VALID_STRING_ENCODINGS = {0x00, 0x01, 0x02, 0x03}
     _ID3V1_TAG_SIZE = 128
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
@@ -1158,20 +1165,16 @@ class _ID3(TinyTag):
         # tags are more likely to be outdated or have encoding issues
         if not self.title:
             value = asciidecode(content[3:33])
-            if value:
-                self._set_field('title', value)
+            self._set_field('title', value)
         if not self.artist:
             value = asciidecode(content[33:63])
-            if value:
-                self._set_field('artist', value)
+            self._set_field('artist', value)
         if not self.album:
             value = asciidecode(content[63:93])
-            if value:
-                self._set_field('album', value)
+            self._set_field('album', value)
         if not self.year:
             value = asciidecode(content[93:97])
-            if value:
-                self._set_field('year', value)
+            self._set_field('year', value)
         comment = content[97:127]
         if b'\x00\x00' < comment[-2:] < b'\x01\x00':
             if self.track is None:
@@ -1179,8 +1182,7 @@ class _ID3(TinyTag):
             comment = comment[:-2]
         if not self.comment:
             value = asciidecode(comment)
-            if value:
-                self._set_field('comment', value)
+            self._set_field('comment', value)
         if not self.genre:
             genre_id = ord(content[127:128])
             if genre_id < len(self._ID3V1_GENRES):
@@ -1228,11 +1230,10 @@ class _ID3(TinyTag):
                      frame_id: bytes,
                      content: bytes) -> tuple[str, Image]:
         # See section 4.14: http://id3.org/id3v2.4.0-frames
-        encoding = content[:1]
+        encoding = content[0]
         if frame_id == b'PIC':  # ID3 v2.2:
             imgformat = content[1:4].lower()
             mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
-            # skip encoding (1), imgformat (3), pictype(1)
             desc_start_pos = 5
         else:  # ID3 v2.3+
             mime_start_pos = 1
@@ -1240,18 +1241,17 @@ class _ID3(TinyTag):
                 content, start_pos=mime_start_pos)
             mime_type = self._decode_string(
                 content[mime_start_pos:mime_end_pos]).lower()
-            # skip mtype, pictype(1)
             desc_start_pos = mime_end_pos + 1
         pic_type = content[desc_start_pos - 1]
         desc_end_pos = self._find_string_end_pos(
             content, encoding, desc_start_pos)
         # skip stray null byte in broken file
         if (desc_end_pos + 1 < len(content)
-                and content[desc_end_pos] == 0
-                and content[desc_end_pos + 1] != 0):
+                and content[desc_end_pos] == 0x00
+                and content[desc_end_pos + 1] != 0x00):
             desc_end_pos += 1
         desc = self._decode_string(
-            encoding + content[desc_start_pos:desc_end_pos])
+            content[desc_start_pos:desc_end_pos], encoding)
         return self._create_tag_image(
             content[desc_end_pos:], pic_type, mime_type, desc)
 
@@ -1264,20 +1264,22 @@ class _ID3(TinyTag):
 
     def _parse_synced_lyrics(self, content: bytes) -> str:
         # Convert ID3 synced lyrics to LRC format
+        lyrics = ""
         content_length = len(content)
-        encoding = content[:1]
+        if content_length <= 7:
+            return lyrics
+        encoding = content[0]
         # skip language (3)
-        timestamp_format = content[4:5]
+        timestamp_format = content[4]
         # skip content type (1)
         start_pos = 6
         end_pos = self._find_string_end_pos(content, encoding, start_pos)
-        lyrics = ""
         offset = end_pos
         found_line = False
         while offset < content_length:
             end_pos = self._find_string_end_pos(content, encoding, offset)
             value = self._decode_string(
-                encoding + content[offset:end_pos]).lstrip('\n')
+                content[offset:end_pos], encoding).lstrip('\n')
             offset = end_pos
             if offset + 4 > content_length:
                 break
@@ -1286,7 +1288,7 @@ class _ID3(TinyTag):
             if found_line:
                 lyrics += '\n'
             found_line = True
-            if timestamp_format == b'\x02':
+            if timestamp_format == 0x02:
                 # time in milliseconds
                 timestamp = self._lrc_timestamp(time / 1000)
             else:
@@ -1322,26 +1324,29 @@ class _ID3(TinyTag):
         if frame_size > total_size:
             # invalid frame size, stop here
             return -1
-        should_set_field = True
         if self._parse_tags and frame_id in self._ID3_MAPPING:
             fieldname = self._ID3_MAPPING[frame_id]
             content = fh.read(frame_size)
+            if not content:
+                return frame_size
             if fieldname in {'comment', 'other.lyrics'}:
-                encoding = content[:1]
+                encoding = content[0]
                 content = content[4:]
                 end_pos = self._find_string_end_pos(content, encoding)
-                value = self._decode_string(encoding + content[:end_pos])
+                value = self._decode_string(content[:end_pos], encoding)
                 if end_pos < len(content):
                     content_descriptor = value
-                    value = self._decode_string(encoding + content[end_pos:])
+                    value = self._decode_string(content[end_pos:], encoding)
                     # check if comment is a key-value pair (used by iTunes)
                     if fieldname == 'comment' and content_descriptor and value:
                         self._set_custom_field(content_descriptor, value)
                         return frame_size
-            else:
+            elif frame_id.startswith(b'W'):  # URL frame, no custom encoding
                 value = self._decode_string(content)
-            if not value:
-                return frame_size
+            else:
+                encoding = content[0]
+                content = content[1:]
+                value = self._decode_string(content, encoding)
             if fieldname in {'track', 'disc', 'other.movement'}:
                 if '/' in value:
                     value, total = value.split('/')[:2]
@@ -1371,83 +1376,86 @@ class _ID3(TinyTag):
                 return frame_size
             self._set_field(fieldname, value)
         elif self._parse_tags and frame_id in self._SYNCED_LYRICS_FRAME_IDS:
-            lyrics = self._parse_synced_lyrics(fh.read(frame_size))
+            content = fh.read(frame_size)
+            lyrics = self._parse_synced_lyrics(content)
             self._set_field('other.lyrics', lyrics)
         elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
             content = fh.read(frame_size)
-            encoding = content[:1]
-            end_pos = self._find_string_end_pos(content, encoding, start_pos=1)
-            description = self._decode_string(content[:end_pos])
-            value = self._decode_string(encoding + content[end_pos:])
-            if description and value:
-                self._set_custom_field(description, value)
+            if content:
+                encoding = content[0]
+                end_pos = self._find_string_end_pos(
+                    content, encoding, start_pos=1)
+                description = self._decode_string(content[1:end_pos], encoding)
+                value = self._decode_string(content[end_pos:], encoding)
+                if description and value:
+                    self._set_custom_field(description, value)
         elif self._parse_tags and frame_id == b'PRIV':
             content = fh.read(frame_size)
-            owner_id_end_pos = self._find_string_end_pos(content)
-            owner_id = content[:owner_id_end_pos - 1]
-            if owner_id == b'XMP':
-                value = self._unpad(
-                    content[owner_id_end_pos:].decode('utf-8', 'replace'))
-                self._set_field(self._OTHER_PREFIX + 'xmp', value)
+            if content:
+                owner_id_end_pos = self._find_string_end_pos(content)
+                owner_id = content[:owner_id_end_pos - 1]
+                if owner_id == b'XMP':
+                    value = self._unpad_bytes(
+                        content[owner_id_end_pos:]).decode('utf-8', 'replace')
+                    self._set_field('other.xmp', value)
         elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
-            value = self._decode_string(fh.read(frame_size))
-            if value:
+            content = fh.read(frame_size)
+            if content:
+                encoding = content[0]
+                if encoding in self._VALID_STRING_ENCODINGS:
+                    value = self._decode_string(content[1:], encoding)
+                else:
+                    value = self._decode_string(content)
                 self._set_field(
                     self._OTHER_PREFIX + frame_id.decode('latin-1').lower(),
                     value)
         elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
-            field_name, image = self._parse_image(
-                frame_id, fh.read(frame_size))
-            # pylint: disable=protected-access
-            self.images._set_field(field_name, image)
+            content = fh.read(frame_size)
+            if content:
+                field_name, image = self._parse_image(frame_id, content)
+                # pylint: disable=protected-access
+                self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
         return frame_size
 
     @staticmethod
     def _find_string_end_pos(content: bytes,
-                             encoding: bytes = b'\x00',
+                             encoding: int = 0x00,
                              start_pos: int = 0) -> int:
         # latin1 and utf-8 are 1 byte
-        if encoding in {b'\x00', b'\x03'}:
+        if encoding == 0x00 or encoding == 0x03:
             end_pos = content.find(b'\x00', start_pos)
             return start_pos if end_pos < 0 else end_pos + 1
         end_pos = -1
         for i in range(start_pos, len(content), 2):
-            if content[i:i + 2] == b'\x00\x00':
+            if content[i] == 0x00 and content[i + 1] == 0x00:
                 end_pos = i + 2
                 break
         return start_pos if end_pos < 0 else end_pos
 
-    def _decode_string(self, value: bytes) -> str:
-        default_encoding = 'ISO-8859-1'
-        if self._default_encoding:
-            default_encoding = self._default_encoding
-        # it's not my fault, this is the spec.
-        first_byte = value[:1]
-        if first_byte == b'\x00':  # ISO-8859-1
-            value = value[1:]
-            encoding = default_encoding
-        elif first_byte == b'\x01':  # UTF-16 with BOM
-            value = value[1:]
+    def _decode_string(self, value: bytes, encoding: int | None = None) -> str:
+        if encoding == 0x00:  # ISO-8859-1 (but allow override)
+            encoding_name = self._default_encoding or 'ISO-8859-1'
+        elif encoding == 0x01:  # UTF-16 with BOM
             # read byte order mark to determine endianness
-            encoding = ('UTF-16be' if value.startswith(b'\xfe\xff')
-                        else 'UTF-16le')
+            encoding_name = (
+                'UTF-16be' if value.startswith(b'\xfe\xff') else 'UTF-16le')
             # strip the bom if it exists
             if value.startswith(b'\xfe\xff') or value.startswith(b'\xff\xfe'):
                 value = value[2:] if len(value) % 2 == 0 else value[2:-1]
-        elif first_byte == b'\x02':  # UTF-16 without BOM
+        elif encoding == 0x02:  # UTF-16 without BOM
+            encoding_name = 'UTF-16be'
             # strip optional null byte, if byte count uneven
-            value = value[1:-1] if len(value) % 2 == 0 else value[1:]
-            encoding = 'UTF-16be'
-        elif first_byte == b'\x03':  # UTF-8
-            value = value[1:]
-            encoding = 'UTF-8'
+            if len(value) % 2 != 0:
+                value = value[:-1]
+        elif encoding == 0x03:  # UTF-8
+            encoding_name = 'UTF-8'
         else:
-            encoding = default_encoding  # wild guess
-        return self._unpad(value.decode(encoding, 'replace'))
+            encoding_name = 'ISO-8859-1'
+        return self._unpad(value.decode(encoding_name, 'replace'))
 
     @staticmethod
     def _unsynchsafe(ints: tuple[int, ...]) -> int:
@@ -1652,7 +1660,7 @@ class _Ogg(TinyTag):
                                     f'{fieldname}_total', int(total))
                         if value.isdecimal():
                             self._set_field(fieldname, int(value))
-                    elif value:
+                    else:
                         self._set_field(fieldname, value)
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[tuple[bytearray, int]]:
@@ -1791,8 +1799,7 @@ class _Wave(TinyTag):
                         data_length = unpack('I', walker.read(4))[0]
                         # IFF chunks are padded to an even size
                         data_length += data_length % 2
-                        # strip zero-byte
-                        data = walker.read(data_length).split(b'\x00', 1)[0]
+                        data = self._unpad_bytes(walker.read(data_length))
                         if field in self._RIFF_MAPPING:
                             fieldname = self._RIFF_MAPPING[field]
                             value = data.decode('utf-8', 'replace')
@@ -1809,9 +1816,9 @@ class _Wave(TinyTag):
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
             elif self._parse_tags and subchunk_id == b'_PMX':
-                value = self._unpad(
-                    fh.read(subchunk_size).decode('utf-8', 'replace'))
-                self._set_field(self._OTHER_PREFIX + 'xmp', value)
+                chunk = self._unpad_bytes(fh.read(subchunk_size))
+                value = chunk.decode('utf-8', 'replace')
+                self._set_field('other.xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
@@ -2037,7 +2044,7 @@ class _Wma(TinyTag):
                     if field_name in {'track', 'disc'}:
                         if isinstance(value, int) or value.isdecimal():
                             self._set_field(field_name, int(value))
-                    elif value:
+                    else:
                         self._set_field(field_name, value)
             elif self._parse_duration and object_id == self._ASF_FILE_PROP:
                 data = fh.read(object_size - header_len)
@@ -2057,7 +2064,7 @@ class _Wma(TinyTag):
             elif self._parse_tags and object_id == self._XMP_METADATA:
                 value = fh.read(
                     object_size - header_len).decode('utf-8', 'replace')
-                self._set_field(self._OTHER_PREFIX + 'xmp', value)
+                self._set_field('other.xmp', value)
             else:
                 # skip unknown object ids
                 fh.seek(object_size - header_len, SEEK_CUR)
@@ -2107,8 +2114,8 @@ class _Aiff(TinyTag):
             # IFF chunks are padded to an even number of bytes
             subchunk_size += subchunk_size % 2
             if self._parse_tags and subchunk_id in self._AIFF_MAPPING:
-                value = self._unpad(
-                    fh.read(subchunk_size).decode('utf-8', 'replace'))
+                chunk = self._unpad_bytes(fh.read(subchunk_size))
+                value = chunk.decode('utf-8', 'replace')
                 self._set_field(self._AIFF_MAPPING[subchunk_id], value)
             elif self._parse_duration and subchunk_id == b'COMM':
                 chunk = fh.read(subchunk_size)
@@ -2135,8 +2142,9 @@ class _Aiff(TinyTag):
                 chunk = fh.read(subchunk_size)
                 application_signature = chunk[:4]
                 if application_signature == b'XMP ':
-                    value = self._unpad(chunk[4:].decode('utf-8', 'replace'))
-                    self._set_field(self._OTHER_PREFIX + 'xmp', value)
+                    content = self._unpad_bytes(chunk[4:])
+                    value = content.decode('utf-8', 'replace')
+                    self._set_field('other.xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
