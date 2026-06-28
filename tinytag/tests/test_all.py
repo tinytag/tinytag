@@ -16,7 +16,7 @@ from sys import stdout
 from unittest import skipIf, TestCase
 
 from tinytag import ParseError, TinyTagException, UnsupportedFormatError
-from tinytag import Images, OtherFields, TinyTag
+from tinytag import Image, Images, OtherFields, TinyTag
 from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 TYPE_CHECKING = False
@@ -2058,6 +2058,22 @@ class TestAll(TestCase):
             "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
             "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')"
         )
+
+    def test_images_duplicate_named_field_stored_with_correct_key(
+            self) -> None:
+        # When a named image field (e.g. front_cover) already has a value,
+        # additional images must be stored in `other` under the original field
+        # name, not under a truncated key produced by stripping len('other.')
+        # bytes from a name that doesn't start with 'other.'.
+        for fieldname in ('front_cover', 'back_cover', 'media'):
+            with self.subTest(fieldname=fieldname):
+                imgs = Images()
+                img1 = Image(fieldname, b'data1', 'image/jpeg')
+                img2 = Image(fieldname, b'data2', 'image/jpeg')
+                imgs._set_field(fieldname, img1)
+                imgs._set_field(fieldname, img2)
+                self.assertEqual(list(imgs.other.keys()), [fieldname])
+                self.assertEqual(imgs.other[fieldname][0].data, b'data2')
 
     def test_mp3_utf_8_invalid_string(self) -> None:
         tag = TinyTag.get(
