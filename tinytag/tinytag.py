@@ -197,10 +197,9 @@ class TinyTag:
     def _get_parser_for_filename(cls, filename: str) -> type[TinyTag] | None:
         if cls._file_extension_mapping is None:
             cls._file_extension_mapping = {
-                ('.mp1', '.mp2', '.mp3'): _ID3,
+                ('.mp1', '.mp2', '.mp3', '.flac'): _ID3,
                 ('.oga', '.ogv', '.ogg', '.opus', '.spx'): _Ogg,
                 ('.wav',): _Wave,
-                ('.flac',): _Flac,
                 ('.wma',): _Wma,
                 ('.m4b', '.m4a', '.m4r', '.m4v', '.mp4',
                  '.aax', '.aaxc'): _MP4,
@@ -220,8 +219,15 @@ class TinyTag:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
         header = filehandle.read(35)
         filehandle.seek(0)
-        if header.startswith(b'ID3') or header.startswith(b'\xff\xfb'):
+        if header.startswith(b'ID3'):
             return _ID3
+        if header.startswith(b'\xff\xfb'):
+            filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
+            footer = filehandle.read(3)
+            filehandle.seek(0)
+            if footer == b'TAG':
+                return _ID3
+            return _MPEG
         if header.startswith(b'fLaC'):
             return _Flac
         if header[4:8] == b'ftyp':
@@ -799,7 +805,7 @@ class _MP4(TinyTag):
 
 
 class _ID3(TinyTag):
-    """MP3 Parser."""
+    """ID3 Parser."""
 
     _ID3_MAPPING = {
         # Mapping from Frame ID to a field of the TinyTag
@@ -879,6 +885,7 @@ class _ID3(TinyTag):
     }
     _VALID_STRING_ENCODINGS = {0x00, 0x01, 0x02, 0x03}
     _ID3V1_TAG_SIZE = 128
+    _ID3V2_HEADER_SIZE = 10
     _MAX_ESTIMATION_SEC = 30.0
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
@@ -992,140 +999,54 @@ class _ID3(TinyTag):
 
     def __init__(self) -> None:
         super().__init__()
+        self._only_id3 = False
         self._modern_grouping_values: list[str] = []
         self._legacy_grouping_values: list[str] = []
 
     def _parse(self, fh: BinaryIO) -> None:
-        audio_offset = 0
+        audio_offset = fh.tell()
+        tag_size = 0
         if self._parse_tags:
-            audio_offset = self._parse_id3v2(fh)
+            tag_size = self._parse_id3v2(fh)
         elif self._parse_duration:
-            audio_offset, _extended, _major = self._parse_id3v2_header(fh)
-        if self._parse_duration:
-            self._determine_duration(fh, audio_offset)
-        if self._parse_tags and self.filesize >= self._ID3V1_TAG_SIZE:
-            # try parsing id3v1 at the end of file
-            fh.seek(self.filesize - self._ID3V1_TAG_SIZE)
-            self._parse_id3v1(fh)
-        self._tags_parsed = self._parse_tags
-
-    @staticmethod
-    def _parse_xing_header(fh: BinaryIO) -> tuple[int, int]:
-        # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
-        fh.seek(4, SEEK_CUR)  # read over Xing header
-        header_flags = unpack('>i', fh.read(4))[0]
-        frames = byte_count = 0
-        if header_flags & 1:  # FRAMES FLAG
-            frames = unpack('>i', fh.read(4))[0]
-        if header_flags & 2:  # BYTES FLAG
-            byte_count = unpack('>i', fh.read(4))[0]
-        if header_flags & 4:  # TOC FLAG
-            fh.seek(100, SEEK_CUR)
-        if header_flags & 8:  # VBR SCALE FLAG
-            fh.seek(4, SEEK_CUR)
-        return frames, byte_count
-
-    def _determine_duration(self, fh: BinaryIO, audio_offset: int) -> None:
-        max_estimation_frames = (
-            (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
-        frame_size_accu = 0
-        frames = 0  # count frames for determining mp3 duration
-        invalid_frames = 0
-        bitrate_accu = 0    # add up bitrates to find average bitrate to detect
-        last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
-        # seek to first position after id3 tag (speedup for large header)
-        first_mpeg_id = None
+            tag_size, _extended, _major = self._parse_id3v2_header(fh)
+        if tag_size > 0:
+            audio_offset += self._ID3V2_HEADER_SIZE + tag_size
         fh.seek(audio_offset)
-        while True:
-            # reading through garbage until 11 '1' sync-bits are found
-            header = fh.read(4)
-            header_len = len(header)
-            if header_len < 4:
-                if frames:
-                    self.bitrate = bitrate_accu / frames
-                break  # EOF
-            _sync, conf, bitrate_freq, rest = unpack('4B', header)
-            br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
-            sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
-            padding = 1 if bitrate_freq & 0x02 > 0 else 0
-            mpeg_id = (conf >> 3) & 0x03
-            layer_id = (conf >> 1) & 0x03
-            channel_mode = (rest >> 6) & 0x03
-            # check for eleven 1s, validate bitrate and sample rate
-            if (header[:2] <= b'\xFF\xE0'
-                    or (first_mpeg_id is not None and first_mpeg_id != mpeg_id)
-                    or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0
-                    or mpeg_id == 1):
-                # invalid frame, find next sync header
-                idx = header.find(b'\xFF', 1)
-                next_offset = header_len
-                if idx != -1:
-                    next_offset -= idx
-                    fh.seek(idx - header_len, SEEK_CUR)
-                if frames == 0:
-                    audio_offset += next_offset
-                    invalid_frames += 1
-                    if invalid_frames > self._MAX_INVALID_FRAMES:
-                        raise ParseError("Invalid MPEG frame header")
-                continue
-            if first_mpeg_id is None:
-                first_mpeg_id = mpeg_id
-            self.channels = self._CHANNELS_PER_CHANNEL_MODE[channel_mode]
-            frame_br = self._BITRATE_VERSION_LAYERS[mpeg_id][layer_id][br_id]
-            self.samplerate = samplerate = self._SAMPLE_RATES[mpeg_id][sr_id]
-            frame_length = (144000 * frame_br) // samplerate + padding
-            # There might be a xing header in the first frame that contains
-            # all the info we need, otherwise parse multiple frames to find the
-            # accurate average bitrate
-            if frames == 0 and self._USE_XING_HEADER:
-                prev_offset = header_len + audio_offset
-                frame_content = fh.read(frame_length)
-                xing_header_offset = frame_content.find(b'Xing')
-                if xing_header_offset != -1:
-                    fh.seek(prev_offset + xing_header_offset)
-                    xframes, byte_count = self._parse_xing_header(fh)
-                    if xframes > 0 and byte_count > 0:
-                        # MPEG-2 Audio Layer III uses 576 samples per frame
-                        samples_pf = self._SAMPLES_PER_FRAME
-                        if mpeg_id <= 2:
-                            samples_pf = 576
-                        self.duration = dur = xframes * samples_pf / samplerate
-                        self.bitrate = byte_count * 8 / dur / 1000
-                        self._duration_parsed = True
-                        return
-                fh.seek(prev_offset)
-
-            frames += 1  # it's most probably a mp3 frame
-            bitrate_accu += frame_br
-            if frames <= self._CBR_DETECTION_FRAME_COUNT:
-                last_bitrates.add(frame_br)
-
-            frame_size_accu += frame_length
-            # if bitrate does not change over time its probably CBR
-            is_cbr = (frames == self._CBR_DETECTION_FRAME_COUNT
-                      and len(last_bitrates) == 1)
-            if frames == max_estimation_frames or is_cbr:
-                # try to estimate duration
-                stream_size = (
-                    self.filesize - audio_offset - self._ID3V1_TAG_SIZE)
-                est_frame_count = stream_size / (frame_size_accu / frames)
-                samples = est_frame_count * self._SAMPLES_PER_FRAME
-                self.duration = samples / samplerate
-                self.bitrate = bitrate_accu / frames
-                self._duration_parsed = True
-                return
-
-            if frame_length > 1:  # jump over current frame body
-                fh.seek(frame_length - header_len, SEEK_CUR)
-        if self.samplerate:
-            self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
-        self._duration_parsed = True
+        if self._only_id3:
+            return
+        header = fh.read(4)
+        if header[:4] == b'fLaC':
+            fh.seek(audio_offset)
+            flac_tag = _Flac()
+            flac_tag._filehandler = fh
+            flac_tag.filesize = self.filesize
+            flac_tag._load(
+                tags=self._parse_tags, duration=self._parse_duration,
+                image=self._load_image)
+            self._update(flac_tag)
+        else:
+            end_padding = 0
+            if self.filesize >= self._ID3V1_TAG_SIZE:
+                # try parsing id3v1 at the end of file
+                fh.seek(-self._ID3V1_TAG_SIZE, SEEK_END)
+                if self._parse_id3v1(fh):
+                    end_padding = self._ID3V1_TAG_SIZE
+            fh.seek(audio_offset)
+            mpeg_tag = _MPEG()
+            mpeg_tag._filehandler = fh
+            mpeg_tag._end_padding = end_padding
+            mpeg_tag.filesize = self.filesize
+            mpeg_tag._load(tags=False, duration=self._parse_duration)
+            self._update(mpeg_tag)
+        self._tags_parsed = self._parse_tags
+        self._duration_parsed = self._parse_duration
 
     def _parse_id3v2_header(self, fh: BinaryIO) -> tuple[int, bool, int]:
         size = major = 0
         extended = False
         # for info on the specs, see: http://id3.org/Developer%20Information
-        header = fh.read(10)
+        header = fh.read(self._ID3V2_HEADER_SIZE)
         # check if there is an ID3v2 tag at the beginning of the file
         if header.startswith(b'ID3'):
             major = header[3]
@@ -1139,7 +1060,6 @@ class _ID3(TinyTag):
         size, extended, major = self._parse_id3v2_header(fh)
         if size <= 0:
             return size
-        end_pos = fh.tell() + size
         parsed_size = 0
         if extended:  # just read over the extended header.
             extd_size = self._unsynchsafe(unpack('4B', fh.read(6)[:4]))
@@ -1149,14 +1069,18 @@ class _ID3(TinyTag):
             if frame_size == -1:
                 break
             parsed_size += frame_size
-        fh.seek(end_pos)
         self._set_grouping_work_fields()
         return size
 
-    def _parse_id3v1(self, fh: BinaryIO) -> None:
-        content = fh.read(3 + 30 + 30 + 30 + 4 + 30 + 1)
+    def _parse_id3v1(self, fh: BinaryIO) -> bool:
+        if self._parse_tags:
+            content = fh.read(3 + 30 + 30 + 30 + 4 + 30 + 1)
+        else:
+            content = fh.read(3)
         if content[:3] != b'TAG':  # check if this is an ID3 v1 tag
-            return
+            return False
+        if not self._parse_tags:
+            return True
 
         def asciidecode(x: bytes) -> str:
             return self._unpad(
@@ -1187,6 +1111,7 @@ class _ID3(TinyTag):
             genre_id = ord(content[127:128])
             if genre_id < len(self._ID3V1_GENRES):
                 self._set_field('genre', self._ID3V1_GENRES[genre_id])
+        return True
 
     def _set_custom_field(self, custom_field_name: str, value: str) -> None:
         custom_field_name_lower = custom_field_name.lower()
@@ -1469,6 +1394,167 @@ class _ID3(TinyTag):
     @staticmethod
     def _unsynchsafe(ints: tuple[int, ...]) -> int:
         return (ints[0] << 21) + (ints[1] << 14) + (ints[2] << 7) + ints[3]
+
+
+class _MPEG(TinyTag):
+    """MPEG Audio Parser."""
+
+    _MAX_ESTIMATION_SEC = 30.0
+    _CBR_DETECTION_FRAME_COUNT = 5
+    _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
+
+    # see this page for the magic values used in mp3:
+    # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
+    _SAMPLE_RATES = (
+        (11025, 12000, 8000),   # MPEG 2.5
+        (0, 0, 0),              # reserved
+        (22050, 24000, 16000),  # MPEG 2
+        (44100, 48000, 32000),  # MPEG 1
+    )
+    _V1L1 = (0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416,
+             448, 0)
+    _V1L2 = (0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
+             384, 0)
+    _V1L3 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256,
+             320, 0)
+    _V2L1 = (0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224,
+             256, 0)
+    _V2L2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0)
+    _V2L3 = _V2L2
+    _NONE = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    _BITRATE_VERSION_LAYERS = (
+        # note that layers go from 3 to 1 by design, first layer id is reserved
+        (_NONE, _V2L3, _V2L2, _V2L1),  # MPEG Version 2.5
+        (_NONE, _NONE, _NONE, _NONE),  # reserved
+        (_NONE, _V2L3, _V2L2, _V2L1),  # MPEG Version 2
+        (_NONE, _V1L3, _V1L2, _V1L1),  # MPEG Version 1
+    )
+    _SAMPLES_PER_FRAME = 1152  # the default frame size for mp3
+    _MAX_INVALID_FRAMES = 200
+    _CHANNELS_PER_CHANNEL_MODE = (
+        2,  # 00 Stereo
+        2,  # 01 Joint stereo (Stereo)
+        2,  # 10 Dual channel (2 mono channels)
+        1,  # 11 Single channel (Mono)
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._end_padding = 0
+
+    def _parse(self, fh: BinaryIO) -> None:
+        if not self._parse_duration:
+            return
+        max_estimation_frames = (
+            (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
+        frame_size_accu = 0
+        frames = 0  # count frames for determining mp3 duration
+        invalid_frames = 0
+        bitrate_accu = 0    # add up bitrates to find average bitrate to detect
+        last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
+        # seek to first position after id3 tag (speedup for large header)
+        first_mpeg_id = None
+        audio_offset = fh.tell()
+        while True:
+            # reading through garbage until 11 '1' sync-bits are found
+            header = fh.read(4)
+            header_len = len(header)
+            if header_len < 4:
+                if frames:
+                    self.bitrate = bitrate_accu / frames
+                break  # EOF
+            _sync, conf, bitrate_freq, rest = unpack('4B', header)
+            br_id = (bitrate_freq >> 4) & 0x0F  # biterate id
+            sr_id = (bitrate_freq >> 2) & 0x03  # sample rate id
+            padding = 1 if bitrate_freq & 0x02 > 0 else 0
+            mpeg_id = (conf >> 3) & 0x03
+            layer_id = (conf >> 1) & 0x03
+            channel_mode = (rest >> 6) & 0x03
+            # check for eleven 1s, validate bitrate and sample rate
+            if (header[:2] <= b'\xFF\xE0'
+                    or (first_mpeg_id is not None and first_mpeg_id != mpeg_id)
+                    or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0
+                    or mpeg_id == 1):
+                # invalid frame, find next sync header
+                idx = header.find(b'\xFF', 1)
+                next_offset = header_len
+                if idx != -1:
+                    next_offset -= idx
+                    fh.seek(idx - header_len, SEEK_CUR)
+                if frames == 0:
+                    audio_offset += next_offset
+                    invalid_frames += 1
+                    if invalid_frames > self._MAX_INVALID_FRAMES:
+                        raise ParseError("Invalid MPEG frame header")
+                continue
+            if first_mpeg_id is None:
+                first_mpeg_id = mpeg_id
+            self.channels = self._CHANNELS_PER_CHANNEL_MODE[channel_mode]
+            frame_br = self._BITRATE_VERSION_LAYERS[mpeg_id][layer_id][br_id]
+            self.samplerate = samplerate = self._SAMPLE_RATES[mpeg_id][sr_id]
+            frame_length = (144000 * frame_br) // samplerate + padding
+            # There might be a xing header in the first frame that contains
+            # all the info we need, otherwise parse multiple frames to find the
+            # accurate average bitrate
+            if frames == 0 and self._USE_XING_HEADER:
+                prev_offset = header_len + audio_offset
+                frame_content = fh.read(frame_length)
+                xing_header_offset = frame_content.find(b'Xing')
+                if xing_header_offset != -1:
+                    fh.seek(prev_offset + xing_header_offset)
+                    xframes, byte_count = self._parse_xing_header(fh)
+                    if xframes > 0 and byte_count > 0:
+                        # MPEG-2 Audio Layer III uses 576 samples per frame
+                        samples_pf = self._SAMPLES_PER_FRAME
+                        if mpeg_id <= 2:
+                            samples_pf = 576
+                        self.duration = dur = xframes * samples_pf / samplerate
+                        self.bitrate = byte_count * 8 / dur / 1000
+                        self._duration_parsed = True
+                        return
+                fh.seek(prev_offset)
+
+            frames += 1  # it's most probably a mp3 frame
+            bitrate_accu += frame_br
+            if frames <= self._CBR_DETECTION_FRAME_COUNT:
+                last_bitrates.add(frame_br)
+
+            frame_size_accu += frame_length
+            # if bitrate does not change over time its probably CBR
+            is_cbr = (frames == self._CBR_DETECTION_FRAME_COUNT
+                      and len(last_bitrates) == 1)
+            if frames == max_estimation_frames or is_cbr:
+                # try to estimate duration
+                stream_size = (
+                    self.filesize - audio_offset - self._end_padding)
+                est_frame_count = stream_size / (frame_size_accu / frames)
+                samples = est_frame_count * self._SAMPLES_PER_FRAME
+                self.duration = samples / samplerate
+                self.bitrate = bitrate_accu / frames
+                self._duration_parsed = True
+                return
+
+            if frame_length > 1:  # jump over current frame body
+                fh.seek(frame_length - header_len, SEEK_CUR)
+        if self.samplerate:
+            self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
+        self._duration_parsed = True
+
+    @staticmethod
+    def _parse_xing_header(fh: BinaryIO) -> tuple[int, int]:
+        # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
+        fh.seek(4, SEEK_CUR)  # read over Xing header
+        header_flags = unpack('>i', fh.read(4))[0]
+        frames = byte_count = 0
+        if header_flags & 1:  # FRAMES FLAG
+            frames = unpack('>i', fh.read(4))[0]
+        if header_flags & 2:  # BYTES FLAG
+            byte_count = unpack('>i', fh.read(4))[0]
+        if header_flags & 4:  # TOC FLAG
+            fh.seek(100, SEEK_CUR)
+        if header_flags & 8:  # VBR SCALE FLAG
+            fh.seek(4, SEEK_CUR)
+        return frames, byte_count
 
 
 class _Ogg(TinyTag):
@@ -1822,6 +1908,7 @@ class _Wave(TinyTag):
                 # pylint: disable=protected-access
                 id3 = _ID3()
                 id3._filehandler = fh
+                id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
             elif self._parse_tags and subchunk_id == b'_PMX':
@@ -1855,16 +1942,7 @@ class _Flac(TinyTag):
     _PICTURE = 6
 
     def _parse(self, fh: BinaryIO) -> None:
-        id3 = None
         header = fh.read(4)
-        if header.startswith(b'ID3'):  # parse ID3 header if it exists
-            fh.seek(-4, SEEK_CUR)
-            # pylint: disable=protected-access
-            id3 = _ID3()
-            id3._parse_tags = self._parse_tags
-            id3._load_image = self._load_image
-            id3._parse_id3v2(fh)
-            header = fh.read(4)  # after ID3 should be fLaC
         if header[:4] != b'fLaC':
             raise ParseError('Invalid FLAC header')
         # for spec, see https://xiph.org/flac/ogg_mapping.html
@@ -1923,8 +2001,6 @@ class _Flac(TinyTag):
             if is_last_block:
                 break
             block_header = fh.read(header_len)
-        if id3 is not None:  # apply ID3 tags after vorbis
-            self._update(id3)
         self._tags_parsed = self._parse_tags
 
     @classmethod
@@ -2150,6 +2226,7 @@ class _Aiff(TinyTag):
                 # pylint: disable=protected-access
                 id3 = _ID3()
                 id3._filehandler = fh
+                id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
             elif self._parse_tags and subchunk_id == b'APPL':

@@ -17,7 +17,7 @@ from unittest import skipIf, TestCase
 
 from tinytag import ParseError, TinyTagException, UnsupportedFormatError
 from tinytag import Images, OtherFields, TinyTag
-from tinytag.tinytag import _ID3, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
+from tinytag.tinytag import _ID3, _MPEG, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 TYPE_CHECKING = False
 
@@ -48,7 +48,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'channels': 2,
         'samplerate': 44100,
-        'duration': 0.48866995073891617,
+        'duration': 0.4966768316522011,
         'album': 'I Can Walk On Water I Can Fly',
         'year': '2007',
         'title': 'I Can Walk On Water I Can Fly',
@@ -100,7 +100,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'samplerate': 44100,
         'track_total': 11,
-        'duration': 0.13836297152858082,
+        'duration': 0.14476357158483608,
         'album': 'Hymns for the Exiled',
         'year': '2004',
         'title': 'cosmic american',
@@ -194,7 +194,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'channels': 1,
         'samplerate': 44100,
-        'duration': 1.0265261269342902,
+        'duration': 1.0448979591836736,
         'filesize': 7280,
         'bitrate': 56.0,
     }),
@@ -204,7 +204,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 22050,
         'filesize': 4284,
         'bitrate': 32.0,
-        'duration': 1.0438932496075353,
+        'duration': 1.076043956043956,
     }),
     ('id3v24-long-title.mp3', {
         'other': OtherFields({
@@ -304,7 +304,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 11104,
         'title': 'image-encoding',
         'bitrate': 32.0,
-        'duration': 1.0438932496075353,
+        'duration': 1.076043956043956,
     }),
     ('id3v1_does_not_overwrite_id3v2.mp3', {
         'other': OtherFields({
@@ -407,7 +407,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'composer': 'Billy Howerdel/Maynard James Keenan',
         'bitrate': 192.0,
         'channels': 2,
-        'duration': 0.13198711063372717,
+        'duration': 0.10448979591836735,
         'genre': 'Rock',
         'samplerate': 44100,
         'title': 'Counting Bodies Like Sheep to the Rhythm of the War Drums',
@@ -636,9 +636,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('empty_frame.mp3', {
         'other': OtherFields(),
         'filesize': 2005,
-        'bitrate': 57.39124999999999,
+        'bitrate': 32.0,
         'channels': 1,
-        'duration': 0.1306122448979592,
+        'duration': 0.10448979591836735,
         'samplerate': 44100,
         'album': 'some album',
         'artist': 'some artist',
@@ -732,6 +732,28 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 0.1306122448979592,
         'samplerate': 44100,
         'title': 'some title',
+    }),
+    ('detect_mp3_fffb.x', {
+        'other': OtherFields(),
+        'channels': 2,
+        'samplerate': 44100,
+        'duration': 3.738712956446946,
+        'filesize': 14942,
+        'bitrate': 32.0,
+    }),
+    ('detect_mp3_fffb_id3v1.x', {
+        'other': OtherFields(),
+        'channels': 2,
+        'samplerate': 44100,
+        'genre': 'Darkwave',
+        'duration': 3.738712956446946,
+        'album': 'Quod Libet Test Data',
+        'year': '2004',
+        'title': 'Silence',
+        'artist': 'piman',
+        'track': 2,
+        'filesize': 15070,
+        'bitrate': 32.0,
     }),
     ('empty.ogg', {
         'other': OtherFields(),
@@ -1333,13 +1355,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
                 '-T "title=Track01" -T "album=Unbekannter Titel" '
                 '-T "date=" -T "tracknumber=01" -T "genre=" -5'
             ],
-            'artist': ['Unbekannter Künstler'],
-            'album': ['Unbekannter Titel'],
-            'title': ['Track01'],
+            'artist': ['artist'],
+            'album': ['album'],
+            'title': ['title'],
         }),
         'filesize': 19522,
-        'album': 'album',
-        'artist': 'artist',
+        'album': 'Unbekannter Titel',
+        'artist': 'Unbekannter Künstler',
         'bitrate': 344.36807999999996,
         'channels': 1,
         'disc': 1,
@@ -1348,7 +1370,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'genre': 'genre',
         'samplerate': 44100,
         'bitdepth': 16,
-        'title': 'title',
+        'title': 'Track01',
         'track': 1,
         'track_total': 5,
         'year': '2018',
@@ -1388,6 +1410,15 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 3.684716553287982,
         'filesize': 4777,
         'bitrate': 10.371489759747933,
+        'samplerate': 44100,
+        'bitdepth': 16,
+    }),
+    ('detect_flac.x', {
+        'other': OtherFields(),
+        'channels': 2,
+        'duration': 3.684716553287982,
+        'filesize': 120,
+        'bitrate': 0.2605356439543127,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -1987,7 +2018,7 @@ class TestAll(TestCase):
 
     def test_invalid_file(self) -> None:
         for path, cls in (
-            ('flac1.5sStereo.flac', _ID3),
+            ('ilbm.aiff', _ID3),
             ('silence-44-s-v1.mp3', _MP4),
             ('silence-44-s-v1.mp3', _Flac),
             ('flac1.5sStereo.flac', _Ogg),
@@ -2069,7 +2100,8 @@ class TestAll(TestCase):
     def test_detect_magic_headers(self) -> None:
         for testfile, expected in (
             ('detect_mp3_id3.x', _ID3),
-            ('detect_mp3_fffb.x', _ID3),
+            ('detect_mp3_fffb_id3v1.x', _ID3),
+            ('detect_mp3_fffb.x', _MPEG),
             ('detect_ogg_flac.x', _Ogg),
             ('detect_ogg_opus.x', _Ogg),
             ('detect_ogg_theora.x', _Ogg),
