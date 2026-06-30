@@ -1527,7 +1527,8 @@ class _MPEG(TinyTag):
                 # try to estimate duration
                 stream_size = (
                     self.filesize - audio_offset - self._end_padding)
-                est_frame_count = stream_size / (frame_size_accu / frames)
+                est_frame_count = int(
+                    stream_size / (frame_size_accu / frames) + 0.5)
                 samples = est_frame_count * self._SAMPLES_PER_FRAME
                 self.duration = samples / samplerate
                 self.bitrate = bitrate_accu / frames
