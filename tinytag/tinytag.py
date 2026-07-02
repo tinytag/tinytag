@@ -69,7 +69,7 @@ class TinyTag:
 
     SUPPORTED_FILE_EXTENSIONS = (
         '.mp1', '.mp2', '.mp3',
-        '.oga', '.ogg', '.opus', '.spx',
+        '.oga', '.ogv', '.ogg', '.opus', '.spx',
         '.wav', '.flac', '.wma',
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
         '.aiff', '.aifc', '.aif', '.afc'
