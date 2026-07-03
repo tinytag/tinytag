@@ -182,6 +182,18 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'disc_total': 0,
         'year': '2003',
     }),
+    ('utf-8-id3v2-invalid-string.mp3', {
+        'other': OtherFields(),
+        'genre': 'Acustico',
+        'track_total': 21,
+        'track': 1,
+        'filesize': 2119,
+        'title': '�ran día',
+        'artist': 'Paso a paso',
+        'album': 'S/T',
+        'disc_total': 0,
+        'year': '2003',
+    }),
     ('empty_file.mp3', {
         'other': OtherFields(),
         'filesize': 0
@@ -2089,13 +2101,6 @@ class TestAll(TestCase):
             "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
             "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')"
         )
-
-    def test_mp3_utf_8_invalid_string(self) -> None:
-        tag = TinyTag.get(
-            os.path.join(SAMPLE_FOLDER, 'utf-8-id3v2-invalid-string.mp3'))
-        # the title used to be Gran dia, but I replaced the first byte with
-        # 0xFF, which should be ignored here
-        self.assertEqual(tag.title, '�ran día')
 
     def test_detect_magic_headers(self) -> None:
         for testfile, expected in (
