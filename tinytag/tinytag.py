@@ -1908,7 +1908,7 @@ class _Wave(TinyTag):
             elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
                 id3 = _ID3()
-                id3._filehandler = fh
+                id3._filehandler = BytesIO(fh.read(subchunk_size))
                 id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
@@ -2226,7 +2226,7 @@ class _Aiff(TinyTag):
             elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
                 id3 = _ID3()
-                id3._filehandler = fh
+                id3._filehandler = BytesIO(fh.read(subchunk_size))
                 id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
                 self._update(id3)
