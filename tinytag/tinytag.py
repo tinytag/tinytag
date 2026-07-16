@@ -1278,7 +1278,7 @@ class _ID3(TinyTag):
             offset = 0
             while offset < content_length:
                 end_pos = self._find_string_end_pos(content, encoding, offset)
-                if end_pos == offset:
+                if end_pos <= offset:
                     end_pos = content_length
                 value = self._decode_string(content[offset:end_pos], encoding)
                 offset = end_pos
