@@ -9,7 +9,6 @@ from __future__ import annotations
 import os.path
 
 from io import BytesIO, TextIOWrapper
-from math import isclose
 from pathlib import Path
 from platform import python_implementation, system
 from sys import stdout
@@ -1880,61 +1879,35 @@ class TestAll(TestCase):
         # Use utf-8 encoding for debug print()
         if isinstance(stdout, TextIOWrapper):
             stdout.reconfigure(encoding='utf-8')
+        # Show full assertion error diff
+        cls.maxDiff = None
 
     def compare_tag(self,
                     results: ExpectedTag,
-                    expected: ExpectedTag,
-                    file: str) -> None:
-        def error_fmt(value: str | float | list[str]) -> str:
-            return f'{repr(value)} ({type(value)})'
-
-        def assert_complete_data(results: ExpectedTag | OtherFields,
-                                 expected: ExpectedTag | OtherFields) -> None:
-            missing_result_fields = set(expected) - set(results)
-            missing_expected_fields = set(results) - set(expected)
-            self.assertFalse(
-                missing_result_fields,
-                f'Missing fields in tag \n{missing_result_fields}')
-            self.assertFalse(
-                missing_expected_fields,
-                f'Missing fields in test case \n{missing_expected_fields}')
-
-        def assert_values_match(path: str,
-                                result_val: str | float | list[str],
-                                expected_val: str | float | list[str]) -> None:
-            fmt_string = 'field "%s": got %s expected %s in %s!'
-            fmt_values = (
-                path, error_fmt(result_val), error_fmt(expected_val), file)
-            values_match = False
-            # lets not copy *all* the lyrics inside the fixture
-            if (path in {'other.lyrics', 'other.xmp'}
-                    and isinstance(expected_val, list)
-                    and isinstance(result_val, list)):
-                values_match = result_val[0].startswith(expected_val[0])
-            elif (isinstance(result_val, float)
-                    and isinstance(expected_val, float)):
-                values_match = isclose(result_val, expected_val)
-            else:
-                values_match = result_val == expected_val
-            self.assertTrue(values_match, fmt_string % fmt_values)
-
-        assert_complete_data(results, expected)
+                    expected: ExpectedTag) -> None:
+        self.assertEqual(results.keys(), expected.keys())
 
         for path, result_val in results.items():
             expected_val = expected[path]
             if (isinstance(result_val, OtherFields)
                     and isinstance(expected_val, OtherFields)):
-                assert_complete_data(result_val, expected_val)
+                self.assertEqual(result_val.keys(), expected_val.keys())
 
                 for other_key, other_result_val in result_val.items():
-                    other_path = f"{path}.{other_key}"
-                    assert_values_match(
-                        other_path, other_result_val,
-                        expected_val[other_key]
-                    )
-            elif (not isinstance(result_val, OtherFields)
-                    and not isinstance(expected_val, OtherFields)):
-                assert_values_match(path, result_val, expected_val)
+                    other_expected_val = expected_val[other_key]
+                    if other_key in {'lyrics', 'xmp'}:
+                        # Only check start of value
+                        self.assertEqual(
+                            other_result_val[0][:len(other_expected_val[0])],
+                            other_expected_val[0]
+                        )
+                    else:
+                        self.assertEqual(other_result_val, other_expected_val)
+            elif (isinstance(result_val, float)
+                    and isinstance(expected_val, float)):
+                self.assertAlmostEqual(result_val, expected_val)
+            else:
+                self.assertEqual(result_val, expected_val)
 
     def test_file_reading_all(self) -> None:
         for testfile, expected in TEST_FILES.items():
@@ -1947,7 +1920,7 @@ class TestAll(TestCase):
                     if not key.startswith('_') and key != 'filename'
                     and val is not None and not isinstance(val, Images)
                 }
-                self.compare_tag(results, expected, filename)
+                self.compare_tag(results, expected)
 
     def test_file_reading_tags(self) -> None:
         for testfile, expected in TEST_FILES.items():
@@ -1966,7 +1939,7 @@ class TestAll(TestCase):
                     key: val for key, val in expected.items()
                     if key not in excluded_attrs
                 }
-                self.compare_tag(results, filtered_expected, filename)
+                self.compare_tag(results, filtered_expected)
                 assert tag.images.any is None
 
     def test_file_reading_duration(self) -> None:
@@ -1987,7 +1960,7 @@ class TestAll(TestCase):
                     key: val for key, val in expected.items()
                     if key in allowed_attrs
                 }
-                self.compare_tag(results, filtered_expected, filename)
+                self.compare_tag(results, filtered_expected)
                 assert tag.images.any is None
 
     def test_pathlib_compatibility(self) -> None:
