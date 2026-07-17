@@ -172,6 +172,10 @@ class TinyTag:
     def as_dict(self) -> dict[str, str | float | list[str]]:
         """Return a flat dictionary representation of available
         metadata."""
+        audio_property_keys = {
+            'filename', 'filesize', 'duration', 'channels', 'bitrate',
+            'bitdepth', 'samplerate'
+        }
         fields: dict[str, str | float | list[str]] = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
@@ -181,10 +185,10 @@ class TinyTag:
             if not isinstance(value, OtherFields):
                 if value is None:
                     continue
-                if key != 'filename' and isinstance(value, str):
-                    fields[key] = [value]
-                else:
+                if key in audio_property_keys:
                     fields[key] = value
+                else:
+                    fields[key] = [str(value)]
                 continue
             for other_key, other_values in value.items():
                 other_fields = fields.get(other_key)
@@ -272,57 +276,49 @@ class TinyTag:
         if tags or duration:
             self._parse(self._filehandler)
 
-    def _set_field(self, fieldname: str, value: str | float,
-                   check_conflict: bool = True) -> None:
-        if fieldname.startswith(self._OTHER_PREFIX):
-            if isinstance(value, str) and not value:
-                return
-            fieldname = fieldname[len(self._OTHER_PREFIX):]
-            if check_conflict and fieldname in self.__dict__:
-                fieldname = '_' + fieldname
-            if fieldname not in self.other:
-                self.other[fieldname] = []
-            self.other[fieldname].append(str(value))
-            if _DEBUG:
-                print(f'Adding value "{value} to field "{fieldname}"')
+    def _set_field(self, fieldname: str, value: str | float) -> None:
+        if isinstance(value, str) and not value:
             return
         old_value = self.__dict__.get(fieldname)
-        new_value = value
-        if isinstance(new_value, str):
-            if not new_value:
-                return
-            # First value goes in tag, others in tag.other
-            values = new_value.split('\x00')
-            for index, i_value in enumerate(values):
-                if index or old_value and i_value != old_value:
-                    self._set_field(
-                        self._OTHER_PREFIX + fieldname, i_value,
-                        check_conflict=False)
-                    continue
-                new_value = i_value
-            if old_value:
-                return
-        elif not new_value and old_value:
-            # Prioritize non-zero integer values
+        if value == old_value:
+            return
+        if old_value is not None:
+            self._set_other_field(fieldname, str(value))
+            return
+        if fieldname.startswith(self._OTHER_PREFIX):
+            fieldname = fieldname[len(self._OTHER_PREFIX):]
+            if fieldname in self.__dict__:
+                fieldname = '_' + fieldname
+            self._set_other_field(fieldname, str(value))
             return
         if _DEBUG:
-            print(f'Setting field "{fieldname}" to "{new_value!r}"')
-        self.__dict__[fieldname] = new_value
+            print(f'Setting field "{fieldname}" to "{value!r}"')
+        self.__dict__[fieldname] = value
+
+    def _set_other_field(self, fieldname: str, value: str) -> None:
+        if not value:
+            return
+        if fieldname not in self.other:
+            self.other[fieldname] = []
+        if value in self.other[fieldname]:
+            return
+        self.other[fieldname].append(value)
+        if _DEBUG:
+            print(f'Adding value "{value} to field "{fieldname}"')
 
     def _parse(self, fh: BinaryIO) -> None:
         raise NotImplementedError
 
     def _update(self, other: TinyTag) -> None:
         # update the values of this tag with the values from another tag
+        ignored_keys = {'filename', 'filesize'}
         for key, value in other.__dict__.items():
-            if key.startswith('_'):
+            if key.startswith('_') or key in ignored_keys:
                 continue
             if isinstance(value, OtherFields):
                 for other_key, other_values in other.other.items():
                     for other_value in other_values:
-                        self._set_field(
-                            self._OTHER_PREFIX + other_key, other_value,
-                            check_conflict=False)
+                        self._set_other_field(other_key, other_value)
             elif isinstance(value, Images):
                 self.images._update(value)  # pylint: disable=protected-access
             elif value is not None:
@@ -1125,12 +1121,12 @@ class _ID3(TinyTag):
         # repurposed the TIT1 frame for 'work'. Handle this mess here.
         if self._modern_grouping_values:
             for value in self._modern_grouping_values:
-                self._set_field('other.grouping', value)
+                self._set_other_field('grouping', value)
             for value in self._legacy_grouping_values:
-                self._set_field('other.work', value)
+                self._set_other_field('work', value)
             return
         for value in self._legacy_grouping_values:
-            self._set_field('other.grouping', value)
+            self._set_other_field('grouping', value)
 
     @classmethod
     def _create_tag_image(cls,
@@ -1312,7 +1308,7 @@ class _ID3(TinyTag):
         elif self._parse_tags and frame_id in self._SYNCED_LYRICS_FRAME_IDS:
             content = fh.read(frame_size)
             lyrics = self._parse_synced_lyrics(content)
-            self._set_field('other.lyrics', lyrics)
+            self._set_other_field('lyrics', lyrics)
         elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
             content = fh.read(frame_size)
@@ -1332,7 +1328,7 @@ class _ID3(TinyTag):
                 if owner_id == b'XMP':
                     value = self._unpad_bytes(
                         content[owner_id_end_pos:]).decode('utf-8', 'replace')
-                    self._set_field('other.xmp', value)
+                    self._set_other_field('xmp', value)
         elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
             content = fh.read(frame_size)
@@ -1915,7 +1911,7 @@ class _Wave(TinyTag):
             elif self._parse_tags and subchunk_id == b'_PMX':
                 chunk = self._unpad_bytes(fh.read(subchunk_size))
                 value = chunk.decode('utf-8', 'replace')
-                self._set_field('other.xmp', value)
+                self._set_other_field('xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
@@ -2152,7 +2148,7 @@ class _Wma(TinyTag):
             elif self._parse_tags and object_id == self._XMP_METADATA:
                 value = fh.read(
                     object_size - header_len).decode('utf-8', 'replace')
-                self._set_field('other.xmp', value)
+                self._set_other_field('xmp', value)
             else:
                 # skip unknown object ids
                 fh.seek(object_size - header_len, SEEK_CUR)
@@ -2203,8 +2199,10 @@ class _Aiff(TinyTag):
             subchunk_size += subchunk_size % 2
             if self._parse_tags and subchunk_id in self._AIFF_MAPPING:
                 chunk = self._unpad_bytes(fh.read(subchunk_size))
-                value = chunk.decode('utf-8', 'replace')
-                self._set_field(self._AIFF_MAPPING[subchunk_id], value)
+                for subvalue in chunk.split(b'\x00'):
+                    self._set_field(
+                        self._AIFF_MAPPING[subchunk_id],
+                        subvalue.decode('utf-8', 'replace'))
             elif self._parse_duration and subchunk_id == b'COMM':
                 chunk = fh.read(subchunk_size)
                 channels, num_frames, bitdepth = unpack('>hLh', chunk[:8])
@@ -2236,7 +2234,7 @@ class _Aiff(TinyTag):
                 if application_signature == b'XMP ':
                     content = self._unpad_bytes(chunk[4:])
                     value = content.decode('utf-8', 'replace')
-                    self._set_field('other.xmp', value)
+                    self._set_other_field('xmp', value)
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
