@@ -744,6 +744,28 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'title': 'some title',
     }),
+    ('duplicate_fields.mp3', {
+        'other': OtherFields({
+            'title': ['new title', 'another title'],
+            'artist': ['new artist', 'another artist'],
+            'album': ['new album', 'another album'],
+            'comment': ['new comment', 'another comment'],
+            'track': ['2', '99'],
+            'lyrics': ['duplicate lyrics', 'new lyrics', 'more lyrics'],
+        }),
+        'filesize': 3037,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+        'title': 'duplicate title',
+        'artist': 'duplicate artist',
+        'album': 'duplicate album',
+        'comment': 'duplicate comment',
+        'track': 1,
+        'genre': 'genre',
+        'year': '1980',
+    }),
     ('detect_mp3_fffb.x', {
         'other': OtherFields(),
         'channels': 2,
@@ -1401,17 +1423,25 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'artist': ['artist 2', 'artist 3'],
             'genre': ['genre 2'],
             'album': ['album 2'],
+            'disc': ['2', '3'],
+            'disc_total': ['2', '3'],
+            'track': ['2', '3'],
+            'track_total': ['2', '3'],
             'url': ['https://example.com'],
         }),
-        'filesize': 2824,
+        'filesize': 3016,
         'album': 'album 1',
         'artist': 'artist 1',
-        'bitrate': 225.92,
+        'bitrate': 241.28,
         'channels': 1,
         'duration': 0.1,
         'genre': 'genre 1',
         'samplerate': 44100,
         'bitdepth': 16,
+        'disc': 1,
+        'disc_total': 1,
+        'track': 1,
+        'track_total': 1,
     }),
     ('unsynced_lyrics.flac', {
         'other': OtherFields({
@@ -1885,22 +1915,26 @@ class TestAll(TestCase):
     def compare_tag(self,
                     results: ExpectedTag,
                     expected: ExpectedTag) -> None:
-        self.assertEqual(results.keys(), expected.keys())
+        self.assertEqual(set(results), set(expected))
 
         for path, result_val in results.items():
             expected_val = expected[path]
             if (isinstance(result_val, OtherFields)
                     and isinstance(expected_val, OtherFields)):
-                self.assertEqual(result_val.keys(), expected_val.keys())
+                self.assertEqual(set(result_val), set(expected_val))
 
                 for other_key, other_result_val in result_val.items():
                     other_expected_val = expected_val[other_key]
                     if other_key in {'lyrics', 'xmp'}:
                         # Only check start of value
                         self.assertEqual(
-                            other_result_val[0][:len(other_expected_val[0])],
-                            other_expected_val[0]
+                            len(other_result_val), len(other_expected_val)
                         )
+                        for index, val in enumerate(other_expected_val):
+                            self.assertEqual(
+                                other_result_val[index][:len(val)],
+                                val
+                            )
                     else:
                         self.assertEqual(other_result_val, other_expected_val)
             elif (isinstance(result_val, float)
@@ -2147,12 +2181,12 @@ class TestAll(TestCase):
             os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
         vars_str = str(vars(tag))
         self.assertIn(
-            "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 225.92, "
+            "flac_with_image.flac', 'filesize': 3016, 'duration': 0.1, "
+            "'channels': 1, 'bitrate': 241.28, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
             "'albumartist': None, 'composer': None, 'album': 'album 1', "
-            "'disc': None, 'disc_total': None, 'title': None, 'track': None, "
-            "'track_total': None, 'genre': 'genre 1', 'year': None, "
+            "'disc': 1, 'disc_total': 1, 'title': None, 'track': 1, "
+            "'track_total': 1, 'genre': 'genre 1', 'year': None, "
             "'comment': None, 'images': <tinytag.tinytag.Images "
             "object at ",
             vars_str
@@ -2160,7 +2194,9 @@ class TestAll(TestCase):
         self.assertIn(
             "'other': {'artist': ['artist 2', 'artist 3'], "
             "'album': ['album 2'], 'genre': ['genre 2'], "
-            "'url': ['https://example.com']}",
+            "'url': ['https://example.com'], 'track': ['2', '3'], "
+            "'disc_total': ['2', '3'], 'disc': ['2', '3'], "
+            "'track_total': ['2', '3']}",
             vars_str
         )
         self.assertEqual(
@@ -2180,13 +2216,16 @@ class TestAll(TestCase):
     def test_str_flat_dict(self) -> None:
         tag = TinyTag.get(
             os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
-        self.assertTrue(str(tag.as_dict()).endswith(
-            "flac_with_image.flac', 'filesize': 2824, 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 225.92, "
+        self.assertIn(
+            "flac_with_image.flac', 'filesize': 3016, 'duration': 0.1, "
+            "'channels': 1, 'bitrate': 241.28, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
             "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
-            "'genre': ['genre 1', 'genre 2'], 'url': ['https://example.com']}"
-        ))
+            "'disc': ['1', '2', '3'], 'disc_total': ['1', '2', '3'], "
+            "'track': ['1', '2', '3'], 'track_total': ['1', '2', '3'], "
+            "'genre': ['genre 1', 'genre 2'], 'url': ['https://example.com']}",
+            str(tag.as_dict())
+        )
         self.assertEqual(
             str(tag.images.as_dict()),
             "{'front_cover': [Image(name='front_cover', data=b'\\xff\\xd8\\xff"

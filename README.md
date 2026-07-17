@@ -82,7 +82,9 @@ Alternatively you can use tinytag directly on the command line:
       "title": [
         "track name"
       ],
-      "track": 4,
+      "track": [
+        "4"
+      ],
       "genre": [
         "Jazz"
       ],
