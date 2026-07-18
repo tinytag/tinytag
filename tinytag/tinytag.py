@@ -434,12 +434,15 @@ class Image:
     """A class representing an image embedded in an audio file."""
     def __init__(self,
                  name: str,
+                 size: int,
                  data: bytes,
-                 mime_type: str | None = None) -> None:
+                 mime_type: str | None = None,
+                 description: str | None = None) -> None:
         self.name = name
+        self.size = size
         self.data = data
         self.mime_type = mime_type
-        self.description: str | None = None
+        self.description: str | None = description
 
     def __repr__(self) -> str:
         variables = vars(self).copy()
@@ -697,8 +700,10 @@ class _MP4(TinyTag):
     @classmethod
     def _parse_cover_image(cls, data_atom: bytes) -> dict[str, Image]:
         data_type = unpack('>I', data_atom[:4])[0]
+        image_data = data_atom[8:]
         image = Image(
-            'front_cover', data_atom[8:], cls._IMAGE_MIME_TYPES.get(data_type))
+            'front_cover', len(image_data), image_data,
+            cls._IMAGE_MIME_TYPES.get(data_type))
         return {'images.front_cover': image}
 
     @classmethod
@@ -1140,7 +1145,7 @@ class _ID3(TinyTag):
         name = field_name
         if field_name.startswith(cls._OTHER_PREFIX):
             name = field_name[len(cls._OTHER_PREFIX):]
-        image = Image(name, data)
+        image = Image(name, len(data), data)
         if mime_type:
             image.mime_type = mime_type
         if description:

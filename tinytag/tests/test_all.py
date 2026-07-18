@@ -15,7 +15,7 @@ from sys import stdout
 from unittest import skipIf, TestCase
 
 from tinytag import ParseError, TinyTagException, UnsupportedFormatError
-from tinytag import Images, OtherFields, TinyTag
+from tinytag import Image, Images, OtherFields, OtherImages, TinyTag
 from tinytag.tinytag import _ID3, _MPEG, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
 
 TYPE_CHECKING = False
@@ -24,8 +24,10 @@ TYPE_CHECKING = False
 if TYPE_CHECKING:
     from typing import BinaryIO, Mapping, Union
     ExpectedTag = Mapping[str, Union[str, float, OtherFields]]
+    ExpectedImages = Mapping[str, Union[Image, OtherImages]]
 else:
     ExpectedTag = dict
+    ExpectedImages = dict
 
 TEST_FILES: dict[str, ExpectedTag] = dict([
     ('vbri.mp3', {
@@ -1914,6 +1916,105 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
 ])
 
+IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
+    ('image-text-encoding.mp3', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='cover',
+            size=5708,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00d\x00d'
+        ),
+    }),
+    ('id3v22_with_image.mp3', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='some image ë',
+            size=1220,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('id3v22_with_image_stray_null.mp3', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='some image ë',
+            size=1220,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('ogg_with_image.ogg', {
+        'other': OtherImages({
+            'bright_colored_fish': [Image(
+                name='bright_colored_fish',
+                mime_type='image/jpeg',
+                description='some image ë',
+                size=1220,
+                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+            )],
+        }),
+    }),
+    ('wav_with_image.wav', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='some image ë',
+            size=4627,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01'
+        ),
+    }),
+    ('flac_with_image.flac', {
+        'other': OtherImages({
+            'bright_colored_fish': [Image(
+                name='bright_colored_fish',
+                mime_type='image/jpeg',
+                description='some image ë',
+                size=1220,
+                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+            )],
+        }),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='some image ë',
+            size=1220,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('mpeg4_with_image.m4a', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            size=1220,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('aiff_with_image.aiff', {
+        'other': OtherImages({
+            'generic': [Image(
+                name='generic',
+                mime_type='image/jpeg',
+                description='some image ë',
+                size=1220,
+                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+            )],
+            'composer': [Image(
+                name='composer',
+                mime_type='image/jpeg',
+                description='some image ë',
+                size=1220,
+                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+            )],
+        }),
+    }),
+])
+
 SAMPLE_FOLDER = os.path.join(os.path.dirname(__file__), 'samples')
 
 
@@ -1934,8 +2035,8 @@ class TestAll(TestCase):
 
         for path, result_val in results.items():
             expected_val = expected[path]
-            if (isinstance(result_val, OtherFields)
-                    and isinstance(expected_val, OtherFields)):
+            if isinstance(expected_val, OtherFields):
+                assert isinstance(result_val, OtherFields)
                 self.assertEqual(set(result_val), set(expected_val))
 
                 for other_key, other_result_val in result_val.items():
@@ -1952,11 +2053,43 @@ class TestAll(TestCase):
                             )
                     else:
                         self.assertEqual(other_result_val, other_expected_val)
-            elif (isinstance(result_val, float)
-                    and isinstance(expected_val, float)):
+                continue
+            if isinstance(expected_val, float):
+                assert isinstance(result_val, float)
                 self.assertAlmostEqual(result_val, expected_val)
-            else:
-                self.assertEqual(result_val, expected_val)
+                continue
+            self.assertEqual(result_val, expected_val)
+
+    def compare_images(self,
+                       results: ExpectedImages,
+                       expected: ExpectedImages) -> None:
+        def assert_images_match(result_val: Image,
+                                expected_val: Image) -> None:
+            self.assertEqual(result_val.name, expected_val.name)
+            self.assertEqual(result_val.size, expected_val.size)
+            self.assertEqual(result_val.mime_type, expected_val.mime_type)
+            self.assertEqual(result_val.description, expected_val.description)
+            self.assertEqual(
+                result_val.data[:len(expected_val.data)],
+                expected_val.data
+            )
+
+        self.assertEqual(results.keys(), expected.keys())
+
+        for path, result_val in results.items():
+            expected_val = expected[path]
+            if isinstance(expected_val, OtherImages):
+                assert isinstance(result_val, OtherImages)
+                self.assertEqual(set(result_val), set(expected_val))
+
+                for other_key, other_result_val in result_val.items():
+                    for index, image in enumerate(other_result_val):
+                        assert_images_match(
+                            image, expected_val[other_key][index]
+                        )
+                continue
+            assert isinstance(result_val, Image)
+            assert_images_match(result_val, expected_val)
 
     def test_file_reading_all(self) -> None:
         for testfile, expected in TEST_FILES.items():
@@ -2012,6 +2145,18 @@ class TestAll(TestCase):
                 self.compare_tag(results, filtered_expected)
                 assert tag.images.any is None
 
+    def test_file_reading_images(self) -> None:
+        for testfile, expected in IMAGE_TEST_FILES.items():
+            with self.subTest(testfile=testfile, expected=expected):
+                filename = os.path.join(SAMPLE_FOLDER, testfile)
+                tag = TinyTag.get(filename, image=True)
+                results = {
+                    key: val
+                    for key, val in tag.images.__dict__.items()
+                    if val is not None
+                }
+                self.compare_images(results, expected)
+
     def test_pathlib_compatibility(self) -> None:
         testfile = next(iter(TEST_FILES.keys()))
         filename = Path(SAMPLE_FOLDER) / testfile
@@ -2065,64 +2210,48 @@ class TestAll(TestCase):
                     cls.get(os.path.join(SAMPLE_FOLDER, path))
                 self.assertIsInstance(context.exception, TinyTagException)
 
-    def test_image_loading(self) -> None:
-        for path, expected_size, desc in (
-            ('image-text-encoding.mp3', 5708, 'cover'),
-            ('id3v22_with_image.mp3', 1220, 'some image ë'),
-            ('id3v22_with_image_stray_null.mp3', 1220, 'some image ë'),
-            ('mpeg4_with_image.m4a', 1220, None),
-            ('flac_with_image.flac', 1220, 'some image ë'),
-            ('wav_with_image.wav', 4627, 'some image ë'),
-            ('aiff_with_image.aiff', 1220, 'some image ë'),
-        ):
-            with self.subTest(path=path, expected_size=expected_size,
-                              desc=desc):
-                tag = TinyTag.get(
-                    os.path.join(SAMPLE_FOLDER, path), image=True)
-                image = tag.images.any
-                manual_image = tag.images.front_cover
-                if manual_image is None:
-                    manual_image = tag.images.other['generic'][0]
-                assert image is not None
-                assert manual_image is not None
-                self.assertIn(image.name, {'front_cover', 'generic'})
-                assert image.data is not None
-                self.assertEqual(image.data, manual_image.data)
-                with self.assertWarns(DeprecationWarning):
-                    self.assertEqual(image.data, tag.get_image())
-                image_size = len(image.data)
-                self.assertEqual(
-                    image_size, expected_size,
-                    (f'Image is {image_size} bytes but should be '
-                     f'{expected_size} bytes')
-                )
-                self.assertTrue(
-                    image.data.startswith(b'\xff\xd8\xff\xe0'),
-                    'The image data must start with a jpeg header'
-                )
-                self.assertEqual(image.mime_type, 'image/jpeg')
-                self.assertEqual(image.description, desc)
+    def test_image_construction(self) -> None:
+        name = 'front_cover'
+        mime_type = 'image/jpeg'
+        description = 'cover'
+        size = 5708
+        data = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x02\x00\x00d\x00d'
+        image = Image(
+            name=name, mime_type=mime_type, description=description, size=size,
+            data=data
+        )
+        self.assertEqual(image.name, name)
+        self.assertEqual(image.mime_type, mime_type)
+        self.assertEqual(image.description, description)
+        self.assertEqual(image.size, size)
+        self.assertEqual(image.data, data)
 
-    def test_image_loading_other(self) -> None:
+    def test_images_any(self) -> None:
         tag = TinyTag.get(
-            os.path.join(SAMPLE_FOLDER, 'ogg_with_image.ogg'), image=True)
-        image = tag.images.other['bright_colored_fish'][0]
+            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+        image = tag.images.any
+        manual_image = tag.images.front_cover
+        assert image is not None
+        assert manual_image is not None
         assert image.data is not None
-        assert tag.images.any is not None
-        self.assertEqual(tag.images.any.data, image.data)
+        self.assertEqual(image.name, 'front_cover')
+        self.assertEqual(image.data, manual_image.data)
+        self.assertTrue(tag.images.other)
         with self.assertWarns(DeprecationWarning):
             self.assertEqual(image.data, tag.get_image())
-        self.assertEqual(image.mime_type, 'image/jpeg')
+
+    def test_images_any_other(self) -> None:
+        tag = TinyTag.get(
+            os.path.join(SAMPLE_FOLDER, 'ogg_with_image.ogg'), image=True)
+        image = tag.images.any
+        manual_image = tag.images.other['bright_colored_fish'][0]
+        assert image is not None
+        assert manual_image is not None
+        assert image.data is not None
         self.assertEqual(image.name, 'bright_colored_fish')
-        self.assertEqual(image.description, 'some image ë')
-        self.assertEqual(len(image.data), 1220)
-        self.assertEqual(
-            str(image),
-            "Image(name='bright_colored_fish', data=b'\\xff\\xd8\\xff\\xe0"
-            "\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
-            "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
-            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')"
-        )
+        self.assertEqual(image.data, manual_image.data)
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(image.data, tag.get_image())
 
     def test_detect_magic_headers(self) -> None:
         for testfile, expected in (
@@ -2216,12 +2345,13 @@ class TestAll(TestCase):
         )
         self.assertEqual(
             str(vars(tag.images)),
-            "{'front_cover': Image(name='front_cover', data=b'\\xff\\xd8\\xff"
-            "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00"
-            "\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
-            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë'),"
-            " 'back_cover': None, 'media': None, 'other': "
-            "{'bright_colored_fish': [Image(name='bright_colored_fish', data="
+            "{'front_cover': Image(name='front_cover', size=1220, data=b'\\xff"
+            "\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
+            "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00"
+            "\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description='some "
+            "image ë'), 'back_cover': None, 'media': None, 'other': "
+            "{'bright_colored_fish': [Image(name='bright_colored_fish', "
+            "size=1220, data="
             "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
             "\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
             "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description="
@@ -2243,13 +2373,14 @@ class TestAll(TestCase):
         )
         self.assertEqual(
             str(tag.images.as_dict()),
-            "{'front_cover': [Image(name='front_cover', data=b'\\xff\\xd8\\xff"
-            "\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00"
-            "\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
-            "\\xa0lcm..', mime_type='image/jpeg', description='some image ë')]"
-            ", 'bright_colored_fish': [Image(name='bright_colored_fish', "
-            "data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01"
-            "\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01"
-            "\\x01\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', "
-            "description='some image ë')]}"
+            "{'front_cover': [Image(name='front_cover', size=1220, data="
+            "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
+            "\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
+            "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description="
+            "'some image ë')], 'bright_colored_fish': [Image(name='"
+            "bright_colored_fish', size=1220, data=b'\\xff\\xd8\\xff\\xe0"
+            "\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
+            "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
+            "\\xa0lcm..', mime_type='image/jpeg', description="
+            "'some image ë')]}"
         )

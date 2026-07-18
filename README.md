@@ -304,6 +304,7 @@ Provided values are always lists containing at least one `Image` object.
 The `Image` object provides the following attributes:
 
     data           # image data as bytes
+    size           # image size in bytes as integer (added in tinytag 2.3.0) 
     name           # image name/kind as string
     mime_type      # image MIME type as string
     description    # image description as string
