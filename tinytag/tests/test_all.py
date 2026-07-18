@@ -2135,6 +2135,21 @@ class TestAll(TestCase):
                     TinyTag.get(filename, header_detection=False)
                 self.assertIsInstance(context.exception, TinyTagException)
 
+    def test_short_mpeg_header_file_does_not_oserror(self) -> None:
+        """Path-backed files shorter than ID3v1 must still sniff as MPEG."""
+        import tempfile
+        for payload in (b'\xff\xfb', b'\xff\xfb' + b'\x00' * 10):
+            with self.subTest(size=len(payload)):
+                with tempfile.NamedTemporaryFile(delete=False) as handle:
+                    handle.write(payload)
+                    path = handle.name
+                try:
+                    tag = TinyTag.get(path)
+                    self.assertIsInstance(tag, _MPEG)
+                    self.assertEqual(tag.filesize, len(payload))
+                finally:
+                    os.unlink(path)
+
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
             TinyTag.get()

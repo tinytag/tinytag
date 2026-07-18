@@ -226,11 +226,16 @@ class TinyTag:
         if header.startswith(b'ID3'):
             return _ID3
         if header.startswith(b'\xff\xfb'):
-            filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
-            footer = filehandle.read(3)
-            filehandle.seek(0)
-            if footer == b'TAG':
-                return _ID3
+            # ID3v1 is always 128 bytes; short files must not SEEK_END past start.
+            filehandle.seek(0, SEEK_END)
+            if filehandle.tell() >= _ID3._ID3V1_TAG_SIZE:
+                filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
+                footer = filehandle.read(3)
+                filehandle.seek(0)
+                if footer == b'TAG':
+                    return _ID3
+            else:
+                filehandle.seek(0)
             return _MPEG
         if header.startswith(b'fLaC'):
             return _Flac
