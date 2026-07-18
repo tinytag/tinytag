@@ -123,13 +123,15 @@ These are helpful when you need quick access to common metadata.
 
 #### File/Audio Properties
 
-    tag.bitdepth      # bit depth as integer (for lossless audio)
-    tag.bitrate       # bitrate in kBits/s as float
-    tag.channels      # number of channels as integer
-    tag.duration      # audio duration in seconds as float
-    tag.filename      # filename as string
-    tag.filesize      # file size in bytes as integer
-    tag.samplerate    # samples per second as integer
+```python
+tag.filename: str | None         # file name
+tag.filesize: int                # file size in bytes
+tag.bitdepth: int | None         # audio bit depth (for lossless audio)
+tag.bitrate: float | None        # audio bitrate in kbps
+tag.channels: int | None         # number of audio channels
+tag.duration: float | None       # audio duration in seconds
+tag.samplerate: int | None       # audio samples per second
+```
 
 > [!WARNING]  
 > The `tag.audio_offset` attribute is obsolete as of tinytag 2.0.0, and will
@@ -137,25 +139,29 @@ These are helpful when you need quick access to common metadata.
 
 #### Metadata Fields
 
-    tag.album         # album as string
-    tag.albumartist   # album artist as string
-    tag.artist        # artist name as string
-    tag.comment       # file comment as string
-    tag.composer      # composer as string
-    tag.disc          # disc number as integer
-    tag.disc_total    # total number of discs as integer
-    tag.genre         # genre as string
-    tag.title         # title of the song as string
-    tag.track         # track number as integer
-    tag.track_total   # total number of tracks as integer
-    tag.year          # year or date as string
+```python
+tag.album: str | None            # album name
+tag.albumartist: str | None      # album artist name
+tag.artist: str | None           # artist name
+tag.comment: str | None          # file comment
+tag.composer: str | None         # composer name
+tag.disc: int | None             # disc number
+tag.disc_total: int | None       # total number of discs
+tag.genre: str | None            # genre
+tag.title: str | None            # title
+tag.track: int | None            # track number
+tag.track_total: int | None      # total number of tracks
+tag.year: str | None             # year/date
+```
 
 ### Additional Metadata
 
 For additional values of the same field type, uncommon metadata fields, or
 metadata specific to certain file formats, use `other`:
 
-    tag.other         # a dictionary of additional fields
+```python
+tag.other: OtherFields           # a dictionary of additional fields
+```
 
 > [!WARNING]  
 > The `other` dictionary has replaced the `extra` dictionary in tinytag 2.0.0.
@@ -272,14 +278,18 @@ keyword argument to `TinyTag.get()`.
 If you need to receive an image of a specific kind, including its description,
 use `images`:
 
-    tag.images        # available embedded images
+```python
+tag.images: Images             # available embedded images
+```
 
 The following common image attributes are available, providing the first
-located image of each kind:
+located `Image` object of each kind:
 
-    tag.images.front_cover  # front cover as 'Image' object
-    tag.images.back_cover   # back cover as 'Image' object
-    tag.images.media        # media (e.g. CD label) as 'Image' object
+```python
+tag.images.front_cover: Image  # front cover
+tag.images.back_cover: Image   # back cover
+tag.images.media: Image        # media (e.g. CD label)
+```
 
 When present, any additional images are available in an `images.other`
 dictionary, using the following standardized key names:
@@ -311,11 +321,13 @@ Provided values are always lists containing at least one `Image` object.
 
 The `Image` object provides the following attributes:
 
-    data           # image data as bytes
-    size           # image size in bytes as integer (added in tinytag 2.3.0) 
-    name           # image name/kind as string
-    mime_type      # image MIME type as string
-    description    # image description as string
+```python
+image.data: bytes               # image data
+image.size: int                 # image size in bytes (added in tinytag 2.3.0) 
+image.name: str                 # image name/kind
+image.mime_type: str | None     # image MIME type
+image.description: str | None   # image description
+```
 
 To receive any available image, prioritizing the front cover, use `images.any`:
 
@@ -327,11 +339,13 @@ image: Image | None = tag.images.any
 
 if image is not None:
     data: bytes = image.data
+    size: int = image.size
     name: str = image.name
-    mime_type: str = image.mime_type
-    description: str = image.description
+    mime_type: str | None = image.mime_type
+    description: str | None = image.description
 
     print(len(data))
+    print(size)
     print(name)
     print(mime_type)
     print(description)
@@ -362,7 +376,7 @@ cover_image: Image = images.front_cover
 
 if cover_image is not None:
     data: bytes = cover_image.data
-    description: str = cover_image.description
+    description: str | None = cover_image.description
 ```
 
 To receive an additional image, e.g. `bright_colored_fish`:
