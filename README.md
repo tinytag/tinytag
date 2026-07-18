@@ -123,6 +123,7 @@ These are helpful when you need quick access to common metadata.
 
     tag.bitdepth      # bit depth as integer (for lossless audio)
     tag.bitrate       # bitrate in kBits/s as float
+    tag.channels      # number of channels as integer
     tag.duration      # audio duration in seconds as float
     tag.filename      # filename as string
     tag.filesize      # file size in bytes as integer
