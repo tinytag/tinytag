@@ -1836,6 +1836,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 4096,
         'bitdepth': 16,
     }),
+    ('zero_sample_rate.aiff', {
+        'other': OtherFields(),
+        'channels': 1,
+        'filesize': 38,
+        'bitdepth': 16,
+    }),
     ('aiff_extra_tags.aiff', {
         'other': OtherFields({
             'copyright': ['test'],
