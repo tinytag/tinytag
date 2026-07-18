@@ -797,6 +797,9 @@ class _MP4(TinyTag):
             time_scale, duration = unpack('>II', data[12:20])
         else:  # version == 1:  # uses 64-bit integers for timestamps
             time_scale, duration = unpack('>IQ', data[20:32])
+        # time_scale 0 is invalid/unknown; skip duration like WAV/OGG/FLAC.
+        if not time_scale:
+            return {}
         return {'duration': duration / time_scale}
 
 

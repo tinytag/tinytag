@@ -2135,6 +2135,13 @@ class TestAll(TestCase):
                     TinyTag.get(filename, header_detection=False)
                 self.assertIsInstance(context.exception, TinyTagException)
 
+    def test_mp4_zero_timescale_skips_duration(self) -> None:
+        """mvhd time_scale 0 must skip duration like WAV/OGG/FLAC."""
+        path = os.path.join(SAMPLE_FOLDER, 'zero_timescale.m4a')
+        tag = TinyTag.get(path)
+        self.assertIsInstance(tag, _MP4)
+        self.assertIsNone(tag.duration)
+
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
             TinyTag.get()
