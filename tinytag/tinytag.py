@@ -1149,10 +1149,12 @@ class _ID3(TinyTag):
 
     def _parse_image(self,
                      frame_id: bytes,
-                     content: bytes) -> tuple[str, Image]:
+                     content: bytes) -> tuple[str, Image] | None:
         # See section 4.14: http://id3.org/id3v2.4.0-frames
         encoding = content[0]
         if frame_id == b'PIC':  # ID3 v2.2:
+            if len(content) < 5:
+                return None
             imgformat = content[1:4].lower()
             mime_type = self._ID3V2_2_IMAGE_FORMATS.get(imgformat)
             desc_start_pos = 5
@@ -1163,6 +1165,8 @@ class _ID3(TinyTag):
             mime_type = self._decode_string(
                 content[mime_start_pos:mime_end_pos]).lower()
             desc_start_pos = mime_end_pos + 1
+            if desc_start_pos > len(content):
+                return None
         pic_type = content[desc_start_pos - 1]
         desc_end_pos = self._find_string_end_pos(
             content, encoding, desc_start_pos)
@@ -1344,9 +1348,11 @@ class _ID3(TinyTag):
         elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
             content = fh.read(frame_size)
             if content:
-                field_name, image = self._parse_image(frame_id, content)
-                # pylint: disable=protected-access
-                self.images._set_field(field_name, image)
+                parsed = self._parse_image(frame_id, content)
+                if parsed is not None:
+                    field_name, image = parsed
+                    # pylint: disable=protected-access
+                    self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
         return frame_size
