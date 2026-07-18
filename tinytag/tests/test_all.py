@@ -1062,7 +1062,8 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('id3_header_with_a_zero_byte.wav', {
         'other': OtherFields({
-            'title': ['Stacked']
+            'title': ['Stacked'],
+            'isft': ['Lavf58.20.100'],
         }),
         'channels': 1,
         'duration': 1.0,
@@ -1092,7 +1093,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'year': '1990',
     }),
     ('riff_extra_zero.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf59.16.100'],
+        }),
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20670,
@@ -1107,7 +1110,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 3,
     }),
     ('riff_extra_zero_2.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf59.16.100'],
+        }),
         'channels': 2,
         'duration': 0.11609977324263039,
         'filesize': 20682,
@@ -1121,7 +1126,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 7,
     }),
     ('wav_invalid_track_number.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            '_disc': ['garbage'],
+        }),
         'filesize': 8908,
         'bitrate': 705.6,
         'duration': 0.1,
@@ -1194,7 +1201,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 24,
     }),
     ('24bit_pcm_extended.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf61.7.100'],
+        }),
         'bitrate': 384.0,
         'channels': 2,
         'duration': 0.128,
@@ -1212,7 +1221,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 32,
     }),
     ('32bit_pcm_extended.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf61.7.100'],
+        }),
         'bitrate': 512.0,
         'channels': 2,
         'duration': 0.128,
@@ -1221,7 +1232,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 32,
     }),
     ('adpcm_no_byterate.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf61.7.100'],
+        }),
         'bitrate': 64.7588932806324,
         'channels': 2,
         'duration': 0.1265,
@@ -1230,7 +1243,9 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 4,
     }),
     ('no_audio_data_compressed.wav', {
-        'other': OtherFields(),
+        'other': OtherFields({
+            'isft': ['Lavf61.7.100'],
+        }),
         'channels': 2,
         'duration': 0.0,
         'filesize': 104,

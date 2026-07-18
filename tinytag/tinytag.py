@@ -1894,12 +1894,16 @@ class _Wave(TinyTag):
                         data = self._unpad_bytes(walker.read(data_length))
                         if field in self._RIFF_MAPPING:
                             fieldname = self._RIFF_MAPPING[field]
-                            value = data.decode('utf-8', 'replace')
-                            if fieldname == 'track':
-                                if value.isdecimal():
-                                    self._set_field(fieldname, int(value))
-                            else:
-                                self._set_field(fieldname, value)
+                        else:
+                            fieldname = (
+                                self._OTHER_PREFIX
+                                + field.decode('latin-1')).lower()
+                        value = data.decode('utf-8', 'replace')
+                        if fieldname == 'track':
+                            if value.isdecimal():
+                                self._set_field(fieldname, int(value))
+                        else:
+                            self._set_field(fieldname, value)
                         field = walker.read(4)
             elif self._parse_tags and subchunk_id in {b'id3 ', b'ID3 '}:
                 # pylint: disable=protected-access
