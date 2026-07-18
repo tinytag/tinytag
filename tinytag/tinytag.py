@@ -1976,10 +1976,11 @@ class _Flac(TinyTag):
                     ((head[12] & 1) << 4) + ((head[13] & 0xF0) >> 4) + 1)
                 tot_samples_b = bytes([head[13] & 0x0F]) + head[14:18]
                 tot_samples = unpack('>Q', b'\x00\x00\x00' + tot_samples_b)[0]
-                self.duration = duration = tot_samples / sr
                 self.samplerate = sr
-                if duration > 0:
-                    self.bitrate = self.filesize * 8 / duration / 1000
+                if sr:
+                    self.duration = duration = tot_samples / sr
+                    if duration > 0:
+                        self.bitrate = self.filesize * 8 / duration / 1000
                 self._duration_parsed = True
                 if not self._parse_tags:
                     break
