@@ -65,36 +65,38 @@ print(f'It is {tag.duration:.2f} seconds long.')
 
 Alternatively you can use tinytag directly on the command line:
 
-    $ python3 -m tinytag /some/music.mp3
-    {
-      "filename": "/some/music.mp3",
-      "filesize": 3243226,
-      "duration": 173.52,
-      "channels": 2,
-      "bitrate": 128,
-      "samplerate": 44100,
-      "artist": [
-        "artist name"
-      ],
-      "album": [
-        "album name"
-      ],
-      "title": [
-        "track name"
-      ],
-      "track": [
-        "4"
-      ],
-      "genre": [
-        "Jazz"
-      ],
-      "year": [
-        "2010"
-      ],
-      "comment": [
-        "Some comment here"
-      ]
-    }
+```console
+$ python3 -m tinytag /some/music.mp3
+{
+  "filename": "/some/music.mp3",
+  "filesize": 3243226,
+  "duration": 173.52,
+  "channels": 2,
+  "bitrate": 128,
+  "samplerate": 44100,
+  "artist": [
+    "artist name"
+  ],
+  "album": [
+    "album name"
+  ],
+  "title": [
+    "track name"
+  ],
+  "track": [
+    "4"
+  ],
+  "genre": [
+    "Jazz"
+  ],
+  "year": [
+    "2010"
+  ],
+  "comment": [
+    "Some comment here"
+  ]
+}
+```
 
 Check `python3 -m tinytag --help` for all CLI options, for example other
 output formats.
@@ -219,8 +221,10 @@ print(catalog_numbers)
 
 Output:
 
-    > 10
-    > ['10']
+```console
+> 10
+> ['10']
+```
 
 When a file contains multiple values for a [common metadata field](#common-metadata)
 (e.g. `artist`), the primary value is accessed through the common attribute
@@ -242,8 +246,10 @@ print(additional_artists)
 
 Output:
 
-    > main artist
-    > ['another artist', 'yet another artist']
+```console
+> main artist
+> ['another artist', 'yet another artist']
+```
 
 ### All Metadata
 
@@ -251,10 +257,12 @@ If you need to receive all available metadata as key-value pairs in a flat
 dictionary, use the `as_dict()` method. This combines the common attributes
 and `other` dictionary, which can be more convenient in some cases.
 
-    from tinytag import TinyTag
+```python
+from tinytag import TinyTag
 
-    tag: TinyTag = TinyTag.get('/some/music.mp3')
-    metadata: dict = tag.as_dict()
+tag: TinyTag = TinyTag.get('/some/music.mp3')
+metadata: dict = tag.as_dict()
+```
 
 ### Images
 
@@ -331,10 +339,13 @@ if image is not None:
 
 Output:
 
-    > 74452
-    > front_cover
-    > image/jpeg
-    > some image description
+```console
+> 74452
+> 74452
+> front_cover
+> image/jpeg
+> some image description
+```
 
 > [!WARNING]  
 > `tag.images.any` has replaced `tag.get_image()` in tinytag 2.0.0.
@@ -404,9 +415,11 @@ tag: TinyTag = TinyTag.get(file_obj=your_file_obj)
 
 ### Exceptions
 
-    TinyTagException        # Base class for exceptions
-    ParseError              # Parsing an audio file failed
-    UnsupportedFormatError  # File format is not supported
+```python
+TinyTagException        # Base class for exceptions
+ParseError              # Parsing an audio file failed
+UnsupportedFormatError  # File format is not supported
+```
 
 
 ## Changelog
