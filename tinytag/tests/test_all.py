@@ -2135,6 +2135,14 @@ class TestAll(TestCase):
                     TinyTag.get(filename, header_detection=False)
                 self.assertIsInstance(context.exception, TinyTagException)
 
+    def test_mp4_short_trkn_data_skipped(self) -> None:
+        """Short trkn data atoms must be skipped, not raise ParseError."""
+        path = os.path.join(SAMPLE_FOLDER, 'mp4_short_trkn.m4a')
+        tag = TinyTag.get(path)
+        self.assertIsInstance(tag, _MP4)
+        self.assertEqual(tag.title, 'short-trkn')
+        self.assertIsNone(tag.track)
+
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
             TinyTag.get()
