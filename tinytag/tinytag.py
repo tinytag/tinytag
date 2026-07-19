@@ -292,7 +292,7 @@ class TinyTag:
             self._set_other_field(fieldname, str(value))
             return
         if _DEBUG:
-            print(f'Setting field "{fieldname}" to "{value!r}"')
+            print(f'Setting field {fieldname} to {value!r}')
         self.__dict__[fieldname] = value
 
     def _set_other_field(self, fieldname: str, value: str) -> None:
@@ -302,9 +302,9 @@ class TinyTag:
             self.other[fieldname] = []
         if value in self.other[fieldname]:
             return
-        self.other[fieldname].append(value)
         if _DEBUG:
-            print(f'Adding value "{value} to field "{fieldname}"')
+            print(f'Adding value {value!r} to field {fieldname}')
+        self.other[fieldname].append(value)
 
     def _parse(self, fh: BinaryIO) -> None:
         raise NotImplementedError
@@ -406,27 +406,30 @@ class Images:
 
     def _set_field(self, fieldname: str, value: Image) -> None:
         old_value = self.__dict__.get(fieldname)
-        has_other_prefix = fieldname.startswith(self._OTHER_PREFIX)
-        if has_other_prefix or old_value is not None:
-            if has_other_prefix:
-                fieldname = fieldname[len(self._OTHER_PREFIX):]
-            other_values = self.other.get(fieldname, [])
-            other_values.append(value)
-            if _DEBUG:
-                print(f'Setting other image field "{fieldname}"')
-            self.other[fieldname] = other_values
+        if old_value is not None:
+            self._set_other_field(fieldname, value)
+            return
+        if fieldname.startswith(self._OTHER_PREFIX):
+            fieldname = fieldname[len(self._OTHER_PREFIX):]
+            self._set_other_field(fieldname, value)
             return
         if _DEBUG:
-            print(f'Setting image field "{fieldname}"')
+            print(f'Setting image field {fieldname}')
         self.__dict__[fieldname] = value
+
+    def _set_other_field(self, fieldname: str, value: Image) -> None:
+        if fieldname not in self.other:
+            self.other[fieldname] = []
+        if _DEBUG:
+            print(f'Adding image to field {fieldname}')
+        self.other[fieldname].append(value)
 
     def _update(self, other: Images) -> None:
         for key, value in other.__dict__.items():
             if isinstance(value, OtherImages):
                 for other_key, other_values in value.items():
                     for image_other in other_values:
-                        self._set_field(
-                            self._OTHER_PREFIX + other_key, image_other)
+                        self._set_other_field(other_key, image_other)
                 continue
             if value is not None:
                 self._set_field(key, value)
