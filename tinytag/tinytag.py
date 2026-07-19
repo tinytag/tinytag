@@ -1059,7 +1059,7 @@ class _ID3(TinyTag):
             if _DEBUG:
                 print(f'Found id3 v2.{major}')
             extended = (header[5] & 0x40) > 0
-            size = self._unsynchsafe(unpack('4B', header[6:10]))
+            size = self._unsynchsafe(header[6:10])
         return size, extended, major
 
     def _parse_id3v2(self, fh: BinaryIO) -> int:
@@ -1068,7 +1068,7 @@ class _ID3(TinyTag):
             return size
         parsed_size = 0
         if extended:  # just read over the extended header.
-            extd_size = self._unsynchsafe(unpack('4B', fh.read(6)[:4]))
+            extd_size = self._unsynchsafe(fh.read(6)[:4])
             fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
         while parsed_size < size:
             frame_size = self._parse_frame(fh, size, id3version=major)
@@ -1246,7 +1246,7 @@ class _ID3(TinyTag):
         if frame_size_bytes == 3:
             frame_size = unpack('>I', b'\x00' + header[3:6])[0]
         elif is_synchsafe_int:
-            frame_size = self._unsynchsafe(unpack('4B', header[4:8]))
+            frame_size = self._unsynchsafe(header[4:8])
         else:
             frame_size = unpack('>I', header[4:8])[0]
         if _DEBUG:
