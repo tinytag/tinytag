@@ -1374,7 +1374,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('106-invalid-streaminfo.flac', {
         'other': OtherFields(),
-        'filesize': 4692
+        'filesize': 4692,
+        'bitrate': 10.186943678613627,
+        'channels': 2,
+        'duration': 3.684716553287982,
+        'samplerate': 44100,
+        'bitdepth': 16,
     }),
     ('106-short-picture-block-size.flac', {
         'other': OtherFields(),
