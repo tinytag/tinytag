@@ -1398,7 +1398,7 @@ class _ID3(TinyTag):
         return self._unpad(value.decode(encoding_name, 'replace'))
 
     @staticmethod
-    def _unsynchsafe(ints: tuple[int, ...]) -> int:
+    def _unsynchsafe(ints: bytes) -> int:
         return (ints[0] << 21) + (ints[1] << 14) + (ints[2] << 7) + ints[3]
 
 
