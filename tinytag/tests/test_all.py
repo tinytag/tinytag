@@ -768,6 +768,11 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'genre': 'genre',
         'year': '1980',
     }),
+    ('multiple_images.mp3', {
+        'other': OtherFields(),
+        'filesize': 9633,
+        'title': 'image',
+    }),
     ('detect_mp3_fffb.x', {
         'other': OtherFields(),
         'channels': 2,
@@ -1943,6 +1948,64 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
             name='front_cover',
             mime_type='image/jpeg',
             description='some image ë',
+            size=1220,
+            data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('multiple_images.mp3', {
+        'other': OtherImages({
+            'front_cover': [
+                Image(
+                    name='front_cover',
+                    mime_type='image/png',
+                    description='second image',
+                    size=1552,
+                    data=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\xf4'
+                ),
+                Image(
+                    name='front_cover',
+                    mime_type='image/png',
+                    description='third image',
+                    size=1552,
+                    data=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\xf4'
+                )
+            ],
+            'artist': [
+                Image(
+                    name='artist',
+                    mime_type='image/jpeg',
+                    description='first artist image',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                ),
+                Image(
+                    name='artist',
+                    mime_type='image/jpeg',
+                    description='second artist image',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                ),
+                Image(
+                    name='artist',
+                    mime_type='image/png',
+                    description='third artist image',
+                    size=1552,
+                    data=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\xf4'
+                )
+            ],
+            'conductor': [
+                Image(
+                    name='conductor',
+                    description='empty image',
+                    size=0,
+                    data=b''
+                )
+            ]
+        }),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/jpeg',
+            description='first image',
             size=1220,
             data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
         ),
