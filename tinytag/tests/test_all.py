@@ -1919,6 +1919,24 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 8000,
         'bitdepth': 16,
     }),
+    ('id3_short_apic.mp3', {
+        'other': OtherFields(),
+        'filesize': 446,
+        'duration': 0.026122448979591838,
+        'channels': 2,
+        'bitrate': 128.0,
+        'samplerate': 44100,
+        'title': 'short-apic',
+    }),
+    ('id3v22_short_pic.mp3', {
+        'other': OtherFields(),
+        'filesize': 440,
+        'duration': 0.026122448979591838,
+        'channels': 2,
+        'bitrate': 128.0,
+        'samplerate': 44100,
+        'title': 'short-pic',
+    }),
 ])
 
 IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
@@ -2341,6 +2359,18 @@ class TestAll(TestCase):
                 with self.assertRaises(UnsupportedFormatError) as context:
                     TinyTag.get(filename, header_detection=False)
                 self.assertIsInstance(context.exception, TinyTagException)
+
+    def test_id3_short_image_frame_skipped(self) -> None:
+        """Truncated APIC/PIC frames must be skipped, not raise ParseError."""
+        for path, title in (
+            ('id3_short_apic.mp3', 'short-apic'),
+            ('id3v22_short_pic.mp3', 'short-pic'),
+        ):
+            with self.subTest(path=path):
+                tag = TinyTag.get(
+                    os.path.join(SAMPLE_FOLDER, path), image=True)
+                self.assertEqual(tag.title, title)
+                self.assertIsNone(tag.images.any)
 
     def test_show_hint_for_wrong_usage(self) -> None:
         with self.assertRaises(ValueError) as context:
