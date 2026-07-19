@@ -750,8 +750,6 @@ class _MP4(TinyTag):
     def _parse_uuid(cls, data_atom: bytes) -> dict[str, str]:
         result: dict[str, str] = {}
         uuid_len = 16
-        if len(data_atom) <= uuid_len:
-            return result
         uuid = data_atom[:uuid_len]
         if uuid == b'\xbez\xcf\xcb\x97\xa9B\xe8\x9cq\x99\x94\x91\xe3\xaf\xac':
             result['other.xmp'] = data_atom[uuid_len:].decode(
@@ -1197,8 +1195,6 @@ class _ID3(TinyTag):
         # Convert ID3 synced lyrics to LRC format
         lyrics = ""
         content_length = len(content)
-        if content_length <= 7:
-            return lyrics
         encoding = content[0]
         # skip language (3)
         timestamp_format = content[4]
@@ -1252,14 +1248,14 @@ class _ID3(TinyTag):
         if _DEBUG:
             print(f'Found id3 Frame {frame_id!r} at '
                   f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
+        if frame_size == 0:
+            return frame_size
         if frame_size > total_size:
             # invalid frame size, stop here
             return -1
         if self._parse_tags and frame_id in self._ID3_MAPPING:
             fieldname = self._ID3_MAPPING[frame_id]
             content = fh.read(frame_size)
-            if not content:
-                return frame_size
             if fieldname in {'comment', 'other.lyrics'}:
                 encoding = content[0]
                 content = content[4:]
@@ -1322,41 +1318,37 @@ class _ID3(TinyTag):
         elif self._parse_tags and frame_id in self._CUSTOM_FRAME_IDS:
             # custom fields
             content = fh.read(frame_size)
-            if content:
-                encoding = content[0]
-                end_pos = self._find_string_end_pos(
-                    content, encoding, start_pos=1)
-                description = self._decode_string(content[1:end_pos], encoding)
-                value = self._decode_string(content[end_pos:], encoding)
-                if description and value:
-                    self._set_custom_field(description, value)
+            encoding = content[0]
+            end_pos = self._find_string_end_pos(
+                content, encoding, start_pos=1)
+            description = self._decode_string(content[1:end_pos], encoding)
+            value = self._decode_string(content[end_pos:], encoding)
+            if description and value:
+                self._set_custom_field(description, value)
         elif self._parse_tags and frame_id == b'PRIV':
             content = fh.read(frame_size)
-            if content:
-                owner_id_end_pos = self._find_string_end_pos(content)
-                owner_id = content[:owner_id_end_pos - 1]
-                if owner_id == b'XMP':
-                    value = self._unpad_bytes(
-                        content[owner_id_end_pos:]).decode('utf-8', 'replace')
-                    self._set_other_field('xmp', value)
+            owner_id_end_pos = self._find_string_end_pos(content)
+            owner_id = content[:owner_id_end_pos - 1]
+            if owner_id == b'XMP':
+                value = self._unpad_bytes(
+                    content[owner_id_end_pos:]).decode('utf-8', 'replace')
+                self._set_other_field('xmp', value)
         elif self._parse_tags and frame_id not in self._IGNORED_FRAME_IDS:
             # unknown, try to add to other dict
             content = fh.read(frame_size)
-            if content:
-                encoding = content[0]
-                if encoding in self._VALID_STRING_ENCODINGS:
-                    value = self._decode_string(content[1:], encoding)
-                else:
-                    value = self._decode_string(content)
-                self._set_field(
-                    self._OTHER_PREFIX + frame_id.decode('latin-1').lower(),
-                    value)
+            encoding = content[0]
+            if encoding in self._VALID_STRING_ENCODINGS:
+                value = self._decode_string(content[1:], encoding)
+            else:
+                value = self._decode_string(content)
+            self._set_field(
+                self._OTHER_PREFIX + frame_id.decode('latin-1').lower(),
+                value)
         elif self._load_image and frame_id in self._IMAGE_FRAME_IDS:
             content = fh.read(frame_size)
-            if content:
-                field_name, image = self._parse_image(frame_id, content)
-                # pylint: disable=protected-access
-                self.images._set_field(field_name, image)
+            field_name, image = self._parse_image(frame_id, content)
+            # pylint: disable=protected-access
+            self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
         return frame_size
@@ -1966,8 +1958,6 @@ class _Flac(TinyTag):
             # http://xiph.org/flac/format.html#metadata_block_streaminfo
             if self._parse_duration and block_type == self._STREAMINFO:
                 head = fh.read(size)
-                if len(head) < 34:  # invalid streaminfo
-                    break
                 # From the xiph documentation:
                 # py | <bits>
                 # ----------------------------------------------
@@ -2090,12 +2080,11 @@ class _Wma(TinyTag):
         header_len = 24
         object_header = fh.read(header_len)
         while len(object_header) == header_len:
-            object_size = unpack('<Q', object_header[16:])[0]
-            if object_size == 0 or object_size > self.filesize:
-                break  # invalid object, stop parsing.
+            object_size = max(
+                unpack('<Q', object_header[16:])[0] - header_len, 0)
             object_id = object_header[:16]
             if self._parse_tags and object_id == self._ASF_CONTENT_DESC:
-                walker = BytesIO(fh.read(object_size - header_len))
+                walker = BytesIO(fh.read(object_size))
                 (title_length, author_length,
                  copyright_length, description_length,
                  rating_length) = unpack('<5H', walker.read(10))
@@ -2113,7 +2102,7 @@ class _Wma(TinyTag):
                         self._set_field(i_field_name, value)
             elif self._parse_tags and object_id == self._ASF_EXT_CONTENT_DESC:
                 # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc509555195
-                walker = BytesIO(fh.read(object_size - header_len))
+                walker = BytesIO(fh.read(object_size))
                 descriptor_count = unpack('<H', walker.read(2))[0]
                 for _ in range(descriptor_count):
                     name_len = unpack('<H', walker.read(2))[0]
@@ -2145,13 +2134,13 @@ class _Wma(TinyTag):
                     else:
                         self._set_field(field_name, value)
             elif self._parse_duration and object_id == self._ASF_FILE_PROP:
-                data = fh.read(object_size - header_len)
+                data = fh.read(object_size)
                 play_duration = unpack('<Q', data[40:48])[0] / 10000000
                 preroll = unpack('<Q', data[56:64])[0] / 1000
                 # subtract the preroll to get the actual duration
                 self.duration = max(play_duration - preroll, 0.0)
             elif self._parse_duration and object_id == self._ASF_STREAM_PROPS:
-                data = fh.read(object_size - header_len)
+                data = fh.read(object_size)
                 stream_type = data[:16]
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
                     (codec_id_format_tag, self.channels, self.samplerate,
@@ -2160,12 +2149,11 @@ class _Wma(TinyTag):
                     if codec_id_format_tag == 355:  # lossless
                         self.bitdepth = unpack('<H', data[68:70])[0]
             elif self._parse_tags and object_id == self._XMP_METADATA:
-                value = fh.read(
-                    object_size - header_len).decode('utf-8', 'replace')
+                value = fh.read(object_size).decode('utf-8', 'replace')
                 self._set_other_field('xmp', value)
             else:
                 # skip unknown object ids
-                fh.seek(object_size - header_len, SEEK_CUR)
+                fh.seek(object_size, SEEK_CUR)
             object_header = fh.read(header_len)
         self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
