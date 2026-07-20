@@ -39,12 +39,14 @@ TYPE_CHECKING = False
 # Lazy imports for type checking
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator  # pylint: disable-all
-    from typing import Any, BinaryIO, Dict, List, Union
+    from typing import Any, BinaryIO, Dict, List, Tuple, Union
 
     _StringListDict = Dict[str, List[str]]
     _ImageListDict = Dict[str, List["Image"]]
     _DataTreeDict = Dict[
-        bytes, Union['_DataTreeDict', Callable[..., Dict[str, Any]]]]
+        bytes,
+        Union['_DataTreeDict', Callable[[bytes], Iterator[Tuple[str, Any]]]]
+    ]
 else:
     _StringListDict = _ImageListDict = _DataTreeDict = dict
 
@@ -529,8 +531,8 @@ class _MP4(TinyTag):
                 b'moov': {
                     b'mvhd': _MP4._parse_mvhd,
                     b'trak': {b'mdia': {b"minf": {b"stbl": {b"stsd": {
-                        b'mp4a': _MP4._parse_audio_sample_entry_mp4a,
-                        b'alac': _MP4._parse_audio_sample_entry_alac
+                        b'mp4a': _MP4._parse_mp4a,
+                        b'alac': _MP4._parse_alac
                     }}}}}
                 }
             }
@@ -633,14 +635,13 @@ class _MP4(TinyTag):
                                      curr_path=curr_path + [atom_type])
             # if the path-leaf is a callable, call it on the atom data
             elif callable(sub_path):
-                for fieldname, value in sub_path(fh.read(atom_size)).items():
+                for fieldname, value in sub_path(fh.read(atom_size)):
                     if _DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if isinstance(value, Image):
                         if self._load_image:
                             # pylint: disable=protected-access
-                            self.images._set_field(
-                                fieldname[len('images.'):], value)
+                            self.images._set_field(fieldname, value)
                     elif isinstance(value, list):
                         for subval in value:
                             self._set_field(fieldname, subval)
@@ -666,8 +667,10 @@ class _MP4(TinyTag):
             atom_header = fh.read(header_len)  # read next atom
 
     @classmethod
-    def _data_parser(cls, fieldname: str) -> Callable[[bytes], dict[str, str]]:
-        def _parse_data_atom(data_atom: bytes) -> dict[str, str]:
+    def _data_parser(
+        cls, fieldname: str
+    ) -> Callable[[bytes], Iterator[tuple[str, str]]]:
+        def _parse_data_atom(data_atom: bytes) -> Iterator[tuple[str, str]]:
             data_type = unpack('>I', data_atom[:4])[0]
             data = data_atom[8:]
             value = ""
@@ -678,38 +681,39 @@ class _MP4(TinyTag):
                 data_len = len(data)
                 if data_len in fmts:
                     value = str(unpack(fmts[data_len], data)[0])
-            return {fieldname: value}
+            yield fieldname, value
         return _parse_data_atom
 
     @classmethod
     def _nums_parser(
         cls, fieldname1: str, fieldname2: str
-    ) -> Callable[[bytes], dict[str, int]]:
-        def _parse_nums(data_atom: bytes) -> dict[str, int]:
+    ) -> Callable[[bytes], Iterator[tuple[str, int]]]:
+        def _parse_nums(data_atom: bytes) -> Iterator[tuple[str, int]]:
             number_data = data_atom[8:14]
             numbers = unpack('>3H', number_data)
             # for some reason the first number is always irrelevant.
-            return {fieldname1: numbers[1], fieldname2: numbers[2]}
+            yield fieldname1, numbers[1]
+            yield fieldname2, numbers[2]
         return _parse_nums
 
     @classmethod
-    def _parse_id3v1_genre(cls, data_atom: bytes) -> dict[str, str]:
+    def _parse_id3v1_genre(cls, data_atom: bytes) -> Iterator[tuple[str, str]]:
         # dunno why genre is offset by -1 but that's how mutagen does it
         idx = unpack('>H', data_atom[8:])[0] - 1
-        result = {}
         # pylint: disable=protected-access
         if idx < len(_ID3._ID3V1_GENRES):
-            result['genre'] = _ID3._ID3V1_GENRES[idx]
-        return result
+            yield 'genre', _ID3._ID3V1_GENRES[idx]
 
     @classmethod
-    def _parse_cover_image(cls, data_atom: bytes) -> dict[str, Image]:
+    def _parse_cover_image(cls,
+                           data_atom: bytes) -> Iterator[tuple[str, Image]]:
         data_type = unpack('>I', data_atom[:4])[0]
+        image_name = 'front_cover'
         image_data = data_atom[8:]
         image = Image(
-            'front_cover', len(image_data), image_data,
+            image_name, len(image_data), image_data,
             cls._IMAGE_MIME_TYPES.get(data_type))
-        return {'images.front_cover': image}
+        yield image_name, image
 
     @classmethod
     def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
@@ -718,7 +722,8 @@ class _MP4(TinyTag):
                 break
 
     @classmethod
-    def _parse_custom_field(cls, data: bytes) -> dict[str, list[str]]:
+    def _parse_custom_field(cls,
+                            data: bytes) -> Iterator[tuple[str, list[str]]]:
         fh = BytesIO(data)
         header_len = 8
         field_name = None
@@ -737,27 +742,24 @@ class _MP4(TinyTag):
                 data_atom = fh.read(atom_size)
                 parser = cls._data_parser(field_name)
                 atom_values = parser(data_atom)
-                if field_name in atom_values:
-                    values.append(atom_values[field_name])
+                for _field_name, value in atom_values:
+                    values.append(value)
+                    break
             else:
                 fh.seek(atom_size, SEEK_CUR)
             atom_header = fh.read(header_len)  # read next atom
         if field_name and values:
-            return {field_name: values}
-        return {}
+            yield field_name, values
 
     @classmethod
-    def _parse_uuid(cls, data_atom: bytes) -> dict[str, str]:
-        result: dict[str, str] = {}
+    def _parse_uuid(cls, data_atom: bytes) -> Iterator[tuple[str, str]]:
         uuid_len = 16
         uuid = data_atom[:uuid_len]
         if uuid == b'\xbez\xcf\xcb\x97\xa9B\xe8\x9cq\x99\x94\x91\xe3\xaf\xac':
-            result['other.xmp'] = data_atom[uuid_len:].decode(
-                'utf-8', 'replace')
-        return result
+            yield 'other.xmp', data_atom[uuid_len:].decode('utf-8', 'replace')
 
     @classmethod
-    def _parse_audio_sample_entry_mp4a(cls, data: bytes) -> dict[str, int]:
+    def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, int]]:
         # this atom also contains the esds atom:
         # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
         # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
@@ -765,9 +767,10 @@ class _MP4(TinyTag):
 
         # jump over version and flags
         channels = unpack('>H', data[16:18])[0]
+        yield 'channels', channels
         # jump over bit_depth, QT compr id & pkt size
         sr = unpack('>I', data[22:26])[0]
-        result = {'channels': channels, 'samplerate': sr}
+        yield 'samplerate', sr
 
         # ES Description Atom
         esds_atom_size = unpack('>I', data[28:32])[0]
@@ -783,21 +786,22 @@ class _MP4(TinyTag):
         esds_atom.seek(9, SEEK_CUR)
         avg_br = unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
         if avg_br > 0:
-            result['bitrate'] = avg_br
-        return result
+            yield 'bitrate', avg_br
 
     @classmethod
-    def _parse_audio_sample_entry_alac(cls, data: bytes) -> dict[str, int]:
+    def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, int]]:
         # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
         bitdepth = data[45]
+        yield 'bitdepth', bitdepth
         channels = data[49]
+        yield 'channels', channels
         avg_br, sr = unpack('>II', data[56:64])
+        yield 'samplerate', sr
         avg_br /= 1000  # kbit/s
-        return {'channels': channels, 'samplerate': sr, 'bitrate': avg_br,
-                'bitdepth': bitdepth}
+        yield 'bitrate', avg_br
 
     @classmethod
-    def _parse_mvhd(cls, data: bytes) -> dict[str, float]:
+    def _parse_mvhd(cls, data: bytes) -> Iterator[tuple[str, float]]:
         # http://stackoverflow.com/a/3639993/1191373
         version = data[0]
         # jump over flags, create & mod times
@@ -805,7 +809,7 @@ class _MP4(TinyTag):
             time_scale, duration = unpack('>II', data[12:20])
         else:  # version == 1:  # uses 64-bit integers for timestamps
             time_scale, duration = unpack('>IQ', data[20:32])
-        return {'duration': duration / time_scale}
+        yield 'duration', duration / time_scale
 
 
 class _ID3(TinyTag):
