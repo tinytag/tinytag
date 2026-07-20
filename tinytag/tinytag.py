@@ -227,7 +227,7 @@ class TinyTag:
         filehandle.seek(0)
         if header.startswith(b'ID3'):
             return _ID3
-        if header.startswith(b'\xff\xfb'):
+        if header.startswith(b'\xFF\xFB'):
             filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
             footer = filehandle.read(3)
             filehandle.seek(0)
@@ -242,8 +242,9 @@ class TinyTag:
             return _Ogg
         if header.startswith(b'RIFF') and header.startswith(b'WAVE', 8):
             return _Wave
-        if header.startswith(b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00'
-                             b'\xAA\x00\x62\xCE\x6C'):
+        if header.startswith(
+            b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
+        ):
             return _Wma
         if (header.startswith(b'FORM')
                 and header.startswith((b'AIFF', b'AIFC'), 8)):
@@ -545,29 +546,29 @@ class _MP4(TinyTag):
             cls._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
                 # http://atomicparsley.sourceforge.net/mpeg-4files.html
                 # https://metacpan.org/dist/Image-ExifTool/source/lib/Image/ExifTool/QuickTime.pm#L3093
-                b'\xa9ART': {b'data': _MP4._data_parser('artist')},
-                b'\xa9alb': {b'data': _MP4._data_parser('album')},
-                b'\xa9cmt': {b'data': _MP4._data_parser('comment')},
-                b'\xa9com': {b'data': _MP4._data_parser('composer')},
-                b'\xa9con': {b'data': _MP4._data_parser('other.conductor')},
-                b'\xa9day': {b'data': _MP4._data_parser('year')},
-                b'\xa9des': {b'data': _MP4._data_parser('other.description')},
-                b'\xa9dir': {b'data': _MP4._data_parser('other.director')},
-                b'\xa9gen': {b'data': _MP4._data_parser('genre')},
-                b'\xa9grp': {b'data': _MP4._data_parser('other.grouping')},
-                b'\xa9lyr': {b'data': _MP4._data_parser('other.lyrics')},
-                b'\xa9mvc': {
+                b'\xA9ART': {b'data': _MP4._data_parser('artist')},
+                b'\xA9alb': {b'data': _MP4._data_parser('album')},
+                b'\xA9cmt': {b'data': _MP4._data_parser('comment')},
+                b'\xA9com': {b'data': _MP4._data_parser('composer')},
+                b'\xA9con': {b'data': _MP4._data_parser('other.conductor')},
+                b'\xA9day': {b'data': _MP4._data_parser('year')},
+                b'\xA9des': {b'data': _MP4._data_parser('other.description')},
+                b'\xA9dir': {b'data': _MP4._data_parser('other.director')},
+                b'\xA9gen': {b'data': _MP4._data_parser('genre')},
+                b'\xA9grp': {b'data': _MP4._data_parser('other.grouping')},
+                b'\xA9lyr': {b'data': _MP4._data_parser('other.lyrics')},
+                b'\xA9mvc': {
                     b'data': _MP4._data_parser('other.movement_total')
                 },
-                b'\xa9mvi': {b'data': _MP4._data_parser('other.movement')},
-                b'\xa9mvn': {
+                b'\xA9mvi': {b'data': _MP4._data_parser('other.movement')},
+                b'\xA9mvn': {
                     b'data': _MP4._data_parser('other.movement_name')
                 },
-                b'\xa9nam': {b'data': _MP4._data_parser('title')},
-                b'\xa9pub': {b'data': _MP4._data_parser('other.publisher')},
-                b'\xa9too': {b'data': _MP4._data_parser('other.encoded_by')},
-                b'\xa9wrk': {b'data': _MP4._data_parser('other.work')},
-                b'\xa9wrt': {b'data': _MP4._data_parser('composer')},
+                b'\xA9nam': {b'data': _MP4._data_parser('title')},
+                b'\xA9pub': {b'data': _MP4._data_parser('other.publisher')},
+                b'\xA9too': {b'data': _MP4._data_parser('other.encoded_by')},
+                b'\xA9wrk': {b'data': _MP4._data_parser('other.work')},
+                b'\xA9wrt': {b'data': _MP4._data_parser('composer')},
                 b'aART': {b'data': _MP4._data_parser('albumartist')},
                 b'cprt': {b'data': _MP4._data_parser('other.copyright')},
                 b'desc': {b'data': _MP4._data_parser('other.description')},
@@ -756,7 +757,9 @@ class _MP4(TinyTag):
     def _parse_uuid(cls, data_atom: bytes) -> Iterator[tuple[str, str]]:
         uuid_len = 16
         uuid = data_atom[:uuid_len]
-        if uuid == b'\xbez\xcf\xcb\x97\xa9B\xe8\x9cq\x99\x94\x91\xe3\xaf\xac':
+        if uuid == (
+            b'\xBE\x7A\xCF\xCB\x97\xA9\x42\xE8\x9C\x71\x99\x94\x91\xE3\xAF\xAC'
+        ):
             yield 'other.xmp', data_atom[uuid_len:].decode('utf-8', 'replace')
 
     @classmethod
@@ -1379,9 +1382,9 @@ class _ID3(TinyTag):
         elif encoding == 0x01:  # UTF-16 with BOM
             # read byte order mark to determine endianness
             encoding_name = (
-                'UTF-16be' if value.startswith(b'\xfe\xff') else 'UTF-16le')
+                'UTF-16be' if value.startswith(b'\xFE\xFF') else 'UTF-16le')
             # strip the bom if it exists
-            if value.startswith(b'\xfe\xff') or value.startswith(b'\xff\xfe'):
+            if value.startswith(b'\xFE\xFF') or value.startswith(b'\xFF\xFE'):
                 value = value[2:] if len(value) % 2 == 0 else value[2:-1]
         elif encoding == 0x02:  # UTF-16 without BOM
             encoding_name = 'UTF-16be'
@@ -1663,7 +1666,7 @@ class _Ogg(TinyTag):
                     self._parse_vorbis_comment(walker)
                     self._tags_parsed = True
                 self._audio_size_serial = serial
-            elif packet.startswith(b'\x7fFLAC'):
+            elif packet.startswith(b'\x7FFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
                 walker = BytesIO(packet)
                 # jump over header name, version and number of headers
@@ -2069,23 +2072,35 @@ class _Wma(TinyTag):
         4: '<I',
         8: '<Q'
     }
-    _ASF_CONTENT_DESC = b'3&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b\xcel'
-    _ASF_EXT_CONTENT_DESC = (b'@\xa4\xd0\xd2\x07\xe3\xd2\x11\x97\xf0\x00'
-                             b'\xa0\xc9^\xa8P')
-    _STREAM_BITRATE_PROPS = (b'\xceu\xf8{\x8dF\xd1\x11\x8d\x82\x00`\x97\xc9'
-                             b'\xa2\xb2')
-    _ASF_FILE_PROP = b'\xa1\xdc\xab\x8cG\xa9\xcf\x11\x8e\xe4\x00\xc0\x0c Se'
-    _ASF_STREAM_PROPS = (b'\x91\x07\xdc\xb7\xb7\xa9\xcf\x11\x8e\xe6\x00\xc0'
-                         b'\x0c Se')
-    _STREAM_TYPE_ASF_AUDIO_MEDIA = b'@\x9ei\xf8M[\xcf\x11\xa8\xfd\x00\x80_\\D+'
-    _XMP_METADATA = b'\xcb\xcfz\xbe\xa9\x97\xe8B\x9cq\x99\x94\x91\xe3\xaf\xac'
+    _ASF_CONTENT_DESC = (
+        b'\x33\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
+    )
+    _ASF_EXT_CONTENT_DESC = (
+        b'\x40\xA4\xD0\xD2\x07\xE3\xD2\x11\x97\xF0\x00\xA0\xC9\x5E\xA8\x50'
+    )
+    _STREAM_BITRATE_PROPS = (
+        b'\xCE\x75\xF8\x7B\x8D\x46\xD1\x11\x8D\x82\x00\x60\x97\xC9\xA2\xB2'
+    )
+    _ASF_FILE_PROP = (
+        b'\xA1\xDC\xAB\x8C\x47\xA9\xCF\x11\x8E\xE4\x00\xC0\x0C\x20\x53\x65'
+    )
+    _ASF_STREAM_PROPS = (
+        b'\x91\x07\xDC\xB7\xB7\xA9\xCF\x11\x8E\xE6\x00\xC0\x0C\x20\x53\x65'
+    )
+    _STREAM_TYPE_ASF_AUDIO_MEDIA = (
+        b'\x40\x9E\x69\xF8\x4D\x5B\xCF\x11\xA8\xFD\x00\x80\x5F\x5C\x44\x2B'
+    )
+    _XMP_METADATA = (
+        b'\xCB\xCF\x7A\xBE\xA9\x97\xE8\x42\x9C\x71\x99\x94\x91\xE3\xAF\xAC'
+    )
 
     def _parse(self, fh: BinaryIO) -> None:
         # http://www.garykessler.net/library/file_sigs.html
         # http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx#_Toc521913958
         header = fh.read(30)
-        if (not header.startswith(b'0&\xb2u\x8ef\xcf\x11\xa6\xd9\x00\xaa\x00b'
-                                  b'\xcel') or header[-1] != 0x02):
+        if (not header.startswith(
+            b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
+        ) or not header.startswith(b'\x02', 29)):
             raise ParseError('Invalid WMA header')
         header_len = 24
         object_header = fh.read(header_len)
