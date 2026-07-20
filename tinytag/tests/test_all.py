@@ -1916,11 +1916,10 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'mime_type': 'audio/mp4',
         'filesize': 39
     }),
-    ('mp4_size_zero.m4a', {
+    ('mp4_invalid_size_zero.m4a', {
         'other': OtherFields(),
         'mime_type': 'audio/mp4',
-        'filesize': 152,
-        'duration': 2.0
+        'filesize': 152
     }),
     ('xmp_data.m4a', {
         'other': OtherFields({
@@ -2045,6 +2044,11 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('empty_file.m4a', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('empty_custom_field.m4a', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4',
+        'filesize': 72,
     }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
