@@ -718,12 +718,6 @@ class _MP4(TinyTag):
         yield image_name, image
 
     @classmethod
-    def _read_extended_descriptor(cls, esds_atom: BinaryIO) -> None:
-        for _i in range(4):
-            if esds_atom.read(1) != b'\x80':
-                break
-
-    @classmethod
     def _parse_custom_field(cls,
                             data: bytes) -> Iterator[tuple[str, list[str]]]:
         fh = BytesIO(data)
@@ -763,7 +757,7 @@ class _MP4(TinyTag):
             yield 'other.xmp', data_atom[uuid_len:].decode('utf-8', 'replace')
 
     @classmethod
-    def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, int]]:
+    def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, float]]:
         # this atom also contains the esds atom:
         # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
         # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
@@ -777,20 +771,29 @@ class _MP4(TinyTag):
         yield 'samplerate', sr
 
         # ES Description Atom
-        esds_atom_size = unpack_from('>I', data, 28)[0]
-        esds_atom = BytesIO(data[36:36 + esds_atom_size])
-        esds_atom.seek(5, SEEK_CUR)   # jump over version, flags and tag
+        def _read_descriptor_size(data: bytes, offset: int) -> tuple[int, int]:
+            size = 0
+            continuation = 1 << 7
+            for _i in range(4):
+                byte = data[offset]
+                offset += 1
+                size = (size << 7) | (byte & ((1 << 7) - 1))
+                if not (byte & continuation):
+                    break
+            return size, offset
+
+        offset = 36 + 5   # jump over version, flags and tag
 
         # ES Descriptor
-        cls._read_extended_descriptor(esds_atom)
-        esds_atom.seek(4, SEEK_CUR)   # jump over ES id, flags and tag
+        _size, offset = _read_descriptor_size(data, offset)
+        offset += 4   # jump over ES id, flags and tag
 
         # Decoder Config Descriptor
-        cls._read_extended_descriptor(esds_atom)
-        esds_atom.seek(9, SEEK_CUR)
-        avg_br = unpack('>I', esds_atom.read(4))[0] / 1000  # kbit/s
+        _size, offset = _read_descriptor_size(data, offset)
+        offset += 9
+        avg_br = unpack_from('>I', data, offset)[0]
         if avg_br > 0:
-            yield 'bitrate', avg_br
+            yield 'bitrate', avg_br / 1000  # kbit/s
 
     @classmethod
     def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, int]]:

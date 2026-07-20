@@ -28,7 +28,7 @@ python3 -m pip install tinytag
   * Supported formats:
     * ID3 v1, v1.1, v2.2, v2.3, v2.4
     * MP3 / MP2 / MP1
-    * MP4 (AAC / ALAC)
+    * MP4 (MPEG-4 Audio / AAC / ALAC)
     * WAVE / WAV
     * OGG (FLAC / Opus / Speex / Vorbis)
     * FLAC
