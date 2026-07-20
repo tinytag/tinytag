@@ -223,7 +223,7 @@ class TinyTag:
         filehandle: BinaryIO
     ) -> type[TinyTag] | None:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
-        header = filehandle.read(35)
+        header = filehandle.read(30)
         filehandle.seek(0)
         if header.startswith(b'ID3'):
             return _ID3
@@ -244,7 +244,7 @@ class TinyTag:
             return _Wave
         if header.startswith(
             b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
-        ):
+        ) and header.startswith(b'\x02', 29):
             return _Wma
         if (header.startswith(b'FORM')
                 and header.startswith((b'AIFF', b'AIFC'), 8)):
