@@ -1677,7 +1677,7 @@ class _Ogg(TinyTag):
                 if self._parse_tags:
                     walker = BytesIO(packet)
                     walker.seek(7)  # jump over header name
-                    self._parse_vorbis_comment(walker)
+                    self._set_vorbis_comment_fields(walker)
                     self._tags_parsed = True
             elif packet.startswith(b'OpusHead'):
                 if self._parse_duration:  # parse opus header
@@ -1694,7 +1694,7 @@ class _Ogg(TinyTag):
                 if self._parse_tags:  # parse opus metadata:
                     walker = BytesIO(packet)
                     walker.seek(8)  # jump over header name
-                    self._parse_vorbis_comment(walker)
+                    self._set_vorbis_comment_fields(walker)
                     self._tags_parsed = True
                 self._audio_size_serial = serial
             elif packet.startswith(b'\x7FFLAC'):
@@ -1723,7 +1723,7 @@ class _Ogg(TinyTag):
                     block_type = meta_header[0] & 0x7f
                     # pylint: disable=protected-access
                     if block_type == _Flac._VORBIS_COMMENT:
-                        self._parse_vorbis_comment(walker)
+                        self._set_vorbis_comment_fields(walker)
                     self._tags_parsed = True
                 check_flac_second_packet = False
             elif packet.startswith(b'Speex   '):
@@ -1745,7 +1745,7 @@ class _Ogg(TinyTag):
                     comment = walker.read(length).decode('utf-8', 'replace')
                     self._set_field('comment', comment)
                     # other tags
-                    self._parse_vorbis_comment(walker, has_vendor=False)
+                    self._set_vorbis_comment_fields(walker, has_vendor=False)
                     self._tags_parsed = True
                 check_speex_second_packet = False
             if self._tags_parsed and not self._parse_duration:
@@ -1764,9 +1764,13 @@ class _Ogg(TinyTag):
         if self._audio_size:  # opus file
             self.bitrate = self._audio_size * 8 / self.duration / 1000
 
-    def _parse_vorbis_comment(self,
-                              fh: BinaryIO,
-                              has_vendor: bool = True) -> None:
+    @classmethod
+    def _parse_vorbis_comment(
+        cls,
+        fh: BinaryIO,
+        has_vendor: bool = True,
+        load_image: bool = False
+    ) -> Iterator[tuple[str, str | int | Image]]:
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         # https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Vorbis.html
@@ -1781,30 +1785,40 @@ class _Ogg(TinyTag):
                 key, value = keyvalpair.split('=', 1)
                 key_lower = key.lower()
                 if key_lower == "metadata_block_picture":
-                    if self._load_image:
+                    if load_image:
                         if _DEBUG:
                             print('Found Vorbis Image', key, value[:64])
                         # pylint: disable=protected-access
                         fieldname, fieldvalue = _Flac._parse_image(
                             BytesIO(a2b_base64(value)))
-                        self.images._set_field(fieldname, fieldvalue)
+                        yield fieldname, fieldvalue
                 else:
                     if _DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
-                    fieldname = self._VORBIS_MAPPING.get(
-                        key_lower, self._OTHER_PREFIX + key_lower)
+                    fieldname = cls._VORBIS_MAPPING.get(
+                        key_lower, cls._OTHER_PREFIX + key_lower)
                     if fieldname in {
                         'track', 'disc', 'track_total', 'disc_total'
                     }:
                         if fieldname in {'track', 'disc'} and '/' in value:
                             value, total = value.split('/')[:2]
                             if total.isdecimal():
-                                self._set_field(
-                                    f'{fieldname}_total', int(total))
+                                yield f'{fieldname}_total', int(total)
                         if value.isdecimal():
-                            self._set_field(fieldname, int(value))
+                            yield fieldname, int(value)
                     else:
-                        self._set_field(fieldname, value)
+                        yield fieldname, value
+
+    def _set_vorbis_comment_fields(self,
+                                   fh: BinaryIO,
+                                   has_vendor: bool = True) -> None:
+        for fieldname, value in self._parse_vorbis_comment(
+            fh, has_vendor, self._load_image
+        ):
+            if isinstance(value, Image):
+                self.images._set_field(fieldname, value)
+                continue
+            self._set_field(fieldname, value)
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[tuple[bytearray, int]]:
         # for the spec, see: https://wiki.xiph.org/Ogg
@@ -2046,9 +2060,9 @@ class _Flac(TinyTag):
             elif self._parse_tags and block_type == self._VORBIS_COMMENT:
                 # pylint: disable=protected-access
                 walker = BytesIO(fh.read(size))
-                oggtag = _Ogg()
-                oggtag._parse_vorbis_comment(walker)
-                self._update(oggtag)
+                for fieldname, value in _Ogg._parse_vorbis_comment(walker):
+                    if not isinstance(value, Image):
+                        self._set_field(fieldname, value)
             elif self._load_image and block_type == self._PICTURE:
                 fieldname, value = self._parse_image(fh)
                 # pylint: disable=protected-access
