@@ -1148,7 +1148,7 @@ class _ID3(TinyTag):
             value = asciidecode(comment)
             self._set_field('comment', value)
         if not self.genre:
-            genre_id = ord(content[127:128])
+            genre_id = content[127]
             if genre_id < len(self._ID3V1_GENRES):
                 self._set_field('genre', self._ID3V1_GENRES[genre_id])
         return True
