@@ -831,30 +831,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 9633,
         'title': 'image',
     }),
-    ('detect_mp3_fffb.x', {
-        'other': OtherFields(),
-        'mime_type': 'audio/mpeg',
-        'channels': 2,
-        'samplerate': 44100,
-        'duration': 3.7355102040816326,
-        'filesize': 14942,
-        'bitrate': 32.0,
-    }),
-    ('detect_mp3_fffb_id3v1.x', {
-        'other': OtherFields(),
-        'mime_type': 'audio/mpeg',
-        'channels': 2,
-        'samplerate': 44100,
-        'genre': 'Darkwave',
-        'duration': 3.7355102040816326,
-        'album': 'Quod Libet Test Data',
-        'year': '2004',
-        'title': 'Silence',
-        'artist': 'piman',
-        'track': 2,
-        'filesize': 15070,
-        'bitrate': 32.0,
-    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'mime_type': 'audio/ogg; codecs="vorbis"',
@@ -1646,16 +1622,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'filesize': 0,
     }),
-    ('detect_flac.x', {
-        'other': OtherFields(),
-        'mime_type': 'audio/flac',
-        'channels': 2,
-        'duration': 3.684716553287982,
-        'filesize': 120,
-        'bitrate': 0.2605356439543127,
-        'samplerate': 44100,
-        'bitdepth': 16,
-    }),
     ('test2.wma', {
         'other': OtherFields({
             '_track': ['0'],
@@ -2214,6 +2180,153 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'filesize': 0,
     }),
+    ('magic_header_only_id3.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'filesize': 3,
+    }),
+    ('detect_mp3_id3.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'channels': 2,
+        'samplerate': 44100,
+        'duration': 0.4963265306122449,
+        'album': 'I Can Walk On Water I Can Fly',
+        'year': '2007',
+        'title': 'I Can Walk On Water I Can Fly',
+        'artist': 'Basshunter',
+        'track': 1,
+        'filesize': 8186,
+        'bitrate': 128.0,
+        'genre': 'Dance',
+        'comment': 'Ripped by THSLIVE',
+    }),
+    ('detect_mp3_fffb_id3v1.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'channels': 2,
+        'samplerate': 44100,
+        'genre': 'Darkwave',
+        'duration': 3.7355102040816326,
+        'album': 'Quod Libet Test Data',
+        'year': '2004',
+        'title': 'Silence',
+        'artist': 'piman',
+        'track': 2,
+        'filesize': 15070,
+        'bitrate': 32.0,
+    }),
+    ('detect_mp3_fffb.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'channels': 2,
+        'samplerate': 44100,
+        'duration': 3.7355102040816326,
+        'filesize': 14942,
+        'bitrate': 32.0,
+    }),
+    ('magic_header_only_mp3.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'filesize': 2,
+    }),
+    ('detect_ogg.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
+        'filesize': 4480,
+        'album': 'An Album',
+        'artist': 'An Artist',
+        'composer': 'some composer',
+        'bitrate': 112.0,
+        'duration': 3.684716553287982,
+        'channels': 2,
+        'genre': 'Some Genre',
+        'samplerate': 44100,
+        'title': 'A Title',
+        'track': 2,
+        'year': '2007',
+        'comment': 'A Comment',
+    }),
+    ('magic_header_only_ogg.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg',
+        'filesize': 5,
+    }),
+    ('detect_wav.x', {
+        'other': OtherFields({
+            'isft': ['Lavf58.20.10'],
+        }),
+        'mime_type': 'audio/wav; codecs="1"',
+        'channels': 1,
+        'duration': 0.0,
+        'filesize': 120,
+        'samplerate': 22050,
+        'bitdepth': 16,
+        'artist': 'Purpley',
+        'title': 'Test000',
+        'album': 'prototypes',
+    }),
+    ('magic_header_only_wav.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/wav',
+        'filesize': 12,
+    }),
+    ('detect_flac.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'channels': 2,
+        'duration': 3.684716553287982,
+        'filesize': 120,
+        'bitrate': 0.2605356439543127,
+        'samplerate': 44100,
+        'bitdepth': 16,
+    }),
+    ('magic_header_only_flac.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'filesize': 4,
+    }),
+    ('detect_wma.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/x-ms-wma',
+        'filesize': 120,
+        'artist': 'Foo Fighters',
+        'title': 'Doll',
+    }),
+    ('magic_header_only_wma.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/x-ms-wma',
+        'filesize': 30,
+    }),
+    ('detect_mp4_m4a.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4',
+        'filesize': 120,
+        'duration': 167.78739229024944,
+    }),
+    ('magic_header_only_mp4.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4',
+        'filesize': 8,
+    }),
+    ('detect_aiff.x', {
+        'other': OtherFields({
+            'copyright': ['℗ 1992 Ace Records']
+        }),
+        'mime_type': 'audio/aiff; codecs="NONE"',
+        'channels': 2,
+        'duration': 0.0,
+        'filesize': 164,
+        'samplerate': 44100,
+        'bitdepth': 16,
+        'title': 'Go Out and Get Some',
+        'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
+    }),
+    ('magic_header_only_aiff.x', {
+        'other': OtherFields(),
+        'mime_type': 'audio/aiff',
+        'filesize': 12,
+    }),
 ])
 
 IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
@@ -2567,6 +2680,12 @@ class TestAll(TestCase):
             TinyTag.get(bogus_file)
         self.assertIsInstance(context.exception, TinyTagException)
 
+    def test_unsupported_magic_header(self) -> None:
+        bogus_file = os.path.join(SAMPLE_FOLDER, 'detect_none.x')
+        with self.assertRaises(UnsupportedFormatError) as context:
+            TinyTag.get(bogus_file)
+        self.assertIsInstance(context.exception, TinyTagException)
+
     def test_override_encoding(self) -> None:
         chinese_id3 = os.path.join(SAMPLE_FOLDER, 'chinese_id3.mp3')
         tag = TinyTag.get(chinese_id3, encoding='gbk')
@@ -2575,13 +2694,13 @@ class TestAll(TestCase):
 
     def test_invalid_file(self) -> None:
         for path, cls in (
-            ('ilbm.aiff', _ID3),
-            ('silence-44-s-v1.mp3', _MP4),
-            ('silence-44-s-v1.mp3', _Flac),
-            ('flac1.5sStereo.flac', _Ogg),
-            ('flac1.5sStereo.flac', _Wave),
-            ('flac1.5sStereo.flac', _Wma),
-            ('ilbm.aiff', _Aiff),
+            ('invalid_file_larger.mp3', _ID3),
+            ('invalid_file.m4a', _MP4),
+            ('invalid_file.flac', _Flac),
+            ('invalid_file.ogg', _Ogg),
+            ('invalid_file.wav', _Wave),
+            ('invalid_file.wma', _Wma),
+            ('invalid_file.aiff', _Aiff),
         ):
             with self.subTest(path=path, cls=cls):
                 with self.assertRaises(ParseError) as context:
@@ -2636,10 +2755,7 @@ class TestAll(TestCase):
             ('detect_mp3_id3.x', _ID3),
             ('detect_mp3_fffb_id3v1.x', _ID3),
             ('detect_mp3_fffb.x', _MPEG),
-            ('detect_ogg_flac.x', _Ogg),
-            ('detect_ogg_opus.x', _Ogg),
-            ('detect_ogg_theora.x', _Ogg),
-            ('detect_ogg_vorbis.x', _Ogg),
+            ('detect_ogg.x', _Ogg),
             ('detect_wav.x', _Wave),
             ('detect_flac.x', _Flac),
             ('detect_wma.x', _Wma),

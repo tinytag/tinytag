@@ -228,9 +228,15 @@ class TinyTag:
         if header.startswith(b'ID3'):
             return _ID3
         if header.startswith(b'\xFF\xFB'):
-            filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
-            footer = filehandle.read(3)
-            filehandle.seek(0)
+            footer = None
+            try:
+                filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
+                footer = filehandle.read(3)
+            except OSError:
+                # File smaller than ID3v1 tag size
+                pass
+            finally:
+                filehandle.seek(0)
             if footer == b'TAG':
                 return _ID3
             return _MPEG
@@ -604,16 +610,18 @@ class _MP4(TinyTag):
                         curr_path: list[bytes] | None = None) -> None:
         header_len = ext_size_len = 8
         atom_header = fh.read(header_len)
+        if curr_path is None:
+            atom_type = atom_header[4:]
+            # Should be safe enough for a quick header check. Newer MP4
+            # files tend to start with an 'ftyp' atom. Older files don't,
+            # but their initial atom type only seem to use ASCII chars.
+            if len(atom_type) != 4 or not atom_type.isascii():
+                raise ParseError('Invalid MP4 header')
+            self.mime_type = 'audio/mp4'
         while len(atom_header) == header_len:
             atom_size = unpack_from('>I', atom_header)[0]
             atom_type = atom_header[4:]
             if curr_path is None:
-                # Should be safe enough for a quick header check. Newer MP4
-                # files tend to start with an 'ftyp' atom. Older files don't,
-                # but their initial atom type only seem to use ASCII chars.
-                if not atom_type.isascii():
-                    raise ParseError('Invalid MP4 header')
-                self.mime_type = 'audio/mp4'
                 curr_path = [atom_type]
             if atom_size == 1:  # 64-bit size
                 ext_size_header = fh.read(ext_size_len)
@@ -1054,7 +1062,8 @@ class _ID3(TinyTag):
         if self._only_id3:
             return
         header = fh.read(4)
-        if header == b'fLaC':
+        if ((self.filename is not None and self.filename.endswith('.flac'))
+                or header == b'fLaC'):
             self.mime_type = 'audio/flac'
             fh.seek(audio_offset)
             flac_tag = _Flac()
@@ -1090,7 +1099,8 @@ class _ID3(TinyTag):
         # for info on the specs, see: http://id3.org/Developer%20Information
         header = fh.read(self._ID3V2_HEADER_SIZE)
         # check if there is an ID3v2 tag at the beginning of the file
-        if header.startswith(b'ID3'):
+        if (len(header) == self._ID3V2_HEADER_SIZE
+                and header.startswith(b'ID3')):
             major = header[3]
             if _DEBUG:
                 print(f'Found id3 v2.{major}')
@@ -1824,23 +1834,21 @@ class _Ogg(TinyTag):
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[tuple[bytearray, int]]:
         # for the spec, see: https://wiki.xiph.org/Ogg
-        initialized = False
         packets = {}
         last_granule_pos = 0
         last_audio_size = 0
         header_len = 27
         page_header = fh.read(header_len)  # read ogg page header
+        if (not page_header.startswith(b'OggS')
+                or not page_header.startswith(b'\x00', 4)):
+            raise ParseError('Invalid OGG header')
+        self.mime_type = 'audio/ogg'
         while len(page_header) == header_len:
             version = page_header[4]
             if not page_header.startswith(b'OggS') or version != 0:
-                if initialized:
-                    # Garbage found after parsing a valid page
-                    break
-                raise ParseError('Invalid OGG header')
+                # Garbage found after parsing a valid page
+                break
             # https://xiph.org/ogg/doc/framing.html
-            if self.mime_type is None:
-                self.mime_type = 'audio/ogg'
-            initialized = True
             header_type = page_header[5]
             eos = header_type & 0x04
             granule_pos, serial = unpack_from('<qI', page_header, 6)
