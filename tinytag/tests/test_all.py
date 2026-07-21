@@ -1718,6 +1718,11 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'filesize': 0,
     }),
+    ('invalid_object_size.wma', {
+        'other': OtherFields(),
+        'mime_type': 'audio/x-ms-wma',
+        'filesize': 2500,
+    }),
     ('test.m4a', {
         'other': OtherFields({
             'itunsmpb': [
