@@ -493,8 +493,10 @@ class _MP4(TinyTag):
         'catalognumber': 'other.catalog_number',
     }
     _IMAGE_MIME_TYPES = {
+        12: 'image/gif',
         13: 'image/jpeg',
-        14: 'image/png'
+        14: 'image/png',
+        27: 'image/bmp'
     }
     _UNPACK_FORMATS = {
         1: '>b',
