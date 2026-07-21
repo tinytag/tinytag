@@ -83,6 +83,7 @@ class TinyTag:
         self.filename: str | None = None
         self.filesize = 0
 
+        self.mime_type: str | None = None
         self.duration: float | None = None
         self.channels: int | None = None
         self.bitrate: float | None = None
@@ -154,11 +155,10 @@ class TinyTag:
             tag._default_encoding = encoding
             tag.filename = filename_str
             tag.filesize = filesize
-            if filesize > 0:
-                try:
-                    tag._load(tags=tags, duration=duration, image=image)
-                except Exception as exc:
-                    raise ParseError(exc) from exc
+            try:
+                tag._load(tags=tags, duration=duration, image=image)
+            except Exception as exc:
+                raise ParseError(exc) from exc
             return tag
         finally:
             if should_close_file:
@@ -175,8 +175,8 @@ class TinyTag:
         """Return a flat dictionary representation of available
         metadata."""
         audio_property_keys = {
-            'filename', 'filesize', 'duration', 'channels', 'bitrate',
-            'bitdepth', 'samplerate'
+            'filename', 'filesize', 'mime_type', 'duration', 'channels',
+            'bitrate', 'bitdepth', 'samplerate'
         }
         fields: dict[str, str | float | list[str]] = {}
         for key, value in self.__dict__.items():
@@ -277,6 +277,8 @@ class TinyTag:
         self._load_image = image
         if self._filehandler is None:
             raise ValueError("File handle is required")
+        if not self.filesize:
+            return
         if tags or duration:
             self._parse(self._filehandler)
 
@@ -315,7 +317,7 @@ class TinyTag:
 
     def _update(self, other: TinyTag) -> None:
         # update the values of this tag with the values from another tag
-        ignored_keys = {'filename', 'filesize'}
+        ignored_keys = {'filename', 'filesize', 'mime_type'}
         for key, value in other.__dict__.items():
             if key.startswith('_') or key in ignored_keys:
                 continue
@@ -610,6 +612,7 @@ class _MP4(TinyTag):
                 # but their initial atom type only seem to use ASCII chars.
                 if not atom_type.isascii():
                     raise ParseError('Invalid MP4 header')
+                self.mime_type = 'audio/mp4'
                 curr_path = [atom_type]
             if atom_size == 1:  # 64-bit size
                 ext_size_header = fh.read(ext_size_len)
@@ -647,6 +650,8 @@ class _MP4(TinyTag):
                     elif isinstance(value, list):
                         for subval in value:
                             self._set_field(fieldname, subval)
+                    elif fieldname == 'codec':
+                        self.mime_type = f'audio/mp4; codecs="{value}"'
                     else:
                         self._set_field(fieldname, value)
             # unknown data atom, try to parse it
@@ -757,7 +762,7 @@ class _MP4(TinyTag):
             yield 'other.xmp', data_atom[uuid_len:].decode('utf-8', 'replace')
 
     @classmethod
-    def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, float]]:
+    def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, str | float]]:
         # this atom also contains the esds atom:
         # https://ffmpeg.org/doxygen/0.6/mov_8c-source.html
         # http://xhelmboyx.tripod.com/formats/mp4-layout.txt
@@ -790,14 +795,31 @@ class _MP4(TinyTag):
 
         # Decoder Config Descriptor
         _size, offset = _read_descriptor_size(data, offset)
+        object_type = data[offset]
+        codec = f'mp4a.{object_type:X}'
         offset += 9
         avg_br = unpack_from('>I', data, offset)[0]
         if avg_br > 0:
             yield 'bitrate', avg_br / 1000  # kbit/s
+        offset += 5
+
+        # Decoder Specific Info
+        _size, offset = _read_descriptor_size(data, offset)
+        first = data[offset]
+        second = data[offset + 1]
+        audio_object_type = first >> 3
+        if audio_object_type == 31:
+            # Read extended value
+            extended = ((first & 0x07) << 3) | (second >> 5)
+            audio_object_type = 32 + extended
+        if audio_object_type:
+            codec += f'.{audio_object_type}'
+        yield 'codec', codec
 
     @classmethod
-    def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, int]]:
+    def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, str | int]]:
         # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
+        yield 'codec', 'alac'
         bitdepth = data[45]
         yield 'bitdepth', bitdepth
         channels = data[49]
@@ -1032,15 +1054,18 @@ class _ID3(TinyTag):
             return
         header = fh.read(4)
         if header == b'fLaC':
+            self.mime_type = 'audio/flac'
             fh.seek(audio_offset)
             flac_tag = _Flac()
-            flac_tag._filehandler = fh
+            flac_tag.filename = self.filename
             flac_tag.filesize = self.filesize
+            flac_tag._filehandler = fh
             flac_tag._load(
                 tags=self._parse_tags, duration=self._parse_duration,
                 image=self._load_image)
             self._update(flac_tag)
         else:
+            self.mime_type = 'audio/mpeg'
             end_padding = 0
             if self.filesize >= self._ID3V1_TAG_SIZE:
                 # try parsing id3v1 at the end of file
@@ -1049,9 +1074,10 @@ class _ID3(TinyTag):
                     end_padding = self._ID3V1_TAG_SIZE
             fh.seek(audio_offset)
             mpeg_tag = _MPEG()
+            mpeg_tag.filename = self.filename
+            mpeg_tag.filesize = self.filesize
             mpeg_tag._filehandler = fh
             mpeg_tag._end_padding = end_padding
-            mpeg_tag.filesize = self.filesize
             mpeg_tag._load(tags=False, duration=self._parse_duration)
             self._update(mpeg_tag)
         self._tags_parsed = self._parse_tags
@@ -1457,6 +1483,7 @@ class _MPEG(TinyTag):
         self._end_padding = 0
 
     def _parse(self, fh: BinaryIO) -> None:
+        self.mime_type = 'audio/mpeg'
         if not self._parse_duration:
             return
         max_estimation_frames = (
@@ -1644,6 +1671,7 @@ class _Ogg(TinyTag):
                     bitrate = unpack_from('<i', packet, 20)[0]
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
+                    self.mime_type = 'audio/ogg; codecs="vorbis"'
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
             elif packet.startswith(b'\x03vorbis'):
@@ -1660,6 +1688,7 @@ class _Ogg(TinyTag):
                     if (version & 0xF0) == 0:  # only major version 0 supported
                         self.channels = ch
                         self.samplerate = 48000
+                    self.mime_type = 'audio/ogg; codecs="opus"'
                     self._duration_parsed = True
                     self._granule_pos_serial = serial
             elif packet.startswith(b'OpusTags'):
@@ -1676,12 +1705,15 @@ class _Ogg(TinyTag):
                 walker.seek(9)
                 # pylint: disable=protected-access
                 flactag = _Flac()
-                flactag._filehandler = walker
+                flactag.filename = self.filename
                 flactag.filesize = self.filesize
+                flactag._filehandler = walker
                 flactag._load(
                     tags=False, duration=self._parse_duration,
                     image=self._load_image)
                 self._update(flactag)
+                if self._parse_duration:
+                    self.mime_type = 'audio/ogg; codecs="flac"'
                 self._duration_parsed = self._parse_duration
                 check_flac_second_packet = True
             elif check_flac_second_packet:
@@ -1702,6 +1734,7 @@ class _Ogg(TinyTag):
                     self.channels, bitrate = unpack_from('<ii', packet, 48)
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
+                    self.mime_type = 'audio/ogg; codecs="speex"'
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
                 check_speex_second_packet = True
@@ -1790,6 +1823,8 @@ class _Ogg(TinyTag):
                     break
                 raise ParseError('Invalid OGG header')
             # https://xiph.org/ogg/doc/framing.html
+            if self.mime_type is None:
+                self.mime_type = 'audio/ogg'
             initialized = True
             header_type = page_header[5]
             eos = header_type & 0x04
@@ -1872,6 +1907,7 @@ class _Wave(TinyTag):
         header = fh.read(12)
         if not header.startswith(b'RIFF') or not header.startswith(b'WAVE', 8):
             raise ParseError('Invalid WAV header')
+        self.mime_type = 'audio/wav'
         is_compressed = False
         block_align = 0
         audio_size = 0
@@ -1893,6 +1929,8 @@ class _Wave(TinyTag):
                 if bitdepth > 0:
                     self.bitdepth = bitdepth
                 is_compressed = format_tag not in self._UNCOMPRESSED_FORMATS
+                if format_tag:
+                    self.mime_type = f'audio/wav; codecs="{format_tag}"'
             elif self._parse_duration and chunk_header.startswith(b'data'):
                 audio_size = subchunk_size_unpadded
                 fh.seek(subchunk_size, SEEK_CUR)
@@ -1927,6 +1965,8 @@ class _Wave(TinyTag):
                     and chunk_header.startswith((b'id3 ', b'ID3 '))):
                 # pylint: disable=protected-access
                 id3 = _ID3()
+                id3.filename = self.filename
+                id3.filesize = self.filesize
                 id3._filehandler = BytesIO(fh.read(subchunk_size))
                 id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
@@ -1966,6 +2006,7 @@ class _Flac(TinyTag):
         if not header.startswith(b'fLaC'):
             raise ParseError('Invalid FLAC header')
         # for spec, see https://xiph.org/flac/ogg_mapping.html
+        self.mime_type = 'audio/flac'
         header_len = 4
         block_header = fh.read(header_len)
         while len(block_header) == header_len:
@@ -2105,6 +2146,7 @@ class _Wma(TinyTag):
             b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
         ) or not header.startswith(b'\x02', 29)):
             raise ParseError('Invalid WMA header')
+        self.mime_type = 'audio/x-ms-wma'
         header_len = 24
         object_header = fh.read(header_len)
         while len(object_header) == header_len:
@@ -2174,10 +2216,13 @@ class _Wma(TinyTag):
                 data = fh.read(object_size)
                 stream_type = data[:16]
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
-                    (codec_id_format_tag, self.channels, self.samplerate,
+                    (format_tag, self.channels, self.samplerate,
                      avg_bytes_per_second) = unpack_from('<HHII', data, 54)
                     self.bitrate = avg_bytes_per_second * 8 / 1000
-                    if codec_id_format_tag == 355:  # lossless
+                    if format_tag:
+                        self.mime_type = (
+                            f'audio/x-ms-wma; codecs="{format_tag}"')
+                    if format_tag == 355:  # lossless
                         self.bitdepth = unpack_from('<H', data, 68)[0]
             elif (self._parse_tags
                     and object_header.startswith(self._XMP_METADATA)):
@@ -2225,6 +2270,7 @@ class _Aiff(TinyTag):
         if (not header.startswith(b'FORM')
                 or not header.startswith((b'AIFC', b'AIFF'), 8)):
             raise ParseError('Invalid AIFF header')
+        self.mime_type = 'audio/aiff'
         header_len = 8
         chunk_header = fh.read(header_len)
         while len(chunk_header) == header_len:
@@ -2253,6 +2299,11 @@ class _Aiff(TinyTag):
                     self.samplerate, self.duration = sr, duration
                 except OverflowError:
                     pass
+                compression_type = chunk[18:22].decode('latin-1')
+                if not compression_type:
+                    compression_type = 'NONE'  # uncompressed
+                self.mime_type = (
+                    f'audio/aiff; codecs="{compression_type}"')
                 self._duration_parsed = True
                 if not self._parse_tags:
                     break
@@ -2260,6 +2311,8 @@ class _Aiff(TinyTag):
                     and chunk_header.startswith((b'id3 ', b'ID3 '))):
                 # pylint: disable=protected-access
                 id3 = _ID3()
+                id3.filename = self.filename
+                id3.filesize = self.filesize
                 id3._filehandler = BytesIO(fh.read(subchunk_size))
                 id3._only_id3 = True
                 id3._load(tags=True, duration=False, image=self._load_image)
