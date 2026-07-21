@@ -2197,8 +2197,10 @@ class _Wma(TinyTag):
         header_len = 24
         object_header = fh.read(header_len)
         while len(object_header) == header_len:
-            object_size = max(
-                unpack_from('<Q', object_header, 16)[0] - header_len, 0)
+            object_size = unpack_from('<Q', object_header, 16)[0]
+            if object_size < header_len:
+                break
+            object_size -= header_len
             if (self._parse_tags
                     and object_header.startswith(self._ASF_CONTENT_DESC)):
                 walker = BytesIO(fh.read(object_size))
