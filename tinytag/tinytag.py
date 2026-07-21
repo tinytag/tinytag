@@ -603,53 +603,77 @@ class _MP4(TinyTag):
                     result[key] = value
         return cls._combined_tree
 
+    @staticmethod
+    def _read_atom_header(
+        fh: BinaryIO
+    ) -> tuple[bytes | None, int, int | None]:
+        atom_type = None
+        atom_size = None
+        atom_header = fh.read(8)
+        header_size = len(atom_header)
+        if header_size < 8:
+            return atom_type, header_size, atom_size
+        atom_size = unpack_from('>I', atom_header)[0]
+        atom_type = atom_header[4:]
+        if atom_size == 1:  # 64-bit size
+            ext_size_header = fh.read(8)
+            header_size += len(ext_size_header)
+            if header_size == 16:
+                atom_size = unpack('>Q', ext_size_header)[0]
+        if atom_size < header_size:
+            # Invalid atom size, stop parsing. Technically an atom size of
+            # 0 is valid, and means the atom extends to the end of the file,
+            # but we likely don't care about such atoms anyway.
+            atom_size = None
+        else:
+            atom_size -= header_size
+        return atom_type, header_size, atom_size
+
     def _traverse_atoms(self,
                         fh: BinaryIO,
                         path: _DataTreeDict,
+                        curr_pos: int | None = None,
                         stop_pos: int | None = None,
-                        curr_path: list[bytes] | None = None) -> None:
-        header_len = ext_size_len = 8
-        atom_header = fh.read(header_len)
+                        curr_path: list[bytes] | None = None) -> int:
+        if curr_pos is None:
+            curr_pos = fh.tell()
+        atom_type, header_size, atom_size = self._read_atom_header(fh)
         if curr_path is None:
-            atom_type = atom_header[4:]
             # Should be safe enough for a quick header check. Newer MP4
             # files tend to start with an 'ftyp' atom. Older files don't,
             # but their initial atom type only seem to use ASCII chars.
-            if len(atom_type) != 4 or not atom_type.isascii():
+            if atom_type is None or not atom_type.isascii():
                 raise ParseError('Invalid MP4 header')
             self.mime_type = 'audio/mp4'
-        while len(atom_header) == header_len:
-            atom_size = unpack_from('>I', atom_header)[0]
-            atom_type = atom_header[4:]
+        while atom_type is not None and atom_size is not None:
+            curr_pos += header_size
             if curr_path is None:
                 curr_path = [atom_type]
-            if atom_size == 1:  # 64-bit size
-                ext_size_header = fh.read(ext_size_len)
-                if len(ext_size_header) == ext_size_len:
-                    atom_size = unpack('>Q', ext_size_header)[0] - ext_size_len
-            atom_size -= header_len
-            if atom_size <= 0:  # empty atom, jump to next one
-                atom_header = fh.read(header_len)
-                continue
             if _DEBUG:
                 print(f'{" " * 4 * len(curr_path)} '
-                      f'pos: {fh.tell() - header_len} '
-                      f'atom: {atom_type!r} len: {atom_size + header_len}')
-            if atom_type in self._VERSIONED_ATOMS:  # jump atom version for now
-                fh.seek(4, SEEK_CUR)
-                atom_size -= 4
-            if atom_type in self._FLAGGED_ATOMS:  # jump atom flags for now
-                fh.seek(4, SEEK_CUR)
-                atom_size -= 4
-            sub_path = path.get(atom_type, None)
+                      f'pos: {curr_pos - header_size} '
+                      f'atom: {atom_type!r} len: {atom_size + header_size}')
+            if atom_size >= 4:
+                if atom_type in self._VERSIONED_ATOMS:  # skip atom version
+                    curr_pos = fh.seek(4, SEEK_CUR)
+                    atom_size -= 4
+                if atom_type in self._FLAGGED_ATOMS:  # skip atom flags
+                    curr_pos = fh.seek(4, SEEK_CUR)
+                    atom_size -= 4
+            sub_path = path.get(atom_type)
             # if the path leaf is a dict, traverse deeper into the tree:
             if isinstance(sub_path, dict):
-                atom_end_pos = fh.tell() + atom_size
-                self._traverse_atoms(fh, path=sub_path, stop_pos=atom_end_pos,
-                                     curr_path=curr_path + [atom_type])
+                curr_pos = self._traverse_atoms(
+                    fh, path=sub_path,
+                    curr_pos=curr_pos,
+                    stop_pos=curr_pos + atom_size,
+                    curr_path=curr_path + [atom_type]
+                )
             # if the path-leaf is a callable, call it on the atom data
             elif callable(sub_path):
-                for fieldname, value in sub_path(fh.read(atom_size)):
+                data = fh.read(atom_size)
+                curr_pos += len(data)
+                for fieldname, value in sub_path(data):
                     if _DEBUG:
                         print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
                     if isinstance(value, Image):
@@ -665,30 +689,33 @@ class _MP4(TinyTag):
                         self._set_field(fieldname, value)
             # unknown data atom, try to parse it
             elif curr_path == self._ILST_PATH:
-                atom_end_pos = fh.tell() + atom_size
                 field_name = (
                     self._OTHER_PREFIX + atom_type.decode('latin-1').lower()
                 )
-                fh.seek(-header_len, SEEK_CUR)
-                self._traverse_atoms(
+                fh.seek(-header_size, SEEK_CUR)
+                curr_pos -= header_size
+                curr_pos = self._traverse_atoms(
                     fh,
                     path={atom_type: {b'data': self._data_parser(field_name)}},
-                    stop_pos=atom_end_pos, curr_path=curr_path + [atom_type])
+                    curr_pos=curr_pos,
+                    stop_pos=curr_pos + atom_size + header_size,
+                    curr_path=curr_path + [atom_type])
             # if no action was specified using dict or callable, jump over atom
             else:
-                fh.seek(atom_size, SEEK_CUR)
+                curr_pos = fh.seek(atom_size, SEEK_CUR)
             # check if we have reached the end of this branch:
-            if stop_pos and fh.tell() >= stop_pos:
-                return  # return to parent (next parent node in tree)
-            atom_header = fh.read(header_len)  # read next atom
+            if stop_pos and curr_pos >= stop_pos:
+                return curr_pos  # return to parent (next parent node in tree)
+            atom_type, header_size, atom_size = self._read_atom_header(fh)
+        return curr_pos
 
     @classmethod
     def _data_parser(
         cls, fieldname: str
     ) -> Callable[[bytes], Iterator[tuple[str, str]]]:
-        def _parse_data_atom(data_atom: bytes) -> Iterator[tuple[str, str]]:
-            data_type = unpack_from('>I', data_atom)[0]
-            data = data_atom[8:]
+        def _parse_data_atom(data: bytes) -> Iterator[tuple[str, str]]:
+            data_type = unpack_from('>I', data)[0]
+            data = data[8:]
             value = ""
             if data_type == 1:     # UTF-8 string
                 value = data.decode('utf-8', 'replace')
@@ -704,8 +731,8 @@ class _MP4(TinyTag):
     def _nums_parser(
         cls, fieldname1: str, fieldname2: str
     ) -> Callable[[bytes], Iterator[tuple[str, int]]]:
-        def _parse_nums(data_atom: bytes) -> Iterator[tuple[str, int]]:
-            number_data = data_atom[8:14]
+        def _parse_nums(data: bytes) -> Iterator[tuple[str, int]]:
+            number_data = data[8:14]
             numbers = unpack('>3H', number_data)
             # for some reason the first number is always irrelevant.
             yield fieldname1, numbers[1]
@@ -713,19 +740,19 @@ class _MP4(TinyTag):
         return _parse_nums
 
     @classmethod
-    def _parse_id3v1_genre(cls, data_atom: bytes) -> Iterator[tuple[str, str]]:
+    def _parse_id3v1_genre(cls, data: bytes) -> Iterator[tuple[str, str]]:
         # dunno why genre is offset by -1 but that's how mutagen does it
-        idx = unpack_from('>H', data_atom, 8)[0] - 1
+        idx = unpack_from('>H', data, 8)[0] - 1
         # pylint: disable=protected-access
         if idx < len(_ID3._ID3V1_GENRES):
             yield 'genre', _ID3._ID3V1_GENRES[idx]
 
     @classmethod
     def _parse_cover_image(cls,
-                           data_atom: bytes) -> Iterator[tuple[str, Image]]:
-        data_type = unpack_from('>I', data_atom)[0]
+                           data: bytes) -> Iterator[tuple[str, Image]]:
+        data_type = unpack_from('>I', data)[0]
         image_name = 'front_cover'
-        image_data = data_atom[8:]
+        image_data = data[8:]
         image = Image(
             image_name, len(image_data), image_data,
             cls._IMAGE_MIME_TYPES.get(data_type))
@@ -735,13 +762,10 @@ class _MP4(TinyTag):
     def _parse_custom_field(cls,
                             data: bytes) -> Iterator[tuple[str, list[str]]]:
         fh = BytesIO(data)
-        header_len = 8
         field_name = None
         values = []
-        atom_header = fh.read(header_len)
-        while len(atom_header) == header_len:
-            atom_size = unpack_from('>I', atom_header)[0] - header_len
-            atom_type = atom_header[4:]
+        atom_type, header_size, atom_size = cls._read_atom_header(fh)
+        while atom_type is not None and atom_size is not None:
             if atom_type == b'name':
                 atom_value = fh.read(atom_size)[4:].lower()
                 field_name = atom_value.decode('utf-8', 'replace')
@@ -757,18 +781,18 @@ class _MP4(TinyTag):
                     break
             else:
                 fh.seek(atom_size, SEEK_CUR)
-            atom_header = fh.read(header_len)  # read next atom
+            atom_type, header_size, atom_size = cls._read_atom_header(fh)
         if field_name and values:
             yield field_name, values
 
     @classmethod
-    def _parse_uuid(cls, data_atom: bytes) -> Iterator[tuple[str, str]]:
+    def _parse_uuid(cls, data: bytes) -> Iterator[tuple[str, str]]:
         uuid_len = 16
-        uuid = data_atom[:uuid_len]
+        uuid = data[:uuid_len]
         if uuid == (
             b'\xBE\x7A\xCF\xCB\x97\xA9\x42\xE8\x9C\x71\x99\x94\x91\xE3\xAF\xAC'
         ):
-            yield 'other.xmp', data_atom[uuid_len:].decode('utf-8', 'replace')
+            yield 'other.xmp', data[uuid_len:].decode('utf-8', 'replace')
 
     @classmethod
     def _parse_mp4a(cls, data: bytes) -> Iterator[tuple[str, str | float]]:
