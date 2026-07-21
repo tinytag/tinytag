@@ -696,6 +696,9 @@ class _MP4(TinyTag):
     ) -> Callable[[bytes], Iterator[tuple[str, int]]]:
         def _parse_nums(data_atom: bytes) -> Iterator[tuple[str, int]]:
             number_data = data_atom[8:14]
+            # truncated trkn/disk data atoms omit the 6-byte number payload
+            if len(number_data) < 6:
+                return {}
             numbers = unpack('>3H', number_data)
             # for some reason the first number is always irrelevant.
             yield fieldname1, numbers[1]
