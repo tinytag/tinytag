@@ -359,13 +359,12 @@ class TinyTag:
 
     @property
     def extra(self) -> dict[str, str]:
-        """Deprecated, use 'other' instead."""
+        """Obsolete, use 'other' instead."""
         from warnings import warn  # pylint: disable=import-outside-toplevel
-        warn("'extra' attribute is deprecated, and will be "
+        warn("'extra' attribute is obsolete, and will be "
              "removed in the future. Use 'other' instead.",
              DeprecationWarning, stacklevel=2)
-        extra_keys = {'copyright', 'initial_key', 'isrc', 'lyrics', 'url'}
-        return {k: v[0] for k, v in self.other.items() if k in extra_keys}
+        return {}
 
 
 class Images:

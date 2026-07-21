@@ -2679,7 +2679,7 @@ class TestAll(TestCase):
         with self.assertWarns(DeprecationWarning):
             assert tag.audio_offset is None
         with self.assertWarns(DeprecationWarning):
-            self.assertEqual(str(tag.extra), "{'url': 'https://example.com'}")
+            self.assertEqual(str(tag.extra), "{}")
         with self.assertWarns(DeprecationWarning):
             assert tag.images.any is not None
             self.assertEqual(tag.get_image(), tag.images.any.data)
