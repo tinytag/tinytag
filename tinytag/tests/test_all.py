@@ -1795,7 +1795,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'mime_type': 'audio/mp4; codecs="mp4a.40.2"',
         'artist': 'test1',
         'composer': 'test8',
-        'filesize': 7371,
+        'filesize': 9419,
         'samplerate': 8000,
         'duration': 1.294,
         'channels': 1,
@@ -2345,7 +2345,22 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
         ),
     }),
     ('mpeg4_with_image.m4a', {
-        'other': OtherImages(),
+        'other': OtherImages({
+            'front_cover': [
+                Image(
+                    name='front_cover',
+                    mime_type='image/bmp',
+                    size=1870,
+                    data=b'BMN\x07\x00\x00\x00\x00\x00\x00F\x00\x00\x008\x00'
+                ),
+                Image(
+                    name='front_cover',
+                    mime_type='image/gif',
+                    size=61,
+                    data=b'GIF87a\x1e\x00\x1e\x00\x80\x01\x00\x00\x00\x00\xff'
+                )
+            ],
+        }),
         'front_cover': Image(
             name='front_cover',
             mime_type='image/jpeg',
