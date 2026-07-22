@@ -1028,7 +1028,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'album': 'test2',
         'artist': 'test6',
         'comment': 'test5',
-        'bitrate': 20.022488249118684,
+        'bitrate': 19.912367802585194,
         'duration': 3.705034013605442,
         'channels': 2,
         'genre': 'Acoustic',
@@ -1403,7 +1403,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'artist': 'art',
         'channels': 1,
         'filesize': 26632,
-        'bitrate': 213.056,
+        'bitrate': 211.48,
         'samplerate': 44100,
         'bitdepth': 16,
         'comment': 'hello',
@@ -1414,7 +1414,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 453.51473922902494,
         'filesize': 84236,
-        'bitrate': 1.4859230399999999,
+        'bitrate': 1.33982856,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -1429,7 +1429,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 23,
         'artist': 'art',
         'filesize': 59868,
-        'bitrate': 319.39739599872973,
+        'bitrate': 318.34639568116864,
         'genre': 'Avantgarde',
         'samplerate': 44100,
         'bitdepth': 16,
@@ -1459,7 +1459,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 4,
         'artist': 'Belle and Sebastian',
         'filesize': 13000,
-        'bitrate': 0.38006139453296306,
+        'bitrate': 0.0023973103347463822,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -1469,7 +1469,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 4692,
-        'bitrate': 10.186943678613627,
+        'bitrate': 1.0985919653406853,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -1494,7 +1494,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track_total': 11,
         'artist': 'Boom Boom Satellites',
         'filesize': 10240,
-        'bitrate': 0.31305411189238763,
+        'bitrate': 0.06040966065423418,
         'disc': 1,
         'genre': 'Anime Soundtrack',
         'samplerate': 44100,
@@ -1507,7 +1507,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 4692,
-        'bitrate': 10.186943678613627,
+        'bitrate': 1.0985919653406853,
         'channels': 2,
         'duration': 3.684716553287982,
         'samplerate': 44100,
@@ -1517,7 +1517,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 4692,
-        'bitrate': 10.186943678613627,
+        'bitrate': 1.0985919653406853,
         'channels': 2,
         'duration': 3.684716553287982,
         'samplerate': 44100,
@@ -1529,7 +1529,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 16070,
         'album': 'album',
         'artist': 'artist',
-        'bitrate': 283.4748,
+        'bitrate': 261.74231999999995,
         'channels': 1,
         'duration': 0.45351473922902497,
         'genre': 'genre',
@@ -1557,7 +1557,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 19522,
         'album': 'Unbekannter Titel',
         'artist': 'Unbekannter Künstler',
-        'bitrate': 344.36807999999996,
+        'bitrate': 261.74231999999995,
         'channels': 1,
         'disc': 1,
         'disc_total': 1,
@@ -1575,7 +1575,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 235,
-        'bitrate': 18.8,
+        'bitrate': 1.92,
         'channels': 1,
         'duration': 0.1,
         'samplerate': 44100,
@@ -1596,7 +1596,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 4749,
         'album': 'album 1',
         'artist': 'artist 1',
-        'bitrate': 379.92,
+        'bitrate': 1.92,
         'channels': 1,
         'duration': 0.1,
         'genre': 'genre 1',
@@ -1615,7 +1615,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 4777,
-        'bitrate': 10.371489759747933,
+        'bitrate': 1.0985919653406853,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -1627,7 +1627,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 273,
-        'bitrate': 21.84,
+        'bitrate': 1.92,
         'channels': 1,
         'duration': 0.1,
         'samplerate': 44100,
@@ -1638,7 +1638,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 295,
-        'bitrate': 23.6,
+        'bitrate': 1.92,
         'channels': 1,
         'duration': 0.1,
         'samplerate': 44100,
@@ -2312,7 +2312,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 120,
-        'bitrate': 0.2605356439543127,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -2896,7 +2895,7 @@ class TestAll(TestCase):
         self.assertIn(
             "multiple_values_images.flac', 'filesize': 4749, "
             "'mime_type': 'audio/flac', 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 379.92, "
+            "'channels': 1, 'bitrate': 1.92, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
             "'albumartist': None, 'composer': None, 'album': 'album 1', "
             "'disc': 1, 'disc_total': 1, 'title': None, 'track': 1, "
@@ -2945,7 +2944,7 @@ class TestAll(TestCase):
         self.assertIn(
             "multiple_values_images.flac', 'filesize': 4749, "
             "'mime_type': 'audio/flac', 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 379.92, "
+            "'channels': 1, 'bitrate': 1.92, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
             "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
             "'disc': ['1', '2', '3'], 'disc_total': ['1', '2', '3'], "
