@@ -1816,7 +1816,8 @@ class _Ogg(TinyTag):
         cls,
         fh: BinaryIO,
         has_vendor: bool = True,
-        load_image: bool = False
+        load_image: bool = False,
+        read_data: bool = True
     ) -> Iterator[tuple[str, str | int | Image]]:
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
@@ -1827,6 +1828,9 @@ class _Ogg(TinyTag):
         elements = unpack('I', fh.read(4))[0]
         for _i in range(elements):
             length = unpack('I', fh.read(4))[0]
+            if not read_data:
+                fh.seek(length, SEEK_CUR)
+                continue
             keyvalpair = fh.read(length).decode('utf-8', 'replace')
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
@@ -1836,9 +1840,10 @@ class _Ogg(TinyTag):
                         if _DEBUG:
                             print('Found Vorbis Image', key, value[:64])
                         # pylint: disable=protected-access
-                        fieldname, fieldvalue = _Flac._parse_image(
-                            BytesIO(a2b_base64(value)))
-                        yield fieldname, fieldvalue
+                        result = _Flac._parse_image(BytesIO(a2b_base64(value)))
+                        if result is not None:
+                            fieldname, fieldvalue = result
+                            yield fieldname, fieldvalue
                 else:
                     if _DEBUG:
                         print('Found Vorbis Comment', key, value[:64])
@@ -2103,18 +2108,25 @@ class _Flac(TinyTag):
                 if duration > 0:
                     self.bitrate = self.filesize * 8 / duration / 1000
                 self._duration_parsed = True
-                if not self._parse_tags:
-                    break
-            elif self._parse_tags and block_type == self._VORBIS_COMMENT:
+            elif block_type == self._VORBIS_COMMENT:
+                # Some files in the wild contain incorrect block sizes for
+                # Vorbis comment blocks. Attempt to parse the block as usual
+                # to find the actual size.
                 # pylint: disable=protected-access
-                walker = BytesIO(fh.read(size))
-                for fieldname, value in _Ogg._parse_vorbis_comment(walker):
+                for fieldname, value in _Ogg._parse_vorbis_comment(
+                    fh, read_data=self._parse_tags
+                ):
                     if not isinstance(value, Image):
                         self._set_field(fieldname, value)
-            elif self._load_image and block_type == self._PICTURE:
-                fieldname, value = self._parse_image(fh)
-                # pylint: disable=protected-access
-                self.images._set_field(fieldname, value)
+            elif block_type == self._PICTURE:
+                # Some files in the wild contain incorrect block sizes for
+                # picture blocks. Attempt to parse the block as usual to find
+                # the actual size.
+                result = self._parse_image(fh, read_data=self._load_image)
+                if result is not None:
+                    # pylint: disable=protected-access
+                    fieldname, value = result
+                    self.images._set_field(fieldname, value)
             else:
                 fh.seek(size, SEEK_CUR)  # seek over this block
             if is_streaminfo_block and not found_streaminfo:
@@ -2128,14 +2140,27 @@ class _Flac(TinyTag):
         self._tags_parsed = self._parse_tags
 
     @classmethod
-    def _parse_image(cls, fh: BinaryIO) -> tuple[str, Image]:
+    def _parse_image(cls,
+                     fh: BinaryIO,
+                     read_data: bool = True) -> tuple[str, Image] | None:
         # https://xiph.org/flac/format.html#metadata_block_picture
+        mime_type = None
         pic_type, mime_type_len = unpack('>II', fh.read(8))
-        mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
+        if read_data:
+            mime_type = fh.read(mime_type_len).decode('utf-8', 'replace')
+        else:
+            fh.seek(mime_type_len, SEEK_CUR)
+        description = None
         description_len = unpack('>I', fh.read(4))[0]
-        description = fh.read(description_len).decode('utf-8', 'replace')
+        if read_data:
+            description = fh.read(description_len).decode('utf-8', 'replace')
+        else:
+            fh.seek(description_len, SEEK_CUR)
         fh.seek(16, SEEK_CUR)  # jump over width, height, depth, colors
         pic_len = unpack('>I', fh.read(4))[0]
+        if not read_data:
+            fh.seek(pic_len, SEEK_CUR)
+            return None
         # pylint: disable=protected-access
         return _ID3._create_tag_image(
             fh.read(pic_len), pic_type, mime_type, description)

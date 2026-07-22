@@ -1634,6 +1634,20 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'bitdepth': 16,
         'title': 'title',
     }),
+    ('invalid_block_sizes.flac', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'filesize': 295,
+        'bitrate': 23.6,
+        'channels': 1,
+        'duration': 0.1,
+        'samplerate': 44100,
+        'bitdepth': 16,
+        'title': 'some title',
+        'artist': 'some artist',
+        'track': 1,
+        'album': 'some album',
+    }),
     ('test2.wma', {
         'other': OtherFields({
             '_track': ['0'],
@@ -2496,6 +2510,15 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
             description='some image ë',
             size=1220,
             data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
+        ),
+    }),
+    ('invalid_block_sizes.flac', {
+        'other': OtherImages(),
+        'front_cover': Image(
+            name='front_cover',
+            mime_type='image/gif',
+            size=61,
+            data=b'GIF87a\x1e\x00\x1e\x00\x80\x01\x00\x00\x00\x00\xff\xff'
         ),
     }),
     ('mpeg4_with_image.m4a', {
