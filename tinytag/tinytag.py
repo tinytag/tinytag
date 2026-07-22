@@ -26,6 +26,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+# pyright: reportPrivateUsage=false
+
 """Audio file metadata reader."""
 
 from __future__ import annotations
@@ -42,13 +44,16 @@ if TYPE_CHECKING:
     from typing import Any, BinaryIO, Dict, List, Tuple, Union
 
     _StringListDict = Dict[str, List[str]]
-    _ImageListDict = Dict[str, List["Image"]]
-    _DataTreeDict = Dict[
-        bytes,
-        Union['_DataTreeDict', Callable[[bytes], Iterator[Tuple[str, Any]]]]
+    _ImageListDict = Dict[str, List['Image']]
+    _AtomParser = Callable[
+        [bytes],
+        Iterator[
+            Tuple[str, Union[str, float, List[str], 'Image']]
+        ]
     ]
+    _AtomTreeDict = Dict[bytes, Union['_AtomTreeDict', _AtomParser]]
 else:
-    _StringListDict = _ImageListDict = _DataTreeDict = dict
+    _StringListDict = _ImageListDict = dict
 
 # some of the parsers can print debug info
 _DEBUG = bool(environ.get('TINYTAG_DEBUG'))
@@ -104,7 +109,7 @@ class TinyTag:
         self.comment: str | None = None
 
         self.images = Images()
-        self.other: _StringListDict = OtherFields()
+        self.other = OtherFields()
 
         self._filehandler: BinaryIO | None = None
         self._default_encoding: str | None = None  # override for some formats
@@ -195,8 +200,9 @@ class TinyTag:
             for other_key, other_values in value.items():
                 other_fields = fields.get(other_key)
                 if not isinstance(other_fields, list):
-                    other_fields = fields[other_key] = []
-                other_fields += other_values
+                    fields[other_key] = other_values
+                else:
+                    other_fields += other_values
         return fields
 
     @classmethod
@@ -382,7 +388,7 @@ class Images:
         self.back_cover: Image | None = None
         self.media: Image | None = None
 
-        self.other: _ImageListDict = OtherImages()
+        self.other = OtherImages()
         self.__dict__: dict[str, Image | OtherImages | None]
 
     @property
@@ -411,8 +417,9 @@ class Images:
             for other_key, other_values in value.items():
                 other_images = images.get(other_key)
                 if not isinstance(other_images, list):
-                    other_images = images[other_key] = []
-                other_images += other_values
+                    other_images = images[other_key] = other_values
+                else:
+                    other_images += other_values
         return images
 
     def _set_field(self, fieldname: str, value: Image) -> None:
@@ -514,16 +521,16 @@ class _MP4(TinyTag):
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
     _ILST_PATH = [b'ftyp', b'moov', b'udta', b'meta', b'ilst']
 
-    _audio_data_tree: _DataTreeDict | None = None
-    _meta_data_tree: _DataTreeDict | None = None
-    _combined_tree: _DataTreeDict | None = None
+    _audio_data_tree: _AtomTreeDict | None = None
+    _meta_data_tree: _AtomTreeDict | None = None
+    _combined_tree: _AtomTreeDict | None = None
 
     def _parse(self, fh: BinaryIO) -> None:
         # The parser tree: Each key is an atom name which is traversed if
         # existing. Leaves of the parser tree are callables which receive
         # the atom data. Callables return {fieldname: value} which is updates
         # the TinyTag.
-        tree = {}
+        tree: _AtomTreeDict = {}
         if self._parse_duration and self._parse_tags:
             tree = self._build_combined_tree()
         elif self._parse_duration:
@@ -535,7 +542,7 @@ class _MP4(TinyTag):
         self._tags_parsed = self._parse_tags
 
     @classmethod
-    def _build_audio_data_tree(cls) -> _DataTreeDict:
+    def _build_audio_data_tree(cls) -> _AtomTreeDict:
         if cls._audio_data_tree is None:
             # https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
             cls._audio_data_tree = {
@@ -550,7 +557,7 @@ class _MP4(TinyTag):
         return cls._audio_data_tree
 
     @classmethod
-    def _build_meta_data_tree(cls) -> _DataTreeDict:
+    def _build_meta_data_tree(cls) -> _AtomTreeDict:
         if cls._meta_data_tree is None:
             cls._meta_data_tree = {b'moov': {b'udta': {b'meta': {b'ilst': {
                 # http://atomicparsley.sourceforge.net/mpeg-4files.html
@@ -592,7 +599,7 @@ class _MP4(TinyTag):
         return cls._meta_data_tree
 
     @classmethod
-    def _build_combined_tree(cls) -> _DataTreeDict:
+    def _build_combined_tree(cls) -> _AtomTreeDict:
         if cls._combined_tree is None:
             cls._combined_tree = result = dict(cls._build_audio_data_tree())
             for key, value in cls._build_meta_data_tree().items():
@@ -631,7 +638,7 @@ class _MP4(TinyTag):
 
     def _traverse_atoms(self,
                         fh: BinaryIO,
-                        path: _DataTreeDict,
+                        path: _AtomTreeDict,
                         curr_pos: int | None = None,
                         stop_pos: int | None = None,
                         curr_path: list[bytes] | None = None) -> int:
@@ -661,16 +668,8 @@ class _MP4(TinyTag):
                     curr_pos = fh.seek(4, SEEK_CUR)
                     atom_size -= 4
             sub_path = path.get(atom_type)
-            # if the path leaf is a dict, traverse deeper into the tree:
-            if isinstance(sub_path, dict):
-                curr_pos = self._traverse_atoms(
-                    fh, path=sub_path,
-                    curr_pos=curr_pos,
-                    stop_pos=curr_pos + atom_size,
-                    curr_path=curr_path + [atom_type]
-                )
             # if the path-leaf is a callable, call it on the atom data
-            elif callable(sub_path):
+            if callable(sub_path):
                 data = fh.read(atom_size)
                 curr_pos += len(data)
                 for fieldname, value in sub_path(data):
@@ -687,6 +686,14 @@ class _MP4(TinyTag):
                         self.mime_type = f'audio/mp4; codecs="{value}"'
                     else:
                         self._set_field(fieldname, value)
+            # if the path leaf is a dict, traverse deeper into the tree:
+            elif isinstance(sub_path, dict):
+                curr_pos = self._traverse_atoms(
+                    fh, path=sub_path,
+                    curr_pos=curr_pos,
+                    stop_pos=curr_pos + atom_size,
+                    curr_path=curr_path + [atom_type]
+                )
             # unknown data atom, try to parse it
             elif curr_path == self._ILST_PATH:
                 field_name = (
@@ -763,8 +770,8 @@ class _MP4(TinyTag):
                             data: bytes) -> Iterator[tuple[str, list[str]]]:
         fh = BytesIO(data)
         field_name = None
-        values = []
-        atom_type, header_size, atom_size = cls._read_atom_header(fh)
+        values: list[str] = []
+        atom_type, _header_size, atom_size = cls._read_atom_header(fh)
         while atom_type is not None and atom_size is not None:
             if atom_type == b'name':
                 atom_value = fh.read(atom_size)[4:].lower()
@@ -781,7 +788,7 @@ class _MP4(TinyTag):
                     break
             else:
                 fh.seek(atom_size, SEEK_CUR)
-            atom_type, header_size, atom_size = cls._read_atom_header(fh)
+            atom_type, _header_size, atom_size = cls._read_atom_header(fh)
         if field_name and values:
             yield field_name, values
 
@@ -1527,7 +1534,7 @@ class _MPEG(TinyTag):
         frames = 0  # count frames for determining mp3 duration
         invalid_frames = 0
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
-        last_bitrates = set()  # CBR mp3s (multiple frames with same bitrates)
+        last_bitrates: set[int] = set()  # CBR mp3s (many frames with same brs)
         # seek to first position after id3 tag (speedup for large header)
         first_mpeg_id = None
         audio_offset = fh.tell()
@@ -1858,7 +1865,7 @@ class _Ogg(TinyTag):
 
     def _parse_pages(self, fh: BinaryIO) -> Iterator[tuple[bytearray, int]]:
         # for the spec, see: https://wiki.xiph.org/Ogg
-        packets = {}
+        packets: dict[int, bytearray] = {}
         last_granule_pos = 0
         last_audio_size = 0
         header_len = 27
@@ -2249,7 +2256,7 @@ class _Wma(TinyTag):
                             name = name[3:]
                         field_name = self._OTHER_PREFIX + name.lower()
                     if field_name in {'track', 'disc'}:
-                        if isinstance(value, int) or value.isdecimal():
+                        if value.isdecimal():
                             self._set_field(field_name, int(value))
                     else:
                         self._set_field(field_name, value)
