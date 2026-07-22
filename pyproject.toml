@@ -120,6 +120,16 @@ py-version = "3.7"
 [tool.mypy]
 strict = true
 
+[tool.pyright]
+pythonVersion = "3.7"
+typeCheckingMode = "strict"
+reportCallInDefaultInitializer = true
+reportImportCycles = true
+reportPropertyTypeMismatch = true
+reportUninitializedInstanceVariable = true
+reportUnnecessaryTypeIgnoreComment = true
+reportUnreachable = true
+
 [tool.coverage.report]
 exclude_lines = [
     "if TYPE_CHECKING:"

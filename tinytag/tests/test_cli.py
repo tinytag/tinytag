@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-module-docstring
+# pyright: reportPrivateUsage=false
 
 import json
 import os

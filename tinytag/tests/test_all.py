@@ -3,6 +3,7 @@
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-module-docstring
+# pyright: reportPrivateUsage=false
 
 from __future__ import annotations
 
@@ -1580,7 +1581,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'bitdepth': 16,
     }),
-    ('flac_with_image.flac', {
+    ('multiple_values_images.flac', {
         'other': OtherFields({
             'artist': ['artist 2', 'artist 3'],
             'genre': ['genre 2'],
@@ -1592,10 +1593,10 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'url': ['https://example.com'],
         }),
         'mime_type': 'audio/flac',
-        'filesize': 3016,
+        'filesize': 4749,
         'album': 'album 1',
         'artist': 'artist 1',
-        'bitrate': 241.28,
+        'bitrate': 379.92,
         'channels': 1,
         'duration': 0.1,
         'genre': 'genre 1',
@@ -2429,13 +2430,15 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
     }),
     ('ogg_with_image.ogg', {
         'other': OtherImages({
-            'bright_colored_fish': [Image(
-                name='bright_colored_fish',
-                mime_type='image/jpeg',
-                description='some image ë',
-                size=1220,
-                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
-            )],
+            'bright_colored_fish': [
+                Image(
+                    name='bright_colored_fish',
+                    mime_type='image/jpeg',
+                    description='some image ë',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                )
+            ],
         }),
     }),
     ('wav_with_image.wav', {
@@ -2448,15 +2451,33 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
             data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01'
         ),
     }),
-    ('flac_with_image.flac', {
+    ('multiple_values_images.flac', {
         'other': OtherImages({
-            'bright_colored_fish': [Image(
-                name='bright_colored_fish',
-                mime_type='image/jpeg',
-                description='some image ë',
-                size=1220,
-                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
-            )],
+            'bright_colored_fish': [
+                Image(
+                    name='bright_colored_fish',
+                    mime_type='image/jpeg',
+                    description='some image ë',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                )
+            ],
+            'front_cover': [
+                Image(
+                    name='front_cover',
+                    mime_type='image/png',
+                    description='another image',
+                    size=1552,
+                    data=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\xf4'
+                ),
+                Image(
+                    name='front_cover',
+                    mime_type='image/gif',
+                    description='yet another image',
+                    size=61,
+                    data=b'GIF87a\x1e\x00\x1e\x00\x80\x01\x00\x00\x00\x00\xff'
+                )
+            ],
         }),
         'front_cover': Image(
             name='front_cover',
@@ -2492,20 +2513,24 @@ IMAGE_TEST_FILES: dict[str, ExpectedImages] = dict([
     }),
     ('aiff_with_image.aiff', {
         'other': OtherImages({
-            'generic': [Image(
-                name='generic',
-                mime_type='image/jpeg',
-                description='some image ë',
-                size=1220,
-                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
-            )],
-            'composer': [Image(
-                name='composer',
-                mime_type='image/jpeg',
-                description='some image ë',
-                size=1220,
-                data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H'
-            )],
+            'generic': [
+                Image(
+                    name='generic',
+                    mime_type='image/jpeg',
+                    description='some image ë',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                )
+            ],
+            'composer': [
+                Image(
+                    name='composer',
+                    mime_type='image/jpeg',
+                    description='some image ë',
+                    size=1220,
+                    data=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H'
+                )
+            ],
         }),
     }),
 ])
@@ -2734,13 +2759,16 @@ class TestAll(TestCase):
 
     def test_images_any(self) -> None:
         tag = TinyTag.get(
-            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+            os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac'),
+            image=True
+        )
         image = tag.images.any
         manual_image = tag.images.front_cover
         assert image is not None
         assert manual_image is not None
         assert image.data is not None
         self.assertEqual(image.name, 'front_cover')
+        self.assertEqual(image.size, 1220)
         self.assertEqual(image.data, manual_image.data)
         self.assertTrue(tag.images.other)
         with self.assertWarns(DeprecationWarning):
@@ -2755,6 +2783,7 @@ class TestAll(TestCase):
         assert manual_image is not None
         assert image.data is not None
         self.assertEqual(image.name, 'bright_colored_fish')
+        self.assertEqual(image.size, 1220)
         self.assertEqual(image.data, manual_image.data)
         with self.assertWarns(DeprecationWarning):
             self.assertEqual(image.data, tag.get_image())
@@ -2809,7 +2838,7 @@ class TestAll(TestCase):
             tag.load(file_handle=BytesIO(), tags=False, duration=True)
 
     def test_deprecations(self) -> None:
-        file_path = os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac')
+        file_path = os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac')
         with self.assertWarns(DeprecationWarning):
             tag = TinyTag.get(
                 filename=file_path, image=True, ignore_errors=True)
@@ -2826,12 +2855,14 @@ class TestAll(TestCase):
 
     def test_str_vars(self) -> None:
         tag = TinyTag.get(
-            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+            os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac'),
+            image=True
+        )
         vars_str = str(vars(tag))
         self.assertIn(
-            "flac_with_image.flac', 'filesize': 3016, "
+            "multiple_values_images.flac', 'filesize': 4749, "
             "'mime_type': 'audio/flac', 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 241.28, "
+            "'channels': 1, 'bitrate': 379.92, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': 'artist 1', "
             "'albumartist': None, 'composer': None, 'album': 'album 1', "
             "'disc': 1, 'disc_total': 1, 'title': None, 'track': 1, "
@@ -2850,26 +2881,37 @@ class TestAll(TestCase):
         )
         self.assertEqual(
             str(vars(tag.images)),
-            "{'front_cover': Image(name='front_cover', size=1220, data=b'\\xff"
-            "\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H"
-            "\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00"
-            "\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description='some "
-            "image ë'), 'back_cover': None, 'media': None, 'other': "
-            "{'bright_colored_fish': [Image(name='bright_colored_fish', "
-            "size=1220, data="
+            "{'front_cover': Image(name='front_cover', size=1220, data="
             "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
             "\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
             "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description="
-            "'some image ë')]}}"
+            "'some image ë'), 'back_cover': None, 'media': None, 'other': "
+            "{'bright_colored_fish': [Image(name='bright_colored_fish', "
+            "size=1220, data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01"
+            "\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE"
+            "\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', mime_type="
+            "'image/jpeg', description='some image ë')], 'front_cover': "
+            "[Image(name='front_cover', size=1552, data=b'\\x89PNG\\r\\n\\x1a"
+            "\\n\\x00\\x00\\x00\\rIHDR\\x00\\x00\\x01\\xf4\\x00\\x00\\x01"
+            "\\xf4\\x08\\x02\\x00\\x00\\x00D\\xb4H\\xdd\\x00\\x00\\x00\\x01"
+            "sRGB\\x01\\xd9\\xc9,..', mime_type='image/png', description="
+            "'another image'), Image(name='front_cover', size=61, data="
+            "b'GIF87a\\x1e\\x00\\x1e\\x00\\x80\\x01\\x00\\x00\\x00\\x00\\xff"
+            "\\xff\\xff,\\x00\\x00\\x00\\x00\\x1e\\x00\\x1e\\x00\\x00\\x02"
+            "\\x1c\\x84\\x8f\\xa9\\xcb\\xed\\x0f\\xa3\\x9c\\xb4\\xda\\x8b"
+            "\\xb3\\xde\\xbc..', mime_type='image/gif', description="
+            "'yet another image')]}}"
         )
 
     def test_str_flat_dict(self) -> None:
         tag = TinyTag.get(
-            os.path.join(SAMPLE_FOLDER, 'flac_with_image.flac'), image=True)
+            os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac'),
+            image=True
+        )
         self.assertIn(
-            "flac_with_image.flac', 'filesize': 3016, "
+            "multiple_values_images.flac', 'filesize': 4749, "
             "'mime_type': 'audio/flac', 'duration': 0.1, "
-            "'channels': 1, 'bitrate': 241.28, "
+            "'channels': 1, 'bitrate': 379.92, "
             "'bitdepth': 16, 'samplerate': 44100, 'artist': ['artist 1', "
             "'artist 2', 'artist 3'], 'album': ['album 1', 'album 2'], "
             "'disc': ['1', '2', '3'], 'disc_total': ['1', '2', '3'], "
@@ -2879,14 +2921,23 @@ class TestAll(TestCase):
         )
         self.assertEqual(
             str(tag.images.as_dict()),
-            "{'front_cover': [Image(name='front_cover', size=1220, data="
-            "b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
+            "{'front_cover': [Image(name='front_cover', size=1220, data=b'"
+            "\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H"
             "\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01"
             "\\x00\\x00\\x02\\xa0lcm..', mime_type='image/jpeg', description="
-            "'some image ë')], 'bright_colored_fish': [Image(name='"
-            "bright_colored_fish', size=1220, data=b'\\xff\\xd8\\xff\\xe0"
-            "\\x00\\x10JFIF\\x00\\x01\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff"
-            "\\xe2\\x02\\xb0ICC_PROFILE\\x00\\x01\\x01\\x00\\x00\\x02"
-            "\\xa0lcm..', mime_type='image/jpeg', description="
-            "'some image ë')]}"
+            "'some image ë'), Image(name='front_cover', size=1552, data="
+            "b'\\x89PNG\\r\\n\\x1a\\n\\x00\\x00\\x00\\rIHDR\\x00\\x00\\x01"
+            "\\xf4\\x00\\x00\\x01\\xf4\\x08\\x02\\x00\\x00\\x00D\\xb4H\\xdd"
+            "\\x00\\x00\\x00\\x01sRGB\\x01\\xd9\\xc9,..', "
+            "mime_type='image/png', description='another image'), "
+            "Image(name='front_cover', size=61, data=b'GIF87a\\x1e\\x00\\x1e"
+            "\\x00\\x80\\x01\\x00\\x00\\x00\\x00\\xff\\xff\\xff,\\x00\\x00"
+            "\\x00\\x00\\x1e\\x00\\x1e\\x00\\x00\\x02\\x1c\\x84\\x8f\\xa9"
+            "\\xcb\\xed\\x0f\\xa3\\x9c\\xb4\\xda\\x8b\\xb3\\xde\\xbc..', "
+            "mime_type='image/gif', description='yet another image')], "
+            "'bright_colored_fish': [Image(name='bright_colored_fish', "
+            "size=1220, data=b'\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01"
+            "\\x01\\x01\\x00H\\x00H\\x00\\x00\\xff\\xe2\\x02\\xb0ICC_PROFILE"
+            "\\x00\\x01\\x01\\x00\\x00\\x02\\xa0lcm..', "
+            "mime_type='image/jpeg', description='some image ë')]}"
         )
