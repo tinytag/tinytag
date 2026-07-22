@@ -89,6 +89,7 @@ class TinyTag:
         self.filesize = 0
 
         self.mime_type: str | None = None
+        self.is_lossless: bool | None = None
         self.duration: float | None = None
         self.channels: int | None = None
         self.bitrate: float | None = None
@@ -181,7 +182,7 @@ class TinyTag:
         metadata."""
         audio_property_keys = {
             'filename', 'filesize', 'mime_type', 'duration', 'channels',
-            'bitrate', 'bitdepth', 'samplerate'
+            'bitrate', 'bitdepth', 'samplerate', 'is_lossless'
         }
         fields: dict[str, str | float | list[str]] = {}
         for key, value in self.__dict__.items():
@@ -516,6 +517,12 @@ class _MP4(TinyTag):
         2: '>h',
         4: '>i',
         8: '>q'
+    }
+    _LOSSLESS_CODECS = {
+        'mp4a.40.35',  # DST
+        'mp4a.40.36',  # ALS
+        'mp4a.40.37',  # SLS
+        'mp4a.40.38',  # SLS non-core
     }
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
@@ -859,6 +866,7 @@ class _MP4(TinyTag):
         if audio_object_type:
             codec += f'.{audio_object_type}'
         yield 'codec', codec
+        yield 'is_lossless', codec in cls._LOSSLESS_CODECS
 
     @classmethod
     def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, str | int]]:
@@ -872,6 +880,7 @@ class _MP4(TinyTag):
         yield 'samplerate', sr
         avg_br /= 1000  # kbit/s
         yield 'bitrate', avg_br
+        yield 'is_lossless', True
 
     @classmethod
     def _parse_mvhd(cls, data: bytes) -> Iterator[tuple[str, float]]:
@@ -1532,6 +1541,7 @@ class _MPEG(TinyTag):
         self.mime_type = 'audio/mpeg'
         if not self._parse_duration:
             return
+        self.is_lossless = False
         max_estimation_frames = (
             (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
         frame_size_accu = 0
@@ -1718,6 +1728,7 @@ class _Ogg(TinyTag):
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
                     self.mime_type = 'audio/ogg; codecs="vorbis"'
+                    self.is_lossless = False
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
             elif packet.startswith(b'\x03vorbis'):
@@ -1735,6 +1746,7 @@ class _Ogg(TinyTag):
                         self.channels = ch
                         self.samplerate = 48000
                     self.mime_type = 'audio/ogg; codecs="opus"'
+                    self.is_lossless = False
                     self._duration_parsed = True
                     self._granule_pos_serial = serial
             elif packet.startswith(b'OpusTags'):
@@ -1760,6 +1772,7 @@ class _Ogg(TinyTag):
                 self._update(flactag)
                 if self._parse_duration:
                     self.mime_type = 'audio/ogg; codecs="flac"'
+                    self.is_lossless = True
                 self._duration_parsed = self._parse_duration
                 check_flac_second_packet = True
             elif check_flac_second_packet:
@@ -1781,6 +1794,7 @@ class _Ogg(TinyTag):
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
                     self.mime_type = 'audio/ogg; codecs="speex"'
+                    self.is_lossless = False
                     self._granule_pos_serial = serial
                     self._duration_parsed = True
                 check_speex_second_packet = True
@@ -1961,7 +1975,15 @@ class _Wave(TinyTag):
     }
     _UNCOMPRESSED_FORMATS = {
         0x01,  # PCM
-        0x03,  # IEEE FLOAT
+        0x03,  # IEEE Float
+    }
+    _LOSSLESS_FORMATS = {
+        0x01,    # PCM
+        0x03,    # IEEE Float
+        0x163,   # WMA Lossless
+        0x8ae,   # ClearJump LiteWave (lossless)
+        0x1971,  # Sonic Foundry LOSSLESS
+        0xf1ac,  # FLAC
     }
 
     def _parse(self, fh: BinaryIO) -> None:
@@ -1971,7 +1993,6 @@ class _Wave(TinyTag):
         if not header.startswith(b'RIFF') or not header.startswith(b'WAVE', 8):
             raise ParseError('Invalid WAV header')
         self.mime_type = 'audio/wav'
-        is_compressed = False
         block_align = 0
         audio_size = 0
         num_samples = 0
@@ -1991,7 +2012,7 @@ class _Wave(TinyTag):
                     format_tag = unpack_from('<H', chunk, 24)[0]
                 if bitdepth > 0:
                     self.bitdepth = bitdepth
-                is_compressed = format_tag not in self._UNCOMPRESSED_FORMATS
+                self.is_lossless = format_tag in self._LOSSLESS_FORMATS
                 if format_tag:
                     self.mime_type = f'audio/wav; codecs="{format_tag}"'
             elif self._parse_duration and chunk_header.startswith(b'data'):
@@ -2041,7 +2062,7 @@ class _Wave(TinyTag):
             else:  # some other chunk, just skip the data
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
-        if is_compressed and self.samplerate:
+        if not self.is_lossless and self.samplerate:
             if not audio_size:
                 # Normalization due to some encoders setting num_samples to 1
                 # when no audio data is present.
@@ -2105,6 +2126,7 @@ class _Flac(TinyTag):
                 total_samples = info_byte & ((1 << 36) - 1)
                 self.duration = total_samples / samplerate
                 self.samplerate = samplerate
+                self.is_lossless = True
             elif block_type == self._VORBIS_COMMENT:
                 # Some files in the wild contain incorrect block sizes for
                 # Vorbis comment blocks. Attempt to parse the block as usual
@@ -2318,8 +2340,8 @@ class _Wma(TinyTag):
                     if format_tag:
                         self.mime_type = (
                             f'audio/x-ms-wma; codecs="{format_tag}"')
-                    if format_tag == 355:  # lossless
-                        self.bitdepth = unpack_from('<H', data, 68)[0]
+                    self.bitdepth = unpack_from('<H', data, 68)[0]
+                    self.is_lossless = (format_tag == 355)
             elif (self._parse_tags
                     and object_header.startswith(self._XMP_METADATA)):
                 value = fh.read(object_size).decode('utf-8', 'replace')
@@ -2359,6 +2381,20 @@ class _Aiff(TinyTag):
         b'AUTH': 'artist',
         b'ANNO': 'comment',
         b'(c) ': 'other.copyright',
+    }
+    _UNCOMPRESSED_FORMATS = {
+        'NONE',
+        'raw ',
+        'twos',
+        'sowt',
+        'in24',
+        '42ni',
+        'in32',
+        '23ni',
+        'fl32',
+        'FL32',
+        'fl64',
+        'FL64',
     }
 
     def _parse(self, fh: BinaryIO) -> None:
@@ -2400,6 +2436,8 @@ class _Aiff(TinyTag):
                     compression_type = 'NONE'  # uncompressed
                 self.mime_type = (
                     f'audio/aiff; codecs="{compression_type}"')
+                self.is_lossless = (
+                    compression_type in self._UNCOMPRESSED_FORMATS)
                 self._duration_parsed = True
                 if not self._parse_tags:
                     break

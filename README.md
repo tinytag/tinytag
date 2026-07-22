@@ -71,6 +71,7 @@ $ python3 -m tinytag /some/music.mp3
   "filename": "/some/music.mp3",
   "filesize": 3243226,
   "mime_type": "audio/mpeg",
+  "is_lossless": false,
   "duration": 173.52,
   "channels": 2,
   "bitrate": 128,
@@ -127,10 +128,11 @@ These are helpful when you need quick access to common metadata.
 ```python
 tag.filename: str | None         # file name
 tag.filesize: int                # file size in bytes
-tag.bitdepth: int | None         # audio bit depth (for lossless audio)
+tag.bitdepth: int | None         # audio bit depth
 tag.bitrate: float | None        # audio bitrate in kbps
 tag.channels: int | None         # number of audio channels
 tag.duration: float | None       # audio duration in seconds
+tag.is_lossless: bool | None     # is audio lossless? (added in tinytag 2.3.0)
 tag.mime_type: str | None        # audio MIME type (added in tinytag 2.3.0) 
 tag.samplerate: int | None       # audio samples per second
 ```
