@@ -955,6 +955,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 2837,
         'samplerate': 8000,
         'channels': 2,
+        'bitrate': 45.6,
     }),
     ('multi_stream.ogv', {
         'other': OtherFields({
@@ -1343,6 +1344,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 44,
         'samplerate': 8000,
         'bitdepth': 16,
+        'bitrate': 256.0,
     }),
     ('8bit_pcm.wav', {
         'other': OtherFields(),
@@ -1390,6 +1392,11 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('empty_file.wav', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('zero_value_properties.wav', {
+        'other': OtherFields(),
+        'mime_type': 'audio/wav',
+        'filesize': 1644,
     }),
     ('flac1sMono.flac', {
         'other': OtherFields(),
@@ -1622,6 +1629,13 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('empty_file.flac', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('zero_value_properties.flac', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'filesize': 235,
+        'channels': 1,
+        'bitdepth': 1,
     }),
     ('test2.wma', {
         'other': OtherFields({
@@ -2083,6 +2097,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 164,
         'samplerate': 44100,
         'bitdepth': 16,
+        'bitrate': 1411.2,
         'title': 'Go Out and Get Some',
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),
@@ -2185,10 +2200,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 54,
         'samplerate': 8000,
         'bitdepth': 16,
+        'bitrate': 256.0,
     }),
     ('empty_file.aiff', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('zero_value_properties.aiff', {
+        'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
+        'filesize': 4096,
     }),
     ('magic_header_only_id3.x', {
         'other': OtherFields(),
@@ -2270,6 +2291,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 1,
         'duration': 0.0,
         'filesize': 120,
+        'bitrate': 352.8,
         'samplerate': 22050,
         'bitdepth': 16,
         'artist': 'Purpley',
@@ -2329,6 +2351,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 164,
         'samplerate': 44100,
         'bitdepth': 16,
+        'bitrate': 1411.2,
         'title': 'Go Out and Get Some',
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),
