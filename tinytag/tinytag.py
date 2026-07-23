@@ -2061,14 +2061,17 @@ class _Flac(TinyTag):
             raise ParseError('Invalid FLAC header')
         # for spec, see https://xiph.org/flac/ogg_mapping.html
         self.mime_type = 'audio/flac'
+        found_streaminfo = False
         header_len = 4
         block_header = fh.read(header_len)
         while len(block_header) == header_len:
             block_type = block_header[0] & 0x7f
-            is_last_block = block_header[0] & 0x80
+            is_last_block = bool(block_header[0] & 0x80)
+            is_streaminfo_block = (block_type == self._STREAMINFO)
             size = int.from_bytes(block_header[1:], 'big')
             # http://xiph.org/flac/format.html#metadata_block_streaminfo
-            if self._parse_duration and block_type == self._STREAMINFO:
+            if (self._parse_duration and is_streaminfo_block
+                    and not found_streaminfo):
                 head = fh.read(size)
                 # From the xiph documentation:
                 # py | <bits>
@@ -2110,6 +2113,11 @@ class _Flac(TinyTag):
                 self.images._set_field(fieldname, value)
             else:
                 fh.seek(size, SEEK_CUR)  # seek over this block
+            if is_streaminfo_block and not found_streaminfo:
+                # Ignore subsequent STREAMINFO blocks, if any. They are not
+                # permitted in the spec, and increase the risk of parsing
+                # garbage data as stream info due to the zero value block type.
+                found_streaminfo = True
             if is_last_block:
                 break
             block_header = fh.read(header_len)

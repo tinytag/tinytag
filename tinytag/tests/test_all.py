@@ -1623,6 +1623,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'filesize': 0,
     }),
+    ('invalid_second_streaminfo.flac', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'filesize': 273,
+        'bitrate': 21.84,
+        'channels': 1,
+        'duration': 0.1,
+        'samplerate': 44100,
+        'bitdepth': 16,
+        'title': 'title',
+    }),
     ('test2.wma', {
         'other': OtherFields({
             '_track': ['0'],
