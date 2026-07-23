@@ -2103,11 +2103,8 @@ class _Flac(TinyTag):
                 self.channels = ((info_byte >> 41) & ((1 << 3) - 1)) + 1
                 self.bitdepth = ((info_byte >> 36) & ((1 << 5) - 1)) + 1
                 total_samples = info_byte & ((1 << 36) - 1)
-                self.duration = duration = total_samples / samplerate
+                self.duration = total_samples / samplerate
                 self.samplerate = samplerate
-                if duration > 0:
-                    self.bitrate = self.filesize * 8 / duration / 1000
-                self._duration_parsed = True
             elif block_type == self._VORBIS_COMMENT:
                 # Some files in the wild contain incorrect block sizes for
                 # Vorbis comment blocks. Attempt to parse the block as usual
@@ -2137,6 +2134,12 @@ class _Flac(TinyTag):
             if is_last_block:
                 break
             block_header = fh.read(header_len)
+        if self.duration:
+            audio_offset = fh.tell()
+            bitrate = (self.filesize - audio_offset) * 8 / self.duration / 1000
+            if bitrate > 0:
+                self.bitrate = bitrate
+        self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
 
     @classmethod
