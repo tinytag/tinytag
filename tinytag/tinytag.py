@@ -520,6 +520,7 @@ class _MP4(TinyTag):
     _VERSIONED_ATOMS = {b'meta', b'stsd'}  # those have an extra 4 byte header
     _FLAGGED_ATOMS = {b'stsd'}  # these also have an extra 4 byte header
     _ILST_PATH = [b'ftyp', b'moov', b'udta', b'meta', b'ilst']
+    _COVR_PATH = [b'ftyp', b'moov', b'udta', b'meta', b'ilst', b'covr']
 
     _audio_data_tree: _AtomTreeDict | None = None
     _meta_data_tree: _AtomTreeDict | None = None
@@ -670,22 +671,25 @@ class _MP4(TinyTag):
             sub_path = path.get(atom_type)
             # if the path-leaf is a callable, call it on the atom data
             if callable(sub_path):
-                data = fh.read(atom_size)
-                curr_pos += len(data)
-                for fieldname, value in sub_path(data):
-                    if _DEBUG:
-                        print(' ' * 4 * len(curr_path), 'FIELD: ', fieldname)
-                    if isinstance(value, Image):
-                        if self._load_image:
+                if not self._load_image and curr_path == self._COVR_PATH:
+                    curr_pos = fh.seek(atom_size, SEEK_CUR)
+                else:
+                    data = fh.read(atom_size)
+                    curr_pos += len(data)
+                    for fieldname, value in sub_path(data):
+                        if _DEBUG:
+                            print(' ' * 4 * len(curr_path), 'FIELD: ',
+                                  fieldname)
+                        if isinstance(value, Image):
                             # pylint: disable=protected-access
                             self.images._set_field(fieldname, value)
-                    elif isinstance(value, list):
-                        for subval in value:
-                            self._set_field(fieldname, subval)
-                    elif fieldname == 'codec':
-                        self.mime_type = f'audio/mp4; codecs="{value}"'
-                    else:
-                        self._set_field(fieldname, value)
+                        elif isinstance(value, list):
+                            for subval in value:
+                                self._set_field(fieldname, subval)
+                        elif fieldname == 'codec':
+                            self.mime_type = f'audio/mp4; codecs="{value}"'
+                        else:
+                            self._set_field(fieldname, value)
             # if the path leaf is a dict, traverse deeper into the tree:
             elif isinstance(sub_path, dict):
                 curr_pos = self._traverse_atoms(
