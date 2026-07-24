@@ -1714,6 +1714,7 @@ class _Ogg(TinyTag):
         self._audio_size = 0  # size of opus audio stream
         self._granule_pos_serial: int | None = None
         self._audio_size_serial: int | None = None
+        self._skip_page_read = False
 
     def _parse(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
@@ -1747,7 +1748,6 @@ class _Ogg(TinyTag):
                         self.samplerate = 48000
                     self.mime_type = 'audio/ogg; codecs="opus"'
                     self.is_lossless = False
-                    self._duration_parsed = True
                     self._granule_pos_serial = serial
             elif packet.startswith(b'OpusTags'):
                 if self._parse_tags:  # parse opus metadata:
@@ -1755,6 +1755,8 @@ class _Ogg(TinyTag):
                     walker.seek(8)  # jump over header name
                     self._set_vorbis_comment_fields(walker)
                     self._tags_parsed = True
+                if self._parse_duration:
+                    self._duration_parsed = True
                 self._audio_size_serial = serial
             elif packet.startswith(b'\x7FFLAC'):
                 # https://xiph.org/flac/ogg_mapping.html
@@ -1809,7 +1811,12 @@ class _Ogg(TinyTag):
                     self._set_vorbis_comment_fields(walker, has_vendor=False)
                     self._tags_parsed = True
                 check_speex_second_packet = False
-            if self._tags_parsed and not self._parse_duration:
+            self._skip_page_read = (
+                self._tags_parsed and self._duration_parsed
+                or self._tags_parsed and not self._parse_duration
+                or self._duration_parsed and not self._parse_tags
+            )
+            if self._skip_page_read and not self._parse_duration:
                 # Optimization: If we need to determine the duration, read
                 # granule_pos of remaining pages, but skip contents of
                 # segments. If we don't need the duration, stop here.
@@ -1925,13 +1932,13 @@ class _Ogg(TinyTag):
                 if audio_size_serial_match:
                     audio_size += seg_size
                 # less than 255 bytes means end of packet
-                if seg_size < 255 and not self._tags_parsed:
+                if seg_size < 255 and not self._skip_page_read:
                     packet_data += fh.read(read_size)
                     yield packet_data, serial
                     packet_data.clear()
                     read_size = 0
             if read_size:
-                if self._tags_parsed and self._duration_parsed:
+                if self._skip_page_read:
                     fh.seek(read_size, SEEK_CUR)
                 else:  # packet continues on next page
                     packet_data += fh.read(read_size)
