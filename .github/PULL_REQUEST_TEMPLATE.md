@@ -6,10 +6,10 @@
 
    Contributions generated or co-authored by LLMs or AI coding tools are not
    allowed. Your contribution must be licensed as original work that is
-   personally authored by you under the terms of the GNU General Public License
-   v3.0 or later. Every part of your contribution must be written, thoroughly
-   tested and fully understood by you so that any queries about the logic of
-   your contribution can be answered during the review process.
+   personally authored by you under the terms of the MIT License. Every part
+   of your contribution must be written, thoroughly tested and fully understood
+   by you so that any queries about the logic of your contribution can be
+   answered during the review process.
 
    You may only use AI assistants or tooling for learning purposes, including
    guided research of the codebase and exploring concepts. Your contribution
