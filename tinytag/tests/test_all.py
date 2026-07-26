@@ -890,6 +890,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 9633,
         'title': 'image',
     }),
+    ('id3_broken_frame_size.mp3', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'is_lossless': False,
+        'filesize': 1987,
+        'bitrate': 57.39124999999999,
+        'channels': 1,
+        'duration': 0.1306122448979592,
+        'samplerate': 44100,
+    }),
     ('empty.ogg', {
         'other': OtherFields(),
         'mime_type': 'audio/ogg; codecs="vorbis"',
