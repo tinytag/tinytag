@@ -234,7 +234,8 @@ class TinyTag:
         filehandle.seek(0)
         if header.startswith(b'ID3'):
             return _ID3
-        if header.startswith(b'\xFF\xFB'):
+        if (len(header) >= 2
+                and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0):
             footer = None
             try:
                 filehandle.seek(-_ID3._ID3V1_TAG_SIZE, SEEK_END)
@@ -976,10 +977,6 @@ class _ID3(TinyTag):
     _VALID_STRING_ENCODINGS = {0x00, 0x01, 0x02, 0x03}
     _ID3V1_TAG_SIZE = 128
     _ID3V2_HEADER_SIZE = 10
-    _MAX_ESTIMATION_SEC = 30.0
-    _CBR_DETECTION_FRAME_COUNT = 5
-    _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
-
     _ID3V1_GENRES = (
         'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco',
         'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age', 'Oldies',
@@ -1051,41 +1048,6 @@ class _ID3(TinyTag):
         'other.publisher_logo',
     )
     _UNKNOWN_IMAGE_TYPE = 'other.unknown'
-
-    # see this page for the magic values used in mp3:
-    # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
-    _SAMPLE_RATES = (
-        (11025, 12000, 8000),   # MPEG 2.5
-        (0, 0, 0),              # reserved
-        (22050, 24000, 16000),  # MPEG 2
-        (44100, 48000, 32000),  # MPEG 1
-    )
-    _V1L1 = (0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416,
-             448, 0)
-    _V1L2 = (0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
-             384, 0)
-    _V1L3 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256,
-             320, 0)
-    _V2L1 = (0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224,
-             256, 0)
-    _V2L2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0)
-    _V2L3 = _V2L2
-    _NONE = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    _BITRATE_VERSION_LAYERS = (
-        # note that layers go from 3 to 1 by design, first layer id is reserved
-        (_NONE, _V2L3, _V2L2, _V2L1),  # MPEG Version 2.5
-        (_NONE, _NONE, _NONE, _NONE),  # reserved
-        (_NONE, _V2L3, _V2L2, _V2L1),  # MPEG Version 2
-        (_NONE, _V1L3, _V1L2, _V1L1),  # MPEG Version 1
-    )
-    _SAMPLES_PER_FRAME = 1152  # the default frame size for mp3
-    _MAX_INVALID_FRAMES = 200
-    _CHANNELS_PER_CHANNEL_MODE = (
-        2,  # 00 Stereo
-        2,  # 01 Joint stereo (Stereo)
-        2,  # 10 Dual channel (2 mono channels)
-        1,  # 11 Single channel (Mono)
-    )
 
     def __init__(self) -> None:
         super().__init__()
@@ -1496,17 +1458,18 @@ class _ID3(TinyTag):
 class _MPEG(TinyTag):
     """MPEG Audio Parser."""
 
-    _MAX_ESTIMATION_SEC = 30.0
+    _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
+    _MAX_INVALID_FRAMES = 200
 
     # see this page for the magic values used in mp3:
     # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
     _SAMPLE_RATES = (
-        (11025, 12000, 8000),   # MPEG 2.5
+        (11025, 12000, 8000),   # MPEG Version 2.5
         (0, 0, 0),              # reserved
-        (22050, 24000, 16000),  # MPEG 2
-        (44100, 48000, 32000),  # MPEG 1
+        (22050, 24000, 16000),  # MPEG Version 2
+        (44100, 48000, 32000),  # MPEG Version 1
     )
     _V1L1 = (0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416,
              448, 0)
@@ -1526,8 +1489,19 @@ class _MPEG(TinyTag):
         (_NONE, _V2L3, _V2L2, _V2L1),  # MPEG Version 2
         (_NONE, _V1L3, _V1L2, _V1L1),  # MPEG Version 1
     )
-    _SAMPLES_PER_FRAME = 1152  # the default frame size for mp3
-    _MAX_INVALID_FRAMES = 200
+    _SAMPLES_PER_FRAME = (
+        # note that layers go from 3 to 1 by design, first layer id is reserved
+        (0, 576, 1152, 384),   # MPEG Version 2.5
+        (0, 0, 0, 0),          # reserved
+        (0, 576, 1152, 384),   # MPEG Version 2
+        (0, 1152, 1152, 384),  # MPEG Version 1
+    )
+    _SLOT_SIZES = (
+        0,  # reserved
+        1,  # Layer III
+        1,  # Layer II
+        4,  # Layer I
+    )
     _CHANNELS_PER_CHANNEL_MODE = (
         2,  # 00 Stereo
         2,  # 01 Joint stereo (Stereo)
@@ -1544,15 +1518,15 @@ class _MPEG(TinyTag):
         if not self._parse_duration:
             return
         self.is_lossless = False
-        max_estimation_frames = (
-            (self._MAX_ESTIMATION_SEC * 44100) // self._SAMPLES_PER_FRAME)
+        samples_pf = 0
+        max_estimation_frames = 0
         frame_size_accu = 0
         frames = 0  # count frames for determining mp3 duration
         invalid_frames = 0
         bitrate_accu = 0    # add up bitrates to find average bitrate to detect
         last_bitrates: set[int] = set()  # CBR mp3s (many frames with same brs)
         # seek to first position after id3 tag (speedup for large header)
-        first_mpeg_id = None
+        first_id = None
         audio_offset = fh.tell()
         while True:
             # reading through garbage until 11 '1' sync-bits are found
@@ -1569,17 +1543,18 @@ class _MPEG(TinyTag):
             padding = (br_sr_byte >> 1) & ((1 << 1) - 1)
             mpeg_id = (id_byte >> 3) & ((1 << 2) - 1)
             layer_id = (id_byte >> 1) & ((1 << 2) - 1)
+            version_id = (id_byte >> 1) & ((1 << 4) - 1)
             channel_mode = (header[3] >> 6) & ((1 << 2) - 1)
             # check for eleven 1s, validate bitrate and sample rate
-            if (header[:2] <= b'\xFF\xE0'
-                    or (first_mpeg_id is not None and first_mpeg_id != mpeg_id)
+            if (header[0] != 0xFF or (id_byte & 0xE0) != 0xE0
+                    or (first_id is not None and first_id != version_id)
                     or br_id > 14 or br_id == 0 or sr_id == 3 or layer_id == 0
                     or mpeg_id == 1):
                 # invalid frame, find next sync header
                 idx = header.find(b'\xFF', 1)
                 next_offset = header_len
                 if idx != -1:
-                    next_offset -= idx
+                    next_offset = idx
                     fh.seek(idx - header_len, SEEK_CUR)
                 if frames == 0:
                     audio_offset += next_offset
@@ -1587,12 +1562,18 @@ class _MPEG(TinyTag):
                     if invalid_frames > self._MAX_INVALID_FRAMES:
                         raise ParseError("Invalid MPEG frame header")
                 continue
-            if first_mpeg_id is None:
-                first_mpeg_id = mpeg_id
             self.channels = self._CHANNELS_PER_CHANNEL_MODE[channel_mode]
             frame_br = self._BITRATE_VERSION_LAYERS[mpeg_id][layer_id][br_id]
             self.samplerate = samplerate = self._SAMPLE_RATES[mpeg_id][sr_id]
-            frame_length = (144000 * frame_br) // samplerate + padding
+            samples_pf = self._SAMPLES_PER_FRAME[mpeg_id][layer_id]
+            slot_size = self._SLOT_SIZES[layer_id]
+            coefficient = (samples_pf // 8 // slot_size) * 1000
+            frame_length = (
+                ((coefficient * frame_br) // samplerate + padding) * slot_size)
+            if first_id is None:
+                first_id = version_id
+                max_estimation_frames = (
+                    (self._MAX_ESTIMATION_SEC * samplerate) // samples_pf)
             # There might be a xing header in the first frame that contains
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
@@ -1603,22 +1584,17 @@ class _MPEG(TinyTag):
                 if xing_header_offset != -1:
                     fh.seek(prev_offset + xing_header_offset)
                     xframes, byte_count = self._parse_xing_header(fh)
+                    byte_count -= frame_length  # xing frame doesn't count
                     if xframes > 0 and byte_count > 0:
-                        # MPEG-2 Audio Layer III uses 576 samples per frame
-                        samples_pf = self._SAMPLES_PER_FRAME
-                        if mpeg_id <= 2:
-                            samples_pf = 576
                         self.duration = dur = xframes * samples_pf / samplerate
                         self.bitrate = byte_count * 8 / dur / 1000
                         self._duration_parsed = True
                         return
                 fh.seek(prev_offset)
-
             frames += 1  # it's most probably a mp3 frame
             bitrate_accu += frame_br
             if frames <= self._CBR_DETECTION_FRAME_COUNT:
                 last_bitrates.add(frame_br)
-
             frame_size_accu += frame_length
             # if bitrate does not change over time its probably CBR
             is_cbr = (frames == self._CBR_DETECTION_FRAME_COUNT
@@ -1629,16 +1605,15 @@ class _MPEG(TinyTag):
                     self.filesize - audio_offset - self._end_padding)
                 est_frame_count = int(
                     stream_size / (frame_size_accu / frames) + 0.5)
-                samples = est_frame_count * self._SAMPLES_PER_FRAME
+                samples = est_frame_count * samples_pf
                 self.duration = samples / samplerate
                 self.bitrate = bitrate_accu / frames
                 self._duration_parsed = True
                 return
-
             if frame_length > 1:  # jump over current frame body
                 fh.seek(frame_length - header_len, SEEK_CUR)
         if self.samplerate:
-            self.duration = frames * self._SAMPLES_PER_FRAME / self.samplerate
+            self.duration = frames * samples_pf / self.samplerate
         self._duration_parsed = True
 
     @staticmethod
