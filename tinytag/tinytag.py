@@ -1146,19 +1146,20 @@ class _ID3(TinyTag):
         if (len(header) == self._ID3V2_HEADER_SIZE
                 and header.startswith(b'ID3')):
             major = header[3]
-            if _DEBUG:
-                print(f'Found id3 v2.{major}')
             extended = (header[5] & 0x40) > 0
-            size = self._unsynchsafe(header, 6)
+            size += self._unsynchsafe(header, 6)
+            if _DEBUG:
+                print(f'Found id3 v2.{major} tag with size {size}')
         return size, extended, major
 
     def _parse_id3v2(self, fh: BinaryIO) -> int:
         size, extended, major = self._parse_id3v2_header(fh)
         if size <= 0:
             return size
-        parsed_size = 0
+        parsed_size = self._ID3V2_HEADER_SIZE
         if extended:  # just read over the extended header.
             extd_size = self._unsynchsafe(fh.read(6))
+            parsed_size += extd_size
             fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
         while parsed_size < size:
             frame_size = self._parse_frame(fh, size, id3version=major)
@@ -1321,7 +1322,7 @@ class _ID3(TinyTag):
                      total_size: int,
                      id3version: int | None = None) -> int:
         # ID3v2.2 especially ugly. see: http://id3.org/id3v2-00
-        header_len = 6 if id3version == 2 else 10
+        header_len = parsed_size = 6 if id3version == 2 else 10
         frame_size_bytes = 3 if id3version == 2 else 4
         is_synchsafe_int = id3version == 4
         header = fh.read(header_len)
@@ -1337,11 +1338,12 @@ class _ID3(TinyTag):
             frame_size = self._unsynchsafe(header, 4)
         else:
             frame_size = unpack_from('>I', header, 4)[0]
+        parsed_size += frame_size
         if _DEBUG:
             print(f'Found id3 Frame {frame_id!r} at '
                   f'{fh.tell()}-{fh.tell() + frame_size} of {self.filesize}')
         if frame_size == 0:
-            return frame_size
+            return parsed_size
         if frame_size > total_size:
             # invalid frame size, stop here
             return -1
@@ -1359,13 +1361,13 @@ class _ID3(TinyTag):
                     # check if comment is a key-value pair (used by iTunes)
                     if fieldname == 'comment' and content_descriptor and value:
                         self._set_custom_field(content_descriptor, value)
-                        return frame_size
+                        return parsed_size
                 self._set_field(fieldname, value)
-                return frame_size
+                return parsed_size
             if frame_id.startswith(b'W'):  # URL frame, no custom encoding
                 value = self._decode_string(content)
                 self._set_field(fieldname, value)
-                return frame_size
+                return parsed_size
             encoding = content[0]
             content = content[1:]
             content_length = len(content)
@@ -1443,7 +1445,7 @@ class _ID3(TinyTag):
             self.images._set_field(field_name, image)
         else:  # skip frame
             fh.seek(frame_size, SEEK_CUR)
-        return frame_size
+        return parsed_size
 
     @staticmethod
     def _find_string_end_pos(content: bytes,
