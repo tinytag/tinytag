@@ -1322,6 +1322,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 2837,
         'samplerate': 8000,
         'channels': 2,
+        'bitrate': 45.6,
     }),
     ('multi_stream.ogv', {
         'other': OtherFields({
@@ -1439,6 +1440,38 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 1.067,
         'artist': 'test1',
         'title': 'test2',
+        'comment': 'Lavf62.3.100',
+    }),
+    ('zero_value_properties.ogg', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="vorbis"',
+        'is_lossless': False,
+        'filesize': 3979,
+    }),
+    ('silence.opus', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="opus"',
+        'is_lossless': False,
+        'filesize': 155,
+        'duration': 0.1,
+        'bitrate': 1.44,
+        'samplerate': 48000,
+        'channels': 2,
+    }),
+    ('zero_value_properties.opus', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="opus"',
+        'is_lossless': False,
+        'filesize': 155,
+        'duration': 0.1065,
+        'bitrate': 1.3521126760563382,
+        'samplerate': 48000,
+    }),
+    ('zero_value_properties.spx', {
+        'other': OtherFields(),
+        'mime_type': 'audio/ogg; codecs="speex"',
+        'is_lossless': False,
+        'filesize': 2239,
         'comment': 'Lavf62.3.100',
     }),
     ('test.wav', {
@@ -1738,6 +1771,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 44,
         'samplerate': 8000,
         'bitdepth': 16,
+        'bitrate': 256.0,
     }),
     ('8bit_pcm.wav', {
         'other': OtherFields(),
@@ -1789,6 +1823,11 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     ('empty_file.wav', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('zero_value_properties.wav', {
+        'other': OtherFields(),
+        'mime_type': 'audio/wav',
+        'filesize': 1644,
     }),
     ('flac1sMono.flac', {
         'other': OtherFields(),
@@ -2062,6 +2101,14 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'track': 1,
         'album': 'some album',
     }),
+    ('zero_value_properties.flac', {
+        'other': OtherFields(),
+        'mime_type': 'audio/flac',
+        'is_lossless': True,
+        'filesize': 235,
+        'channels': 1,
+        'bitdepth': 1,
+    }),
     ('test2.wma', {
         'other': OtherFields({
             '_track': ['0'],
@@ -2171,6 +2218,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields(),
         'mime_type': 'audio/x-ms-wma',
         'filesize': 2500,
+    }),
+    ('zero_value_properties.wma', {
+        'other': OtherFields(),
+        'mime_type': 'audio/x-ms-wma',
+        'filesize': 2500,
+        'duration': 0.0,
     }),
     ('test.m4a', {
         'other': OtherFields({
@@ -2525,6 +2578,28 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'mime_type': 'audio/mp4',
         'filesize': 72,
     }),
+    ('zero_value_properties.m4a', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4',
+        'filesize': 1995,
+    }),
+    ('alac_silence.m4a', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="alac"',
+        'is_lossless': True,
+        'filesize': 1124,
+        'samplerate': 8000,
+        'duration': 0.1,
+        'channels': 2,
+        'bitrate': 256.0,
+        'bitdepth': 16,
+    }),
+    ('zero_value_properties_alac.m4a', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mp4; codecs="alac"',
+        'is_lossless': True,
+        'filesize': 1124,
+    }),
     ('test-tagged.aiff', {
         'other': OtherFields(),
         'mime_type': 'audio/aiff; codecs="NONE"',
@@ -2554,6 +2629,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 164,
         'samplerate': 44100,
         'bitdepth': 16,
+        'bitrate': 1411.2,
         'title': 'Go Out and Get Some',
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),
@@ -2663,10 +2739,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 54,
         'samplerate': 8000,
         'bitdepth': 16,
+        'bitrate': 256.0,
     }),
     ('empty_file.aiff', {
         'other': OtherFields(),
         'filesize': 0,
+    }),
+    ('zero_value_properties.aiff', {
+        'other': OtherFields(),
+        'mime_type': 'audio/aiff; codecs="NONE"',
+        'is_lossless': True,
+        'filesize': 4096,
     }),
     ('magic_header_only_id3.x', {
         'other': OtherFields(),
@@ -2805,6 +2888,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 1,
         'duration': 0.0,
         'filesize': 120,
+        'bitrate': 352.8,
         'samplerate': 22050,
         'bitdepth': 16,
         'artist': 'Purpley',
@@ -2823,6 +2907,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'channels': 2,
         'duration': 3.684716553287982,
         'filesize': 120,
+        'bitrate': 0.2605356439543127,
         'samplerate': 44100,
         'bitdepth': 16,
     }),
@@ -2865,6 +2950,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 164,
         'samplerate': 44100,
         'bitdepth': 16,
+        'bitrate': 1411.2,
         'title': 'Go Out and Get Some',
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),

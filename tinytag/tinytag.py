@@ -822,10 +822,12 @@ class _MP4(TinyTag):
 
         # jump over version and flags
         channels = unpack_from('>H', data, 16)[0]
-        yield 'channels', channels
         # jump over bit_depth, QT compr id & pkt size
-        sr = unpack_from('>I', data, 22)[0]
-        yield 'samplerate', sr
+        samplerate = unpack_from('>I', data, 22)[0]
+        if channels > 0:
+            yield 'channels', channels
+        if samplerate > 0:
+            yield 'samplerate', samplerate
 
         # ES Description Atom
         def _read_descriptor_size(data: bytes, offset: int) -> tuple[int, int]:
@@ -866,22 +868,26 @@ class _MP4(TinyTag):
             audio_object_type = 32 + extended
         if audio_object_type:
             codec += f'.{audio_object_type}'
-        yield 'codec', codec
-        yield 'is_lossless', codec in cls._LOSSLESS_CODECS
+        if object_type:
+            yield 'codec', codec
+            yield 'is_lossless', codec in cls._LOSSLESS_CODECS
 
     @classmethod
     def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, str | int]]:
         # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
         yield 'codec', 'alac'
-        bitdepth = data[45]
-        yield 'bitdepth', bitdepth
-        channels = data[49]
-        yield 'channels', channels
-        avg_br, sr = unpack_from('>II', data, 56)
-        yield 'samplerate', sr
-        avg_br /= 1000  # kbit/s
-        yield 'bitrate', avg_br
         yield 'is_lossless', True
+        bitdepth = data[45]
+        channels = data[49]
+        avg_br, samplerate = unpack_from('>II', data, 56)
+        if bitdepth > 0:
+            yield 'bitdepth', bitdepth
+        if channels > 0:
+            yield 'channels', channels
+        if avg_br > 0:
+            yield 'bitrate', avg_br / 1000
+        if samplerate:
+            yield 'samplerate', samplerate
 
     @classmethod
     def _parse_mvhd(cls, data: bytes) -> Iterator[tuple[str, float]]:
@@ -890,9 +896,12 @@ class _MP4(TinyTag):
         # jump over flags, create & mod times
         if version == 0:  # uses 32 bit integers for timestamps
             time_scale, duration = unpack_from('>II', data, 12)
-        else:  # version == 1:  # uses 64-bit integers for timestamps
+            if time_scale > 0:
+                yield 'duration', duration / time_scale
+        elif version == 1:  # uses 64-bit integers for timestamps
             time_scale, duration = unpack_from('>IQ', data, 20)
-        yield 'duration', duration / time_scale
+            if time_scale > 0:
+                yield 'duration', duration / time_scale
 
 
 class _ID3(TinyTag):
@@ -1533,7 +1542,7 @@ class _MPEG(TinyTag):
             header = fh.read(4)
             header_len = len(header)
             if header_len < 4:
-                if frames:
+                if frames > 0:
                     self.bitrate = bitrate_accu / frames
                 break  # EOF
             id_byte = header[1]
@@ -1713,13 +1722,16 @@ class _Ogg(TinyTag):
     def _parse(self, fh: BinaryIO) -> None:
         check_flac_second_packet = False
         check_speex_second_packet = False
-        pre_skip = 0  # number of samples to skip in opus stream
+        preskip = 0  # number of samples to skip in opus stream
         for packet, serial in self._parse_pages(fh):
             if packet.startswith(b'\x01vorbis'):
                 if self._parse_duration:
-                    self.channels, self.samplerate = unpack_from(
-                        '<Bi', packet, 11)
+                    channels, samplerate = unpack_from('<Bi', packet, 11)
                     bitrate = unpack_from('<i', packet, 20)[0]
+                    if channels > 0:
+                        self.channels = channels
+                    if samplerate > 0:
+                        self.samplerate = samplerate
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
                     self.mime_type = 'audio/ogg; codecs="vorbis"'
@@ -1736,9 +1748,10 @@ class _Ogg(TinyTag):
                 if self._parse_duration:  # parse opus header
                     # https://www.videolan.org/developers/vlc/modules/codec/opus_header.c
                     # https://mf4.xiph.org/jenkins/view/opus/job/opusfile-unix/ws/doc/html/structOpusHead.html
-                    version, ch, pre_skip = unpack_from('<BBH', packet, 8)
+                    version, channels, preskip = unpack_from('<BBH', packet, 8)
                     if (version & 0xF0) == 0:  # only major version 0 supported
-                        self.channels = ch
+                        if channels > 0:
+                            self.channels = channels
                         self.samplerate = 48000
                     self.mime_type = 'audio/ogg; codecs="opus"'
                     self.is_lossless = False
@@ -1784,8 +1797,12 @@ class _Ogg(TinyTag):
             elif packet.startswith(b'Speex   '):
                 # https://speex.org/docs/manual/speex-manual/node8.html
                 if self._parse_duration:
-                    self.samplerate = unpack_from('<i', packet, 36)[0]
-                    self.channels, bitrate = unpack_from('<ii', packet, 48)
+                    samplerate = unpack_from('<i', packet, 36)[0]
+                    channels, bitrate = unpack_from('<ii', packet, 48)
+                    if samplerate > 0:
+                        self.samplerate = samplerate
+                    if channels > 0:
+                        self.channels = channels
                     if bitrate > 0:
                         self.bitrate = bitrate / 1000
                     self.mime_type = 'audio/ogg; codecs="speex"'
@@ -1812,12 +1829,9 @@ class _Ogg(TinyTag):
         if self.duration is not None or not self.samplerate:
             return  # either ogg flac or invalid file
         self.duration = max(
-            (self._granule_pos - pre_skip) / self.samplerate, 0
+            (self._granule_pos - preskip) / self.samplerate, 0
         )
-        if not self.duration:
-            self.bitrate = None  # no data means no meaningful bitrate
-            return
-        if self._audio_size:  # opus file
+        if self._audio_size and self.duration:  # opus file
             self.bitrate = self._audio_size * 8 / self.duration / 1000
 
     @classmethod
@@ -1925,7 +1939,7 @@ class _Ogg(TinyTag):
                     yield packet_data, serial
                     packet_data.clear()
                     read_size = 0
-            if read_size:
+            if read_size > 0:
                 if self._tags_parsed and self._duration_parsed:
                     fh.seek(read_size, SEEK_CUR)
                 else:  # packet continues on next page
@@ -2000,16 +2014,20 @@ class _Wave(TinyTag):
             subchunk_size += subchunk_size % 2
             if self._parse_duration and chunk_header.startswith(b'fmt '):
                 chunk = fh.read(subchunk_size)
-                format_tag, self.channels, self.samplerate = unpack_from(
+                format_tag, channels, samplerate = unpack_from(
                     '<HHI', chunk)
                 block_align, bitdepth = unpack_from('<HH', chunk, 12)
                 if format_tag == 0xFFFE:  # Extensible, read subformat
                     format_tag = unpack_from('<H', chunk, 24)[0]
+                if channels > 0:
+                    self.channels = channels
+                if samplerate > 0:
+                    self.samplerate = samplerate
                 if bitdepth > 0:
                     self.bitdepth = bitdepth
-                self.is_lossless = format_tag in self._LOSSLESS_FORMATS
                 if format_tag:
                     self.mime_type = f'audio/wav; codecs="{format_tag}"'
+                    self.is_lossless = format_tag in self._LOSSLESS_FORMATS
             elif self._parse_duration and chunk_header.startswith(b'data'):
                 audio_size = subchunk_size_unpadded
                 fh.seek(subchunk_size, SEEK_CUR)
@@ -2058,7 +2076,7 @@ class _Wave(TinyTag):
                 fh.seek(subchunk_size, SEEK_CUR)
             chunk_header = fh.read(header_len)
         if not self.is_lossless and self.samplerate:
-            if not audio_size:
+            if audio_size == 0:
                 # Normalization due to some encoders setting num_samples to 1
                 # when no audio data is present.
                 num_samples = 0
@@ -2067,8 +2085,7 @@ class _Wave(TinyTag):
                 self.bitrate = audio_size * 8 / self.duration / 1000
         elif block_align and self.samplerate:
             self.duration = audio_size / (block_align * self.samplerate)
-            if self.duration:
-                self.bitrate = block_align * self.samplerate * 8 / 1000
+            self.bitrate = block_align * self.samplerate * 8 / 1000
         self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
 
@@ -2116,11 +2133,16 @@ class _Flac(TinyTag):
                 # #---4---# #---5---# #---6---# #---7---# #--8-~   ~-12-#
                 info_byte = unpack_from(">Q", head, 10)[0]
                 samplerate = (info_byte >> 44) & ((1 << 20) - 1)
-                self.channels = ((info_byte >> 41) & ((1 << 3) - 1)) + 1
-                self.bitdepth = ((info_byte >> 36) & ((1 << 5) - 1)) + 1
+                channels = ((info_byte >> 41) & ((1 << 3) - 1)) + 1
+                bitdepth = ((info_byte >> 36) & ((1 << 5) - 1)) + 1
                 total_samples = info_byte & ((1 << 36) - 1)
-                self.duration = total_samples / samplerate
-                self.samplerate = samplerate
+                if samplerate > 0:
+                    self.samplerate = samplerate
+                    self.duration = duration = total_samples / samplerate
+                    if duration > 0:
+                        self.bitrate = self.filesize * 8 / duration / 1000
+                self.channels = channels
+                self.bitdepth = bitdepth
                 self.is_lossless = True
             elif block_type == self._VORBIS_COMMENT:
                 # Some files in the wild contain incorrect block sizes for
@@ -2329,14 +2351,21 @@ class _Wma(TinyTag):
                 data = fh.read(object_size)
                 stream_type = data[:16]
                 if stream_type == self._STREAM_TYPE_ASF_AUDIO_MEDIA:
-                    (format_tag, self.channels, self.samplerate,
+                    (format_tag, channels, samplerate,
                      avg_bytes_per_second) = unpack_from('<HHII', data, 54)
-                    self.bitrate = avg_bytes_per_second * 8 / 1000
+                    if channels > 0:
+                        self.channels = channels
+                    if samplerate > 0:
+                        self.samplerate = samplerate
+                    if avg_bytes_per_second > 0:
+                        self.bitrate = avg_bytes_per_second * 8 / 1000
                     if format_tag:
                         self.mime_type = (
                             f'audio/x-ms-wma; codecs="{format_tag}"')
-                    self.bitdepth = unpack_from('<H', data, 68)[0]
-                    self.is_lossless = (format_tag == 355)
+                        self.is_lossless = (format_tag == 355)
+                    bitdepth = unpack_from('<H', data, 68)[0]
+                    if bitdepth > 0:
+                        self.bitdepth = bitdepth
             elif (self._parse_tags
                     and object_header.startswith(self._XMP_METADATA)):
                 value = fh.read(object_size).decode('utf-8', 'replace')
@@ -2414,16 +2443,20 @@ class _Aiff(TinyTag):
             elif self._parse_duration and chunk_header.startswith(b'COMM'):
                 chunk = fh.read(subchunk_size)
                 channels, num_frames, bitdepth = unpack_from('>hLh', chunk)
-                self.channels, self.bitdepth = channels, bitdepth
+                if channels > 0:
+                    self.channels = channels
+                if bitdepth > 0:
+                    self.bitdepth = bitdepth
                 try:
                     # Extended precision
                     exp, mantissa = unpack_from('>HQ', chunk, 8)
                     sr = int(mantissa * (2 ** (exp - 0x3FFF - 63)))
-                    duration = num_frames / sr
-                    bitrate = sr * channels * bitdepth / 1000
-                    if duration > 0:
-                        self.bitrate = bitrate
-                    self.samplerate, self.duration = sr, duration
+                    if sr > 0:
+                        duration = num_frames / sr
+                        bitrate = sr * channels * bitdepth / 1000
+                        if bitrate > 0:
+                            self.bitrate = bitrate
+                        self.samplerate, self.duration = sr, duration
                 except OverflowError:
                     pass
                 compression_type = chunk[18:22].decode('latin-1')
