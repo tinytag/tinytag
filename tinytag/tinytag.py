@@ -1579,11 +1579,11 @@ class _MPEG(TinyTag):
             # accurate average bitrate
             if frames == 0 and self._USE_XING_HEADER:
                 prev_offset = header_len + audio_offset
-                frame_content = fh.read(frame_length)
+                frame_content = fh.read(min(48, frame_length))  # optimization
                 xing_header_offset = frame_content.find(b'Xing')
                 if xing_header_offset != -1:
-                    fh.seek(prev_offset + xing_header_offset)
-                    xframes, byte_count = self._parse_xing_header(fh)
+                    xframes, byte_count = self._parse_xing_header(
+                        frame_content, xing_header_offset)
                     byte_count -= frame_length  # xing frame doesn't count
                     if xframes > 0 and byte_count > 0:
                         self.duration = dur = xframes * samples_pf / samplerate
@@ -1617,19 +1617,18 @@ class _MPEG(TinyTag):
         self._duration_parsed = True
 
     @staticmethod
-    def _parse_xing_header(fh: BinaryIO) -> tuple[int, int]:
+    def _parse_xing_header(content: bytes, offset: int) -> tuple[int, int]:
         # see: http://www.mp3-tech.org/programmer/sources/vbrheadersdk.zip
-        fh.seek(4, SEEK_CUR)  # read over Xing header
-        header_flags = unpack('>i', fh.read(4))[0]
+        offset += 4  # skip header ID
+        header_flags = unpack_from('>i', content, offset)[0]
+        offset += 4
         frames = byte_count = 0
         if header_flags & 1:  # FRAMES FLAG
-            frames = unpack('>i', fh.read(4))[0]
+            frames = unpack_from('>i', content, offset)[0]
+            offset += 4
         if header_flags & 2:  # BYTES FLAG
-            byte_count = unpack('>i', fh.read(4))[0]
-        if header_flags & 4:  # TOC FLAG
-            fh.seek(100, SEEK_CUR)
-        if header_flags & 8:  # VBR SCALE FLAG
-            fh.seek(4, SEEK_CUR)
+            byte_count = unpack_from('>i', content, offset)[0]
+            offset += 4
         return frames, byte_count
 
 
