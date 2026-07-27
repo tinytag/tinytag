@@ -475,6 +475,42 @@ UnsupportedFormatError  # File format is not supported
 
 ## Changelog
 
+### 2.3.0  (Unreleased)
+
+- Add 'mime_type' attribute for audio MIME type/codec
+- Add 'is_lossless' attribute to indicate lossless audio
+- Add option to disable magic header detection
+- Make XMP metadata available under 'other.xmp' field
+- Add .ogv to list of supported file extensions
+- Mark deprecated 'extra' dictionary as obsolete
+- Fix incorrect key when adding common images to 'other' dictionary
+- Only set audio properties with a positive value
+- Always read tags and audio properties in a single pass
+- ID3: Parse multi-value text frames correctly
+- ID3: Parse COMM and USLT frames correctly
+- ID3: Fix some errors in parsed size calculations
+- ID3: Exclude a few frames with custom structures
+- MPEG: Read VBRI and Xing Info headers for duration/bitrate
+- MPEG: Fix parsing of layer I and MPEG-2 layer III audio properties
+- MPEG: Fix slightly incorrect duration estimation
+- MPEG/MP4: Raise ParseError if header is invalid
+- MP4: Add 'image/bmp' and 'image/gif' MIME types
+- MP4: Fix infinite loop if size of certain sub-atoms is zero
+- MP4: Fix incorrect parsing of descriptor size
+- MP4: Don't read image data when image reading is disabled
+- OGG: Parse multi-stream files correctly
+- Speex: Don't read vendor string as comment
+- FLAC: Provide actual audio bitrate instead of overall bitrate
+- FLAC: Parse VORBIS_COMMENT and PICTURE blocks with invalid size
+- FLAC: Ignore subsequent STREAMINFO blocks
+- WAV: Include unknown fields in 'other' dictionary
+- WAV: Calculate bitrate/duration correctly
+- AIFF/WAV: Read whole ID3 chunk before parsing
+- WMA: Stop parsing if object size is smaller than header
+- WMA: Make magic header detection more strict
+- Various performance improvements
+- Various code refactors
+
 ### 2.2.1  (2026-03-15)
 
 - ID3: Prevent infinite loop due to malformed SYLT strings
@@ -686,6 +722,6 @@ UnsupportedFormatError  # File format is not supported
 
 - fixed decoding of UTF-16LE ID3v2 Tags, improved overall stability
 
-### 0.14.0 (2016-06-05):
+### 0.14.0 (2016-06-05)
 
 - MP4/M4A and Opus support
