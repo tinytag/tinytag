@@ -2362,7 +2362,9 @@ class _Wma(TinyTag):
                     if format_tag:
                         self.mime_type = (
                             f'audio/x-ms-wma; codecs="{format_tag}"')
-                        self.is_lossless = (format_tag == 355)
+                        # pylint: disable=protected-access
+                        self.is_lossless = (
+                            format_tag in _Wave._LOSSLESS_FORMATS)
                     bitdepth = unpack_from('<H', data, 68)[0]
                     if bitdepth > 0:
                         self.bitdepth = bitdepth
