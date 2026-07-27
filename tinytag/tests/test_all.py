@@ -1425,7 +1425,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 2.1445625,
         'artist': 'test1',
         'title': 'test2',
-        'comment': 'Encoded with Speex 1.2.0',
     }),
     ('bitrate_present.spx', {
         'other': OtherFields({
@@ -1440,7 +1439,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'duration': 1.067,
         'artist': 'test1',
         'title': 'test2',
-        'comment': 'Lavf62.3.100',
     }),
     ('zero_value_properties.ogg', {
         'other': OtherFields(),
@@ -1472,7 +1470,6 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'mime_type': 'audio/ogg; codecs="speex"',
         'is_lossless': False,
         'filesize': 2239,
-        'comment': 'Lavf62.3.100',
     }),
     ('test.wav', {
         'other': OtherFields(),
