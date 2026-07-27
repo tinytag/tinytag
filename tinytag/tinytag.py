@@ -1578,18 +1578,27 @@ class _MPEG(TinyTag):
             # all the info we need, otherwise parse multiple frames to find the
             # accurate average bitrate
             if frames == 0 and self._USE_XING_HEADER:
+                xframes = 0
+                byte_count = 0
                 prev_offset = header_len + audio_offset
-                frame_content = fh.read(min(48, frame_length))  # optimization
-                xing_header_offset = frame_content.find(b'Xing')
+                frame_content = fh.read(min(50, frame_length))  # optimization
+                xing_header_offset = frame_content.find(b'Xing')  # VBR
+                if xing_header_offset == -1:
+                    xing_header_offset = frame_content.find(b'Info')  # CBR
                 if xing_header_offset != -1:
                     xframes, byte_count = self._parse_xing_header(
                         frame_content, xing_header_offset)
                     byte_count -= frame_length  # xing frame doesn't count
-                    if xframes > 0 and byte_count > 0:
-                        self.duration = dur = xframes * samples_pf / samplerate
-                        self.bitrate = byte_count * 8 / dur / 1000
-                        self._duration_parsed = True
-                        return
+                else:
+                    vbri_header_offset = frame_content.find(b'VBRI')
+                    if vbri_header_offset != -1:
+                        xframes, byte_count = self._parse_vbri_header(
+                            frame_content, vbri_header_offset)
+                if xframes > 0 and byte_count > 0:
+                    self.duration = dur = xframes * samples_pf / samplerate
+                    self.bitrate = byte_count * 8 / dur / 1000
+                    self._duration_parsed = True
+                    return
                 fh.seek(prev_offset)
             frames += 1  # it's most probably a mp3 frame
             bitrate_accu += frame_br
@@ -1629,6 +1638,16 @@ class _MPEG(TinyTag):
         if header_flags & 2:  # BYTES FLAG
             byte_count = unpack_from('>i', content, offset)[0]
             offset += 4
+        return frames, byte_count
+
+    @staticmethod
+    def _parse_vbri_header(content: bytes, offset: int) -> tuple[int, int]:
+        # https://teslabs.com/openplayer/docs/docs/specs/mp3_structure2.pdf
+        offset += 10
+        byte_count = unpack_from('>I', content, offset)[0]
+        offset += 4
+        frames = unpack_from('>I', content, offset)[0]
+        offset += 4
         return frames, byte_count
 
 
