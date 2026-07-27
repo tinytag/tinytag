@@ -1813,12 +1813,7 @@ class _Ogg(TinyTag):
             elif check_speex_second_packet:
                 if self._parse_tags:
                     walker = BytesIO(packet)
-                    # starts with a comment string
-                    length = unpack('I', walker.read(4))[0]
-                    comment = walker.read(length).decode('utf-8', 'replace')
-                    self._set_field('comment', comment)
-                    # other tags
-                    self._set_vorbis_comment_fields(walker, has_vendor=False)
+                    self._set_vorbis_comment_fields(walker)
                     self._tags_parsed = True
                 check_speex_second_packet = False
             if self._tags_parsed and not self._parse_duration:
@@ -1838,16 +1833,14 @@ class _Ogg(TinyTag):
     def _parse_vorbis_comment(
         cls,
         fh: BinaryIO,
-        has_vendor: bool = True,
         load_image: bool = False,
         read_data: bool = True
     ) -> Iterator[tuple[str, str | int | Image]]:
         # for the spec, see: http://xiph.org/vorbis/doc/v-comment.html
         # discnumber tag based on: https://en.wikipedia.org/wiki/Vorbis_comment
         # https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Vorbis.html
-        if has_vendor:
-            vendor_length = unpack('I', fh.read(4))[0]
-            fh.seek(vendor_length, SEEK_CUR)  # jump over vendor
+        vendor_length = unpack('I', fh.read(4))[0]
+        fh.seek(vendor_length, SEEK_CUR)  # jump over vendor
         elements = unpack('I', fh.read(4))[0]
         for _i in range(elements):
             length = unpack('I', fh.read(4))[0]
@@ -1884,11 +1877,9 @@ class _Ogg(TinyTag):
                     else:
                         yield fieldname, value
 
-    def _set_vorbis_comment_fields(self,
-                                   fh: BinaryIO,
-                                   has_vendor: bool = True) -> None:
+    def _set_vorbis_comment_fields(self, fh: BinaryIO) -> None:
         for fieldname, value in self._parse_vorbis_comment(
-            fh, has_vendor, self._load_image
+            fh, self._load_image
         ):
             if isinstance(value, Image):
                 self.images._set_field(fieldname, value)
