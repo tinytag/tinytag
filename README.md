@@ -42,7 +42,8 @@ python3 -m pip install tinytag
 
 > [!IMPORTANT]  
 > Support for changing/writing metadata will not be added. Use another library
-> such as [Mutagen](https://mutagen.readthedocs.io/) for this.
+> such as [Mutagen](https://mutagen.readthedocs.io/) or [pytaglib](https://github.com/supermihi/pytaglib)
+> for this.
 
 
 ## Usage
