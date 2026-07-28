@@ -480,11 +480,14 @@ UnsupportedFormatError  # File format is not supported
 
 - Add 'mime_type' attribute for audio MIME type/codec
 - Add 'is_lossless' attribute to indicate lossless audio
+- Add 'size' attribute to images for size in bytes
 - Add option to disable magic header detection
 - Make XMP metadata available under 'other.xmp' field
+- Make bit depth available for lossy files providing it
 - Add .ogv to list of supported file extensions
 - Mark deprecated 'extra' dictionary as obsolete
 - Fix incorrect key when adding common images to 'other' dictionary
+- Fix disc/track numbers not being returned as lists in 'as_dict()'
 - Only set audio properties with a positive value
 - Always read tags and audio properties in a single pass
 - ID3: Parse multi-value text frames correctly
