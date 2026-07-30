@@ -77,7 +77,8 @@ class TinyTag:
     SUPPORTED_FILE_EXTENSIONS = (
         '.mp1', '.mp2', '.mp3',
         '.oga', '.ogv', '.ogg', '.opus', '.spx',
-        '.wav', '.flac', '.wma',
+        '.wav', '.flac',
+        '.wma', '.wmv', '.asf',
         '.m4b', '.m4a', '.m4r', '.m4v', '.mp4', '.aax', '.aaxc',
         '.aiff', '.aifc', '.aif', '.afc'
     )
@@ -213,7 +214,7 @@ class TinyTag:
                 ('.mp1', '.mp2', '.mp3', '.flac'): _ID3,
                 ('.oga', '.ogv', '.ogg', '.opus', '.spx'): _Ogg,
                 ('.wav',): _Wave,
-                ('.wma',): _Wma,
+                ('.wma', '.wmv', '.asf'): _ASF,
                 ('.m4b', '.m4a', '.m4r', '.m4v', '.mp4',
                  '.aax', '.aaxc'): _MP4,
                 ('.aiff', '.aifc', '.aif', '.afc'): _Aiff,
@@ -259,7 +260,7 @@ class TinyTag:
         if header.startswith(
             b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
         ) and header.startswith(b'\x02', 29):
-            return _Wma
+            return _ASF
         if (header.startswith(b'FORM')
                 and header.startswith((b'AIFF', b'AIFC'), 8)):
             return _Aiff
@@ -2199,8 +2200,8 @@ class _Flac(TinyTag):
             fh.read(pic_len), pic_type, mime_type, description)
 
 
-class _Wma(TinyTag):
-    """WMA Parser.
+class _ASF(TinyTag):
+    """ASF (WMA) Parser.
 
     http://web.archive.org/web/20131203084402/http://msdn.microsoft.com/en-us/library/bb643323.aspx
     http://uguisu.skr.jp/Windows/format_asf.html
@@ -2280,7 +2281,7 @@ class _Wma(TinyTag):
             b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'
         ) or not header.startswith(b'\x02', 29)):
             raise ParseError('Invalid WMA header')
-        self.mime_type = 'audio/x-ms-wma'
+        self.mime_type = 'application/vnd.ms-asf'
         header_len = 24
         object_header = fh.read(header_len)
         while len(object_header) == header_len:
@@ -2369,7 +2370,7 @@ class _Wma(TinyTag):
                         self.bitrate = avg_bytes_per_second * 8 / 1000
                     if format_tag:
                         self.mime_type = (
-                            f'audio/x-ms-wma; codecs="{format_tag:X}"')
+                            f'application/vnd.ms-asf; codecs="{format_tag:X}"')
                         # pylint: disable=protected-access
                         self.is_lossless = (
                             format_tag in _Wave._LOSSLESS_FORMATS)
