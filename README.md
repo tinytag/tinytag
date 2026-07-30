@@ -489,7 +489,7 @@ UnsupportedFormatError  # File format is not supported
 
 ## Changelog
 
-### 2.3.0  (Unreleased)
+### 2.3.0  (2026-07-31)
 
 - Add 'mime_type' attribute for audio MIME type/codec
 - Add 'is_lossless' attribute to indicate lossless audio
