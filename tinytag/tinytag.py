@@ -2207,6 +2207,10 @@ class _Wma(TinyTag):
     """
 
     _ASF_MAPPING = {
+        'Title': 'title',
+        'Author': 'artist',
+        'Description': 'comment',
+        'Copyright': 'other.copyright',
         'WM/ARTISTS': 'artist',
         'WM/TrackNumber': 'track',
         'WM/PartOfSet': 'disc',
@@ -2246,9 +2250,6 @@ class _Wma(TinyTag):
     _ASF_EXT_CONTENT_DESC = (
         b'\x40\xA4\xD0\xD2\x07\xE3\xD2\x11\x97\xF0\x00\xA0\xC9\x5E\xA8\x50'
     )
-    _STREAM_BITRATE_PROPS = (
-        b'\xCE\x75\xF8\x7B\x8D\x46\xD1\x11\x8D\x82\x00\x60\x97\xC9\xA2\xB2'
-    )
     _ASF_FILE_PROP = (
         b'\xA1\xDC\xAB\x8C\x47\xA9\xCF\x11\x8E\xE4\x00\xC0\x0C\x20\x53\x65'
     )
@@ -2257,6 +2258,15 @@ class _Wma(TinyTag):
     )
     _STREAM_TYPE_ASF_AUDIO_MEDIA = (
         b'\x40\x9E\x69\xF8\x4D\x5B\xCF\x11\xA8\xFD\x00\x80\x5F\x5C\x44\x2B'
+    )
+    _ASF_HEADER_EXTENSION = (
+        b'\xB5\x03\xBf\x5F\x2E\xA9\xCF\x11\x8E\xE3\x00\xC0\x0C\x20\x53\x65'
+    )
+    _ASF_METADATA = (
+        b'\xEA\xCB\xF8\xC5\xAF\x5B\x77\x48\x84\x67\xAA\x8C\x44\xFA\x4C\xCA'
+    )
+    _ASF_METADATA_LIBRARY = (
+        b'\x94\x1c\x23\x44\x98\x94\xd1\x49\xa1\x41\x1d\x13\x4E\x45\x70\x54'
     )
     _XMP_METADATA = (
         b'\xCB\xCF\x7A\xBE\xA9\x97\xE8\x42\x9C\x71\x99\x94\x91\xE3\xAF\xAC'
@@ -2306,30 +2316,37 @@ class _Wma(TinyTag):
                     name = self._unpad(
                         walker.read(name_len).decode('utf-16', 'replace'))
                     value_type, value_len = unpack('<HH', walker.read(4))
-                    # Unicode string
-                    if value_type == 0:
-                        value = self._unpad(
-                            walker.read(value_len).decode('utf-16', 'replace'))
-                    # DWORD / QWORD / WORD
-                    elif (1 < value_type < 6
-                            and value_len in self._UNPACK_FORMATS):
-                        fmt = self._UNPACK_FORMATS[value_len]
-                        value = str(unpack(fmt, walker.read(value_len))[0])
+                    self._parse_value(walker, name, value_type, value_len)
+            elif (self._parse_tags
+                    and object_header.startswith(self._ASF_HEADER_EXTENSION)):
+                offset = fh.seek(18, SEEK_CUR)  # skip reserved fields
+                data_size = unpack('<I', fh.read(4))[0]
+                offset += 4
+                end_offset = offset + data_size
+                while offset < end_offset:
+                    subheader = fh.read(header_len)
+                    offset += len(subheader)
+                    sub_size = max(
+                        unpack_from('<Q', subheader, 16)[0] - header_len, 0)
+                    if subheader.startswith(
+                        (self._ASF_METADATA, self._ASF_METADATA_LIBRARY)
+                    ):
+                        content = fh.read(sub_size)
+                        walker = BytesIO(content)
+                        offset += len(content)
+                        descriptor_count = unpack('<H', walker.read(2))[0]
+                        for _ in range(descriptor_count):
+                            walker.seek(4, SEEK_CUR)  # skip lang, stream num
+                            name_len = unpack('<H', walker.read(2))[0]
+                            value_type = unpack('<H', walker.read(2))[0]
+                            value_len = unpack('<I', walker.read(4))[0]
+                            name = self._unpad(
+                                walker.read(name_len)
+                                .decode('utf-16', 'replace'))
+                            self._parse_value(
+                                walker, name, value_type, value_len)
                     else:
-                        walker.seek(value_len, SEEK_CUR)  # skip other values
-                        continue
-                    # try to get normalized field name
-                    if name in self._ASF_MAPPING:
-                        field_name = self._ASF_MAPPING[name]
-                    else:  # custom field
-                        if name.startswith('WM/'):
-                            name = name[3:]
-                        field_name = self._OTHER_PREFIX + name.lower()
-                    if field_name in {'track', 'disc'}:
-                        if value.isdecimal():
-                            self._set_field(field_name, int(value))
-                    else:
-                        self._set_field(field_name, value)
+                        offset = fh.seek(sub_size, SEEK_CUR)
             elif (self._parse_duration
                     and object_header.startswith(self._ASF_FILE_PROP)):
                 data = fh.read(object_size)
@@ -2369,6 +2386,35 @@ class _Wma(TinyTag):
             object_header = fh.read(header_len)
         self._duration_parsed = self._parse_duration
         self._tags_parsed = self._parse_tags
+
+    def _parse_value(self,
+                     fh: BytesIO,
+                     name: str,
+                     value_type: int,
+                     value_len: int) -> None:
+        # Unicode string
+        if value_type == 0:
+            value = self._unpad(fh.read(value_len).decode('utf-16', 'replace'))
+        # DWORD / QWORD / WORD
+        elif (1 < value_type < 6
+                and value_len in self._UNPACK_FORMATS):
+            fmt = self._UNPACK_FORMATS[value_len]
+            value = str(unpack(fmt, fh.read(value_len))[0])
+        else:
+            fh.seek(value_len, SEEK_CUR)  # skip other values
+            return
+        # try to get normalized field name
+        if name in self._ASF_MAPPING:
+            field_name = self._ASF_MAPPING[name]
+        else:  # custom field
+            if name.startswith('WM/'):
+                name = name[3:]
+            field_name = self._OTHER_PREFIX + name.lower()
+        if field_name in {'track', 'disc'}:
+            if value.isdecimal():
+                self._set_field(field_name, int(value))
+        else:
+            self._set_field(field_name, value)
 
 
 class _Aiff(TinyTag):
