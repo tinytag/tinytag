@@ -32,7 +32,7 @@ python3 -m pip install tinytag
     * WAVE / WAV
     * OGG (FLAC / Opus / Speex / Vorbis)
     * FLAC
-    * WMA
+    * ASF (WMA)
     * AIFF / AIFF-C
   * Same API for all formats
   * Small, portable library
@@ -175,22 +175,35 @@ No official standards exists for `codecs` values for the `audio/aiff` and
 `audio/x-ms-wma` MIME types. The most appropriate value provided by the format
 is used.
 
+    # ASF
+    application/vnd.ms-asf
+    application/vnd.ms-asf; codecs="<1..>"  # WAVE format tag, e.g. "161" (WMA)
+
+    # AIFF
     audio/aiff
-    audio/aiff; codecs="<FourCC>"    # AIFF-C compression type, e.g. "alaw"
+    audio/aiff; codecs="<FourCC>"  # AIFF-C compression type, e.g. "alaw"
+
+    # FLAC
     audio/flac
+
+    # MP4
     audio/mp4
     audio/mp4; codecs="alac"
     audio/mp4; codecs="mp4a.oo[.A]"  # E.g. "mp4a.40.2" for AAC-LC
+
+    # MP3 / MP2 / MP1
     audio/mpeg
+
+    # OGG
     audio/ogg
     audio/ogg; codecs="flac"
     audio/ogg; codecs="opus"
     audio/ogg; codecs="speex"
     audio/ogg; codecs="vorbis"
+
+    # WAV
     audio/wav
-    audio/wav; codecs="<1..>"        # WAVE format tag, e.g. "1" for PCM
-    audio/x-ms-wma
-    audio/x-ms-wma; codecs="<1..>"   # WAVE format tag, e.g. "161" for WMA v2
+    audio/wav; codecs="<1..>"  # WAVE format tag, e.g. "1" for PCM
 
 ### Additional Metadata
 

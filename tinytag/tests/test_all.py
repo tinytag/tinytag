@@ -17,7 +17,7 @@ from unittest import skipIf, TestCase
 
 from tinytag import ParseError, TinyTagException, UnsupportedFormatError
 from tinytag import Image, Images, OtherFields, OtherImages, TinyTag
-from tinytag.tinytag import _ID3, _MPEG, _Ogg, _Wave, _Flac, _Wma, _MP4, _Aiff
+from tinytag.tinytag import _ID3, _MPEG, _Ogg, _Wave, _Flac, _ASF, _MP4, _Aiff
 
 TYPE_CHECKING = False
 
@@ -2118,7 +2118,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'averagelevel': ['7291'],
             'deviceconformancetemplate': ['L2'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'samplerate': 44100,
         'album': 'The Colour and the Shape',
@@ -2137,7 +2137,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('lossless.wma', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma; codecs="163"',
+        'mime_type': 'application/vnd.ms-asf; codecs="163"',
         'is_lossless': True,
         'samplerate': 44100,
         'bitrate': 667.296,
@@ -2150,7 +2150,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf60.16.100']
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'filesize': 3940,
         'bitrate': 128.0,
@@ -2164,7 +2164,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'grouping': ['some grouping'],
             'work': ['some work'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'filesize': 4070,
         'bitrate': 128.0,
@@ -2196,7 +2196,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'encoder_settings': ['Lavf60.16.100'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'filesize': 4723,
         'bitrate': 128.0,
@@ -2214,12 +2214,12 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('invalid_object_size.wma', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma',
+        'mime_type': 'application/vnd.ms-asf',
         'filesize': 2500,
     }),
     ('zero_value_properties.wma', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma',
+        'mime_type': 'application/vnd.ms-asf',
         'filesize': 2500,
         'duration': 0.0,
     }),
@@ -2227,7 +2227,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf62.12.102'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'samplerate': 8000,
         'bitrate': 128.0,
@@ -2248,7 +2248,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'copyright': ['even more nothing', 'more nothing', 'nothing'],
             'encoder_settings': ['Lavf62.12.102'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="161"',
+        'mime_type': 'application/vnd.ms-asf; codecs="161"',
         'is_lossless': False,
         'samplerate': 8000,
         'bitrate': 128.0,
@@ -2262,6 +2262,17 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'genre': 'Jungle',
         'year': '1960',
         'comment': 'dreaming in bytes',
+    }),
+    ('mp3_audio.asf', {
+        'other': OtherFields({
+            'encoder_settings': ['Lavf61.7.100'],
+        }),
+        'mime_type': 'application/vnd.ms-asf; codecs="55"',
+        'is_lossless': False,
+        'samplerate': 44100,
+        'filesize': 6906,
+        'duration': 2.145,
+        'channels': 1,
     }),
     ('test.m4a', {
         'other': OtherFields({
@@ -2954,16 +2965,16 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'mime_type': 'audio/flac',
         'filesize': 4,
     }),
-    ('detect_wma.x', {
+    ('detect_asf.x', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma',
+        'mime_type': 'application/vnd.ms-asf',
         'filesize': 120,
         'artist': 'Foo Fighters',
         'title': 'Doll',
     }),
-    ('magic_header_only_wma.x', {
+    ('magic_header_only_asf.x', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma',
+        'mime_type': 'application/vnd.ms-asf',
         'filesize': 30,
     }),
     ('detect_mp4_m4a.x', {
@@ -3404,7 +3415,7 @@ class TestAll(TestCase):
             ('invalid_file.flac', _Flac),
             ('invalid_file.ogg', _Ogg),
             ('invalid_file.wav', _Wave),
-            ('invalid_file.wma', _Wma),
+            ('invalid_file.asf', _ASF),
             ('invalid_file.aiff', _Aiff),
         ):
             with self.subTest(path=path, cls=cls):
@@ -3472,7 +3483,7 @@ class TestAll(TestCase):
             ('detect_ogg.x', _Ogg),
             ('detect_wav.x', _Wave),
             ('detect_flac.x', _Flac),
-            ('detect_wma.x', _Wma),
+            ('detect_asf.x', _ASF),
             ('detect_mp4_m4a.x', _MP4),
             ('detect_aiff.x', _Aiff),
         ):
