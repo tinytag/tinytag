@@ -190,7 +190,7 @@ is used.
     audio/wav
     audio/wav; codecs="<1..>"        # WAVE format tag, e.g. "1" for PCM
     audio/x-ms-wma
-    audio/x-ms-wma; codecs="<1..>"   # WAVE format tag, e.g. "353" for WMA v2
+    audio/x-ms-wma; codecs="<1..>"   # WAVE format tag, e.g. "161" for WMA v2
 
 ### Additional Metadata
 
