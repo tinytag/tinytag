@@ -2800,7 +2800,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'is_lossless': True,
         'filesize': 4096,
     }),
-    ('magic_header_only_id3.x', {
+    ('magic_bytes_only_id3.x', {
         'other': OtherFields(),
         'mime_type': 'audio/mpeg',
         'is_lossless': False,
@@ -2899,7 +2899,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 2688,
         'bitrate': 224.0,
     }),
-    ('magic_header_only_mp3.x', {
+    ('magic_bytes_only_mp3.x', {
         'other': OtherFields(),
         'mime_type': 'audio/mpeg',
         'is_lossless': False,
@@ -2923,7 +2923,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'year': '2007',
         'comment': 'A Comment',
     }),
-    ('magic_header_only_ogg.x', {
+    ('magic_bytes_only_ogg.x', {
         'other': OtherFields(),
         'mime_type': 'audio/ogg',
         'filesize': 5,
@@ -2944,7 +2944,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'title': 'Test000',
         'album': 'prototypes',
     }),
-    ('magic_header_only_wav.x', {
+    ('magic_bytes_only_wav.x', {
         'other': OtherFields(),
         'mime_type': 'audio/wav',
         'filesize': 12,
@@ -2960,7 +2960,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'samplerate': 44100,
         'bitdepth': 16,
     }),
-    ('magic_header_only_flac.x', {
+    ('magic_bytes_only_flac.x', {
         'other': OtherFields(),
         'mime_type': 'audio/flac',
         'filesize': 4,
@@ -2972,7 +2972,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'artist': 'Foo Fighters',
         'title': 'Doll',
     }),
-    ('magic_header_only_asf.x', {
+    ('magic_bytes_only_asf.x', {
         'other': OtherFields(),
         'mime_type': 'application/vnd.ms-asf',
         'filesize': 30,
@@ -2983,7 +2983,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'filesize': 120,
         'duration': 167.78739229024944,
     }),
-    ('magic_header_only_mp4.x', {
+    ('magic_bytes_only_mp4.x', {
         'other': OtherFields(),
         'mime_type': 'audio/mp4',
         'filesize': 8,
@@ -3003,7 +3003,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'title': 'Go Out and Get Some',
         'comment': 'Millie Jackson - Get It Out \'cha System - 1978',
     }),
-    ('magic_header_only_aiff.x', {
+    ('magic_bytes_only_aiff.x', {
         'other': OtherFields(),
         'mime_type': 'audio/aiff',
         'filesize': 12,
@@ -3396,7 +3396,7 @@ class TestAll(TestCase):
             TinyTag.get(bogus_file)
         self.assertIsInstance(context.exception, TinyTagException)
 
-    def test_unsupported_magic_header(self) -> None:
+    def test_unsupported_magic_bytes(self) -> None:
         bogus_file = os.path.join(SAMPLE_FOLDER, 'detect_none.x')
         with self.assertRaises(UnsupportedFormatError) as context:
             TinyTag.get(bogus_file)
@@ -3470,7 +3470,7 @@ class TestAll(TestCase):
         with self.assertWarns(DeprecationWarning):
             self.assertEqual(image.data, tag.get_image())
 
-    def test_detect_magic_headers(self) -> None:
+    def test_detect_magic_bytes(self) -> None:
         for testfile, expected in (
             ('detect_mp3_id3v2.x', _ID3),
             ('detect_mp3_id3v1.x', _ID3),
@@ -3495,7 +3495,7 @@ class TestAll(TestCase):
             with self.subTest(testfile=testfile, expected=expected):
                 filename = os.path.join(SAMPLE_FOLDER, testfile)
                 with self.assertRaises(UnsupportedFormatError) as context:
-                    TinyTag.get(filename, header_detection=False)
+                    TinyTag.get(filename, check_magic_bytes=False)
                 self.assertIsInstance(context.exception, TinyTagException)
 
     def test_show_hint_for_wrong_usage(self) -> None:

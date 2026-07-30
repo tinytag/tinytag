@@ -445,18 +445,17 @@ if fish_images:
     description = image.description
 ```
 
-### Magic Header Detection
+### Magic Byte Detection
 
 By default, tinytag will determine the file type by 1. checking the file name
-extension, and 2. reading and inspecting the file header, i.e. magic header
-detection.
+extension, and 2. reading and inspecting magic bytes in the file header.
 
-In case you want to disable magic header detection, e.g. to minimize read
+In case you want to disable magic byte detection, e.g. to minimize read
 operations when many non-audio files exist in a folder, pass a
-`header_detection` argument with a value of `False` (added in tinytag 2.3.0).
+`check_magic_bytes` argument with a value of `False` (added in tinytag 2.3.0).
 
 ```python
-tag: TinyTag = TinyTag.get('invalid_file.jpg', header_detection=False)
+tag: TinyTag = TinyTag.get('invalid_file.jpg', check_magic_bytes=False)
 ```
 
 ### Encoding
@@ -494,7 +493,7 @@ UnsupportedFormatError  # File format is not supported
 - Add 'mime_type' attribute for audio MIME type/codec
 - Add 'is_lossless' attribute to indicate lossless audio
 - Add 'size' attribute to images for size in bytes
-- Add option to disable magic header detection
+- Add option to disable magic byte detection
 - Make XMP metadata available under 'other.xmp' field
 - Make bit depth available for lossy files providing it
 - Add .asf, .ogv and .wmv to list of supported file extensions
