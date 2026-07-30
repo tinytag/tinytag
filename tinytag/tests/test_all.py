@@ -1626,7 +1626,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('gsm_6_10.wav', {
         'other': OtherFields(),
-        'mime_type': 'audio/wav; codecs="49"',
+        'mime_type': 'audio/wav; codecs="31"',
         'is_lossless': False,
         'bitrate': 72.8,
         'channels': 1,
@@ -1752,7 +1752,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
-        'mime_type': 'audio/wav; codecs="85"',
+        'mime_type': 'audio/wav; codecs="55"',
         'is_lossless': False,
         'channels': 2,
         'duration': 0.0,
@@ -1809,7 +1809,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'isft': ['Lavf61.7.100'],
         }),
-        'mime_type': 'audio/wav; codecs="85"',
+        'mime_type': 'audio/wav; codecs="55"',
         'is_lossless': False,
         'filesize': 4264,
         'samplerate': 44100,
@@ -2117,7 +2117,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'peakvalue': ['30369'],
             'averagelevel': ['7291'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'samplerate': 44100,
         'album': 'The Colour and the Shape',
@@ -2136,7 +2136,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
     }),
     ('lossless.wma', {
         'other': OtherFields(),
-        'mime_type': 'audio/x-ms-wma; codecs="355"',
+        'mime_type': 'audio/x-ms-wma; codecs="163"',
         'is_lossless': True,
         'samplerate': 44100,
         'bitrate': 667.296,
@@ -2149,7 +2149,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf60.16.100']
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'filesize': 3940,
         'bitrate': 128.0,
@@ -2163,7 +2163,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'grouping': ['some grouping'],
             'work': ['some work'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'filesize': 4070,
         'bitrate': 128.0,
@@ -2195,7 +2195,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             ],
             'encoder_settings': ['Lavf60.16.100'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'filesize': 4723,
         'bitrate': 128.0,

@@ -2017,7 +2017,7 @@ class _Wave(TinyTag):
                 if bitdepth > 0:
                     self.bitdepth = bitdepth
                 if format_tag:
-                    self.mime_type = f'audio/wav; codecs="{format_tag}"'
+                    self.mime_type = f'audio/wav; codecs="{format_tag:X}"'
                     self.is_lossless = format_tag in self._LOSSLESS_FORMATS
             elif self._parse_duration and chunk_header.startswith(b'data'):
                 audio_size = subchunk_size_unpadded
@@ -2352,7 +2352,7 @@ class _Wma(TinyTag):
                         self.bitrate = avg_bytes_per_second * 8 / 1000
                     if format_tag:
                         self.mime_type = (
-                            f'audio/x-ms-wma; codecs="{format_tag}"')
+                            f'audio/x-ms-wma; codecs="{format_tag:X}"')
                         # pylint: disable=protected-access
                         self.is_lossless = (
                             format_tag in _Wave._LOSSLESS_FORMATS)
