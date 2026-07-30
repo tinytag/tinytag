@@ -171,9 +171,9 @@ For standard codec values, see:
              and [RFC 7845](https://www.rfc-editor.org/info/rfc7845)
   * `audio/wav`: [RFC 2361](https://www.rfc-editor.org/info/rfc2361)
 
-No official standards exists for `codecs` values for the `audio/aiff` and
-`audio/x-ms-wma` MIME types. The most appropriate value provided by the format
-is used.
+No official standards exists for `codecs` values for the
+`application/vnd.ms-asf` and `audio/aiff` MIME types. The most appropriate
+value provided by the format is used.
 
     # ASF
     application/vnd.ms-asf
