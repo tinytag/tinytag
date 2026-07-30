@@ -2227,7 +2227,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'other': OtherFields({
             'encoder_settings': ['Lavf62.12.102'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'samplerate': 8000,
         'bitrate': 128.0,
@@ -2248,7 +2248,7 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
             'copyright': ['even more nothing', 'more nothing', 'nothing'],
             'encoder_settings': ['Lavf62.12.102'],
         }),
-        'mime_type': 'audio/x-ms-wma; codecs="353"',
+        'mime_type': 'audio/x-ms-wma; codecs="161"',
         'is_lossless': False,
         'samplerate': 8000,
         'bitrate': 128.0,
