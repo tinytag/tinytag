@@ -131,7 +131,7 @@ class TinyTag:
             image: bool = False,
             encoding: str | None = None,
             ignore_errors: bool | None = None,
-            header_detection: bool = True) -> TinyTag:
+            check_magic_bytes: bool = True) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
         filename_str = None
@@ -153,7 +153,7 @@ class TinyTag:
             file_obj.seek(0, SEEK_END)
             filesize = file_obj.tell()
             file_obj.seek(0)
-            if header_detection:
+            if check_magic_bytes:
                 parser_class = cls._get_parser_class(filename_str, file_obj)
             else:
                 parser_class = cls._get_parser_class(filename_str)
