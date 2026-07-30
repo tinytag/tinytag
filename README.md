@@ -497,7 +497,7 @@ UnsupportedFormatError  # File format is not supported
 - Add option to disable magic header detection
 - Make XMP metadata available under 'other.xmp' field
 - Make bit depth available for lossy files providing it
-- Add .ogv to list of supported file extensions
+- Add .asf, .ogv and .wmv to list of supported file extensions
 - Mark deprecated 'extra' dictionary as obsolete
 - Fix incorrect key when adding common images to 'other' dictionary
 - Fix disc/track numbers not being returned as lists in 'as_dict()'
@@ -523,8 +523,9 @@ UnsupportedFormatError  # File format is not supported
 - WAV: Include unknown fields in 'other' dictionary
 - WAV: Calculate bitrate/duration correctly
 - AIFF/WAV: Read whole ID3 chunk before parsing
-- WMA: Stop parsing if object size is smaller than header
-- WMA: Make magic header detection more strict
+- ASF: Support parsing additional metadata objects
+- ASF: Stop parsing if object size is smaller than header
+- ASF: Make magic header detection more strict
 - Various performance improvements
 - Various code refactors
 
