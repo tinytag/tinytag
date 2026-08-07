@@ -420,7 +420,7 @@ class Images:
             for other_key, other_values in value.items():
                 other_images = images.get(other_key)
                 if not isinstance(other_images, list):
-                    other_images = images[other_key] = other_values
+                    images[other_key] = other_values
                 else:
                     other_images += other_values
         return images
@@ -2498,6 +2498,7 @@ class _Aiff(TinyTag):
                             self.bitrate = bitrate
                         self.samplerate, self.duration = sr, duration
                 except OverflowError:
+                    # Invalid sample rate
                     pass
                 compression_type = chunk[18:22].decode('latin-1')
                 if not compression_type:

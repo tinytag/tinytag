@@ -3527,8 +3527,7 @@ class TestAll(TestCase):
     def test_deprecations(self) -> None:
         file_path = os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac')
         with self.assertWarns(DeprecationWarning):
-            tag = TinyTag.get(
-                filename=file_path, image=True, ignore_errors=True)
+            TinyTag.get(filename=file_path, image=True, ignore_errors=True)
         with self.assertWarns(DeprecationWarning):
             tag = TinyTag.get(
                 filename=file_path, image=True, ignore_errors=False)
