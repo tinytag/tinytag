@@ -70,7 +70,6 @@ tests = [
 exclude = [
     ".gitignore",
     ".github/",
-    "tinytag/icons/",
     "tinytag/tests/"
 ]
 
