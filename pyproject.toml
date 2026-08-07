@@ -67,6 +67,12 @@ tests = [
 ]
 
 [tool.flit.sdist]
+include = [
+    "LICENSES/",
+    ".editorconfig",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+]
 exclude = [
     ".gitignore",
     ".github/",
