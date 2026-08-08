@@ -40,7 +40,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: python -m pip install build flit .[tests]
+        run: python -m pip install .[dev]
 
       - name: PEP 8 style checks
         run: python -m pycodestyle .
