@@ -85,6 +85,8 @@ jobs:
     needs: tests
     runs-on: ubuntu-slim
     timeout-minutes: 15
+    permissions:
+      code-quality: write
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -104,12 +106,26 @@ jobs:
         run: |
           coverage combine --quiet
           coverage html --quiet
+          coverage xml --quiet
 
-      - name: Upload coverage report
+      - name: Upload coverage report (HTML)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: combined-coverage-report
-          path: htmlcov
+          path: |
+            htmlcov
+            coverage.xml
+          if-no-files-found: error
+
+      - name: Upload coverage report (GitHub)
+        if: |
+          github.repository == 'tinytag/tinytag' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-code-coverage@d8e329117199404bba6fc81efe8093dc7c015e34 # v1.4.2
+        with:
+          file: coverage.xml
+          language: Python
+          label: code-coverage/tinytag
 
       - name: Show coverage report
         run: coverage report --fail-under=${MIN_COVERAGE_PERCENTAGE}
