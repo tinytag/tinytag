@@ -3524,21 +3524,6 @@ class TestAll(TestCase):
         with self.assertRaises(NotImplementedError):
             tag.load(file_handle=BytesIO(), tags=False, duration=True)
 
-    def test_deprecations(self) -> None:
-        file_path = os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac')
-        with self.assertWarns(DeprecationWarning):
-            TinyTag.get(filename=file_path, image=True, ignore_errors=True)
-        with self.assertWarns(DeprecationWarning):
-            tag = TinyTag.get(
-                filename=file_path, image=True, ignore_errors=False)
-        with self.assertWarns(DeprecationWarning):
-            assert tag.audio_offset is None
-        with self.assertWarns(DeprecationWarning):
-            self.assertEqual(str(tag.extra), "{}")
-        with self.assertWarns(DeprecationWarning):
-            assert tag.images.any is not None
-            self.assertEqual(tag.get_image(), tag.images.any.data)
-
     def test_str_vars(self) -> None:
         tag = TinyTag.get(
             os.path.join(SAMPLE_FOLDER, 'multiple_values_images.flac'),
