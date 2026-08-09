@@ -65,7 +65,8 @@ dev = [
     "mypy<1.19.0; platform_python_implementation == 'PyPy'",
     "pycodestyle",
     "pylint",
-    "pyright"
+    "pyright",
+    "wheel"
 ]
 
 [tool.flit.sdist]
