@@ -31,6 +31,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python ${{ matrix.python }}
@@ -91,6 +92,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Download coverage data
@@ -118,14 +120,12 @@ jobs:
           if-no-files-found: error
 
       - name: Upload coverage report (GitHub)
-        if: |
-          github.repository == 'tinytag/tinytag' &&
-          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/upload-code-coverage@d8e329117199404bba6fc81efe8093dc7c015e34 # v1.4.2
         with:
           file: coverage.xml
           language: Python
           label: code-coverage/tinytag
+          fail-on-error: false
 
       - name: Show coverage report
         run: coverage report --fail-under=${MIN_COVERAGE_PERCENTAGE}
