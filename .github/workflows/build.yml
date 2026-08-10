@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 tinytag Contributors
+# SPDX-License-Identifier: MIT
+
+name: Build
+on: [push, pull_request, workflow_dispatch]
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set reproducible timestamp
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install flit python3-build twine
+
+      - name: Build package
+        run: |
+          python -m build --no-isolation
+          touch -d "@${SOURCE_DATE_EPOCH}" dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+      - name: Verify package
+        run: python -m twine check --strict dist/*
