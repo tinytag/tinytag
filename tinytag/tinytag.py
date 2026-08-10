@@ -134,12 +134,16 @@ class TinyTag:
             check_magic_bytes: bool = True) -> TinyTag:
         """Return a tag object for an audio file."""
         should_close_file = file_obj is None
+        parser_class = None
         filename_str = None
         if filename:
+            filename_str = fsdecode(filename)
+            if not check_magic_bytes:
+                # Raises UnsupportedFormatError
+                parser_class = cls._get_parser_class(filename_str)
             if should_close_file:
                 # pylint: disable=consider-using-with
                 file_obj = open(filename, 'rb')
-            filename_str = fsdecode(filename)
         if file_obj is None:
             raise ValueError(
                 'Either filename or file_obj argument is required')
@@ -149,14 +153,13 @@ class TinyTag:
             warn('ignore_errors argument is obsolete, and will be removed in '
                  'the future', DeprecationWarning, stacklevel=2)
         try:
-            # pylint: disable=protected-access
+            if parser_class is None:  # check_magic_bytes is True
+                # Raises UnsupportedFormatError
+                parser_class = cls._get_parser_class(filename_str, file_obj)
             file_obj.seek(0, SEEK_END)
             filesize = file_obj.tell()
             file_obj.seek(0)
-            if check_magic_bytes:
-                parser_class = cls._get_parser_class(filename_str, file_obj)
-            else:
-                parser_class = cls._get_parser_class(filename_str)
+            # pylint: disable=protected-access
             tag = parser_class()
             tag._filehandler = file_obj
             tag._default_encoding = encoding
@@ -232,7 +235,6 @@ class TinyTag:
     ) -> type[TinyTag] | None:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
         header = filehandle.read(30)
-        filehandle.seek(0)
         if header.startswith(b'ID3'):
             return _ID3
         if (len(header) >= 2
@@ -244,8 +246,6 @@ class TinyTag:
             except OSError:
                 # File smaller than ID3v1 tag size
                 pass
-            finally:
-                filehandle.seek(0)
             if footer == b'TAG':
                 return _ID3
             return _MPEG
