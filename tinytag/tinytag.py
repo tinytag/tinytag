@@ -1471,7 +1471,7 @@ class _MPEG(TinyTag):
     _MAX_ESTIMATION_SEC = 30
     _CBR_DETECTION_FRAME_COUNT = 5
     _USE_XING_HEADER = True  # much faster, but can be deactivated for testing
-    _MAX_INVALID_FRAMES = 200
+    _MAX_INVALID_FRAMES = 800
 
     # see this page for the magic values used in mp3:
     # http://www.mpgedit.org/mpgedit/mpeg_format/mpeghdr.htm
