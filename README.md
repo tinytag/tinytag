@@ -488,6 +488,12 @@ UnsupportedFormatError  # File format is not supported
 
 ## Changelog
 
+### 2.3.2  (2026-09-07)
+
+- ID3: Optimize parsing of UTF-16 strings
+- MP4: Only parse decoder specific info if it exists
+- ASF: Decode strings as UTF-16LE instead of system byte order
+
 ### 2.3.1  (2026-08-30)
 
 - Don't open unrecognized files when disabling magic byte detection
