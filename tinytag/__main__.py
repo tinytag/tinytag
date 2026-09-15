@@ -10,7 +10,7 @@ import sys
 from io import StringIO
 from os.path import isfile, splitext
 
-from tinytag import TinyTag, TinyTagException
+from tinytag import TinyTag, TinyTagException, __version__
 
 
 def _usage() -> None:
@@ -27,6 +27,9 @@ def _usage() -> None:
 
     -s, --skip-unsupported
         Skip files that do not have a file extension supported by tinytag
+
+    -v, --version
+        Display version
 
 ''')
 
@@ -85,6 +88,10 @@ def _run() -> int:
     display_help = not filenames or _pop_switch('--help') or _pop_switch('-h')
     if display_help:
         _usage()
+        return 0
+    display_version = _pop_switch('--version') or _pop_switch('-v')
+    if display_version:
+        print(__version__)
         return 0
 
     for i, filename in enumerate(filenames):
