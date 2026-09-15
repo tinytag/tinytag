@@ -878,7 +878,7 @@ class _MP4(TinyTag):
             yield 'is_lossless', codec in cls._LOSSLESS_CODECS
 
     @classmethod
-    def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, str | int]]:
+    def _parse_alac(cls, data: bytes) -> Iterator[tuple[str, str | float]]:
         # https://github.com/macosforge/alac/blob/master/ALACMagicCookieDescription.txt
         yield 'codec', 'alac'
         yield 'is_lossless', True
