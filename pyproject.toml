@@ -71,6 +71,7 @@ dev = [
 
 [tool.flit.sdist]
 include = [
+    "data/",
     "LICENSES/",
     ".editorconfig",
     "CONTRIBUTING.md",
