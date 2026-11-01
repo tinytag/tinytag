@@ -991,6 +991,8 @@ class _ID3(TinyTag):
     _VALID_STRING_ENCODINGS = {0x00, 0x01, 0x02, 0x03}
     _ID3V1_TAG_SIZE = 128
     _ID3V2_HEADER_SIZE = 10
+    # Reframed genres of the ID3v2 TCON frame, written as '(RX)' / '(CR)'
+    _ID3V2_REFRAMED_GENRES = {'RX': 'Remix', 'CR': 'Cover'}
     _ID3V1_GENRES = (
         'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco',
         'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age', 'Oldies',
@@ -1370,6 +1372,9 @@ class _ID3(TinyTag):
                         parens_text = value[1:end_pos]
                         if end_pos > 0 and parens_text.isdecimal():
                             genre_id = int(parens_text)
+                        elif end_pos > 0 and parens_text in self._ID3V2_REFRAMED_GENRES:
+                            # ID3v2 reframed genres, e.g. '(RX)' for remix
+                            value = self._ID3V2_REFRAMED_GENRES[parens_text]
                     if 0 <= genre_id < len(self._ID3V1_GENRES):
                         value = self._ID3V1_GENRES[genre_id]
                     self._set_field(fieldname, value)
