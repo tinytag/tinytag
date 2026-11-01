@@ -338,6 +338,27 @@ TEST_FILES: dict[str, ExpectedTag] = dict([
         'title': 'The Embrace (Romano Alfieri Remix)',
         'year': '2012',
     }),
+    ('id3v23_tcon_remix.mp3', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'is_lossless': False,
+        'filesize': 25,
+        'genre': 'Remix',
+    }),
+    ('id3v23_tcon_cover.mp3', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'is_lossless': False,
+        'filesize': 25,
+        'genre': 'Cover',
+    }),
+    ('id3v23_tcon_numeric.mp3', {
+        'other': OtherFields(),
+        'mime_type': 'audio/mpeg',
+        'is_lossless': False,
+        'filesize': 29,
+        'genre': 'Rock',
+    }),
     ('id3_genre_id_out_of_bounds.mp3', {
         'other': OtherFields(),
         'mime_type': 'audio/mpeg',
