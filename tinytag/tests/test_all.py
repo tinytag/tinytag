@@ -3432,6 +3432,53 @@ class TestAll(TestCase):
         self.assertEqual(tag.artist, '苏云')
         self.assertEqual(tag.album, '角落之歌')
 
+    def test_id3v23_extended_header(self) -> None:
+        # Regression test for https://github.com/tinytag/tinytag/issues/379:
+        # an ID3v2.3 tag with an extended header lost all frames because the
+        # extended header size excludes itself in v2.3 (unlike v2.4).
+        def synchsafe(n: int) -> bytes:
+            return bytes([
+                (n >> 21) & 0x7F, (n >> 14) & 0x7F, (n >> 7) & 0x7F, n & 0x7F,
+            ])
+
+        def frame_v23(fid: bytes, text: bytes) -> bytes:
+            body = b'\x00' + text + b'\x00'
+            return fid + len(body).to_bytes(4, 'big') + b'\x00\x00' + body
+
+        frames = frame_v23(b'TIT2', b'Hello World') + frame_v23(b'TALB', b'Album X')
+        # v2.3 extended header: size field excludes itself (6 means 10
+        # bytes in total), then 2 flag bytes + 4 padding-size bytes
+        ext = b'\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00'
+        data = (
+            b'ID3\x03\x00\x40' + synchsafe(len(ext) + len(frames))
+            + ext + frames + b'\x00' * 64
+        )
+        tag = TinyTag.get(file_obj=BytesIO(data), filename='x.mp3')
+        self.assertEqual(tag.title, 'Hello World')
+        self.assertEqual(tag.album, 'Album X')
+
+    def test_id3v24_extended_header(self) -> None:
+        # Companion check: v2.4 extended header size is synchsafe and
+        # includes its own 4 bytes.
+        def synchsafe(n: int) -> bytes:
+            return bytes([
+                (n >> 21) & 0x7F, (n >> 14) & 0x7F, (n >> 7) & 0x7F, n & 0x7F,
+            ])
+
+        def frame_v24(fid: bytes, text: bytes) -> bytes:
+            body = b'\x00' + text + b'\x00'
+            return fid + synchsafe(len(body)) + b'\x00\x00' + body
+
+        frames = frame_v24(b'TIT2', b'Hello World') + frame_v24(b'TALB', b'Album X')
+        ext = synchsafe(9) + b'\x01\x00' + b'\x00\x00\x00'  # 9 bytes total
+        data = (
+            b'ID3\x04\x00\x40' + synchsafe(len(ext) + len(frames))
+            + ext + frames + b'\x00' * 64
+        )
+        tag = TinyTag.get(file_obj=BytesIO(data), filename='x.mp3')
+        self.assertEqual(tag.title, 'Hello World')
+        self.assertEqual(tag.album, 'Album X')
+
     def test_invalid_file(self) -> None:
         for path, cls in (
             ('invalid_file.m4a', _MP4),

@@ -1135,9 +1135,17 @@ class _ID3(TinyTag):
             return size
         parsed_size = self._ID3V2_HEADER_SIZE
         if extended:  # just read over the extended header.
-            extd_size = self._unsynchsafe(fh.read(6))
+            if major == 3:
+                # ID3v2.3: the extended header size is a plain 32-bit
+                # integer that excludes itself, so the total extended
+                # header size is the stored value plus its own 4 bytes.
+                extd_size = int.from_bytes(fh.read(4), 'big') + 4
+            else:
+                # ID3v2.4: the extended header size is synchsafe and
+                # includes its own 4 bytes.
+                extd_size = self._unsynchsafe(fh.read(4))
             parsed_size += extd_size
-            fh.seek(extd_size - 6, SEEK_CUR)  # jump over extended_header
+            fh.seek(extd_size - 4, SEEK_CUR)  # jump over extended_header
         while parsed_size < size:
             frame_size = self._parse_frame(fh, size, id3version=major)
             if frame_size == -1:
